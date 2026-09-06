@@ -1,0 +1,25 @@
+<resources>
+    <string name="app_name">FocusLock</string>
+    <string name="accessibility_service_description">यह पता लगाने के लिए FocusLock द्वारा उपयोग किया जाता है कि ध्यान भटकाने वाले ऐप कब खोले जाते हैं ताकि उन्हें ब्लॉक किया जा सके।</string>
+    <string name="level_xp">स्तर %1$d • अगले के लिए %2$d XP</string>
+    <string name="limits">सीमाएँ</string>
+    <string name="schedules">कार्यक्रम</string>
+    <string name="time_limits_today">आज के लिए समय सीमा</string>
+    <string name="stats">आँकड़े</string>
+    <string name="total_focus">कुल फोकस</string>
+    <string name="time_saved">बचाया गया समय</string>
+    <string name="start_focus">शुरू करें</string>
+    <string name="app_blocked">%1$s ब्लॉक कर दिया गया है</string>
+    <string name="limit_reached">आप %1$d मिनट की अपनी दैनिक सीमा तक पहुँच चुके हैं।</string>
+    <string name="wait_and_breathe">प्रतीक्षा करें और सांस लें</string>
+    <string name="earn_more_time">अधिक समय कमाएँ</string>
+    <string name="emergency_unlock">आपातकालीन अनलॉक</string>
+    <string name="take_a_deep_breath">एक गहरी सांस लें।</string>
+    <string name="challenge_instructions">अतिरिक्त 5 मिनट अनलॉक करने के लिए ऊपर दिया गया टेक्स्ट टाइप करें।</string>
+    <string name="statistics">आँकड़े</string>
+    <string name="most_distracting">सबसे अधिक ध्यान भटकाने वाले</string>
+    <string name="insufficient_data">निर्धारित करने के लिए अपर्याप्त डेटा।</string>
+    <string name="this_week">इस सप्ताह</string>
+    <string name="total_usage">कुल उपयोग: %1$dघंटे %2$dमिनट।</string>
+    <string name="unknown_app">अज्ञात ऐप</string>
+</resources>

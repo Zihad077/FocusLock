@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -89,8 +90,7 @@ fun MainTabScreen() {
                         icon = { Icon(item.icon, contentDescription = item.name) },
                         label = { Text(item.name) },
                         selected = currentDestination?.hierarchy?.any { 
-                            // Quick way to check route class name for type-safe nav
-                            it.route?.contains(item.route::class.simpleName ?: "") == true 
+                            it.hasRoute(item.route::class) 
                         } == true,
                         onClick = {
                             navController.navigate(item.route) {
@@ -115,7 +115,28 @@ fun MainTabScreen() {
             composable<Route.Apps> { AppsScreen() }
             composable<Route.Focus> { FocusScreen() }
             composable<Route.Stats> { StatsScreen() }
-            composable<Route.Settings> { SettingsScreen() }
+            composable<Route.Settings> { 
+                SettingsScreen(
+                    onNavigateToApps = {
+                        navController.navigate(Route.Apps) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onNavigateToFocus = {
+                        navController.navigate(Route.Focus) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                ) 
+            }
         }
     }
 }

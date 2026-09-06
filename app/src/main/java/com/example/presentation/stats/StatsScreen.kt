@@ -26,6 +26,7 @@ fun StatsScreen(
     )
 ) {
     val weeklyUsage by viewModel.weeklyUsage.collectAsStateWithLifecycle()
+    val mostDistracting by viewModel.mostDistracting.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -64,7 +65,6 @@ fun StatsScreen(
                 )
             }
             
-            // Placeholder for most distracting list
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -73,13 +73,28 @@ fun StatsScreen(
                 ) {
                     Box(
                         modifier = Modifier.padding(24.dp),
-                        contentAlignment = Alignment.Center
+                        contentAlignment = Alignment.CenterStart
                     ) {
-                        Text(
-                            text = "Insufficient data to determine.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        if (mostDistracting == null) {
+                            Text(
+                                text = "Insufficient data to determine.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        } else {
+                            Column {
+                                Text(
+                                    text = mostDistracting!!.first,
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "${mostDistracting!!.second / 60}h ${mostDistracting!!.second % 60}m total time",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -104,8 +119,9 @@ fun WeeklyChartCard(data: List<DailyStat>) {
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
             )
             Spacer(modifier = Modifier.height(8.dp))
+            val totalMinutes = data.sumOf { it.minutes }
             Text(
-                text = "You saved 4h 32m this week.",
+                text = "Total usage: ${totalMinutes / 60}h ${totalMinutes % 60}m.",
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.primary
             )

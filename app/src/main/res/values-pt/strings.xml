@@ -1,0 +1,25 @@
+<resources>
+    <string name="app_name">FocusLock</string>
+    <string name="accessibility_service_description">Usado pelo FocusLock para detectar quando aplicativos distrativos são abertos para que possam ser bloqueados.</string>
+    <string name="level_xp">Nível %1$d • %2$d XP para o próximo</string>
+    <string name="limits">Limites</string>
+    <string name="schedules">Horários</string>
+    <string name="time_limits_today">Limites de tempo hoje</string>
+    <string name="stats">Estatísticas</string>
+    <string name="total_focus">Foco Total</string>
+    <string name="time_saved">Tempo Salvo</string>
+    <string name="start_focus">Iniciar</string>
+    <string name="app_blocked">%1$s está Bloqueado</string>
+    <string name="limit_reached">Você atingiu seu limite diário de %1$d minutos.</string>
+    <string name="wait_and_breathe">Espere &amp; Respire</string>
+    <string name="earn_more_time">Ganhe Mais Tempo</string>
+    <string name="emergency_unlock">Desbloqueio de Emergência</string>
+    <string name="take_a_deep_breath">Respire fundo.</string>
+    <string name="challenge_instructions">Digite o texto acima para desbloquear mais 5 minutos.</string>
+    <string name="statistics">Estatísticas</string>
+    <string name="most_distracting">Mais Distrativos</string>
+    <string name="insufficient_data">Dados insuficientes para determinar.</string>
+    <string name="this_week">ESTA SEMANA</string>
+    <string name="total_usage">Uso total: %1$dh %2$dm.</string>
+    <string name="unknown_app">App Desconhecido</string>
+</resources>

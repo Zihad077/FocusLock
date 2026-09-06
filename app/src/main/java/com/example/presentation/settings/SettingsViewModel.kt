@@ -35,6 +35,44 @@ class SettingsViewModel(
         }
     }
 
+    fun updateMaxEmergencyUnlocks(max: Int) {
+        viewModelScope.launch {
+            val current = userSettings.value
+            val remaining = current.emergencyUnlocksRemaining.coerceAtMost(max)
+            repository.updateSettings(current.copy(maxEmergencyUnlocks = max, emergencyUnlocksRemaining = remaining))
+        }
+    }
+
+    fun resetEmergencyUnlocksToday() {
+        viewModelScope.launch {
+            val current = userSettings.value
+            repository.updateSettings(current.copy(emergencyUnlocksRemaining = current.maxEmergencyUnlocks))
+        }
+    }
+
+    fun resetProgress() {
+        viewModelScope.launch {
+            val current = userSettings.value
+            repository.updateSettings(
+                current.copy(
+                    xp = 0,
+                    level = 1,
+                    focusScore = 0,
+                    currentStreak = 0,
+                    emergencyUnlocksRemaining = current.maxEmergencyUnlocks
+                )
+            )
+        }
+    }
+
+    fun sendTestNotification() {
+        val helper = com.example.service.NotificationHelper(getApplication())
+        helper.showNotification(
+            "FocusLock Active",
+            "Notifications are working! Your focus sessions and limits are guarded."
+        )
+    }
+
     class Factory(private val application: Application) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(SettingsViewModel::class.java)) {

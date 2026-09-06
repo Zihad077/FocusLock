@@ -16,6 +16,7 @@ import androidx.lifecycle.lifecycleScope
 import com.example.FocusLockApplication
 import com.example.presentation.challenge.ChallengeScreen
 import com.example.ui.theme.FocusLockTheme
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class BlockActivity : ComponentActivity() {
@@ -42,11 +43,25 @@ class BlockActivity : ComponentActivity() {
                                 packageName?.let {
                                     lifecycleScope.launch {
                                         val repo = (application as FocusLockApplication).repository
-                                        val limit = repo.getLimit(it)
-                                        if (limit != null) {
-                                            // Grant 5 extra minutes upon challenge completion
-                                            repo.insertLimit(limit.copy(dailyLimitMinutes = limit.dailyLimitMinutes + 5))
+                                        val settings = repo.userSettings.first()
+                                        
+                                        var newXp = settings.xp + 20
+                                        var newLevel = settings.level
+                                        if (newXp >= newLevel * 100) {
+                                            newXp -= (newLevel * 100)
+                                            newLevel += 1
                                         }
+                                        
+                                        repo.updateSettings(settings.copy(xp = newXp, level = newLevel))
+                                        
+                                        repo.insertTemporaryUnlock(
+                                            com.example.database.TemporaryUnlock(
+                                                packageName = it,
+                                                type = "CHALLENGE",
+                                                startTime = System.currentTimeMillis(),
+                                                durationMinutes = 5
+                                            )
+                                        )
                                         finish()
                                     }
                                 } ?: finish()
@@ -59,7 +74,6 @@ class BlockActivity : ComponentActivity() {
                             usedMinutes = usedMinutes,
                             limitMinutes = limitMinutes,
                             onWaitClick = {
-                                // Go home
                                 val homeIntent = Intent(Intent.ACTION_MAIN)
                                 homeIntent.addCategory(Intent.CATEGORY_HOME)
                                 homeIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
@@ -73,10 +87,17 @@ class BlockActivity : ComponentActivity() {
                                 packageName?.let {
                                     lifecycleScope.launch {
                                         val repo = (application as FocusLockApplication).repository
-                                        val limit = repo.getLimit(it)
-                                        if (limit != null) {
-                                            // Temporarily disable the limit
-                                            repo.insertLimit(limit.copy(isEnabled = false))
+                                        val settings = repo.userSettings.first()
+                                        if (settings.emergencyUnlocksRemaining > 0) {
+                                            repo.updateSettings(settings.copy(emergencyUnlocksRemaining = settings.emergencyUnlocksRemaining - 1))
+                                            repo.insertTemporaryUnlock(
+                                                com.example.database.TemporaryUnlock(
+                                                    packageName = it,
+                                                    type = "EMERGENCY",
+                                                    startTime = System.currentTimeMillis(),
+                                                    durationMinutes = 5 // 5 minutes emergency unlock
+                                                )
+                                            )
                                         }
                                         finish()
                                     }

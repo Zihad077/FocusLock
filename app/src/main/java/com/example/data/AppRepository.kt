@@ -35,6 +35,8 @@ class AppRepository(private val focusDao: FocusDao) {
     
     fun getUsageForDate(dateString: String): Flow<List<DailyUsage>> = focusDao.getUsageForDate(dateString)
     
+    fun getAllUsage(): Flow<List<DailyUsage>> = focusDao.getAllUsage()
+    
     suspend fun getUsage(packageName: String, dateString: String): DailyUsage? = focusDao.getUsage(packageName, dateString)
     
     suspend fun insertUsage(usage: DailyUsage) {
@@ -51,5 +53,15 @@ class AppRepository(private val focusDao: FocusDao) {
     
     suspend fun updateSettings(settings: UserSettings) {
         focusDao.updateSettings(settings)
+    }
+
+    suspend fun getTemporaryUnlocks(packageName: String) = focusDao.getTemporaryUnlocks(packageName)
+
+    suspend fun insertTemporaryUnlock(unlock: com.example.database.TemporaryUnlock) {
+        focusDao.insertTemporaryUnlock(unlock)
+    }
+
+    suspend fun deleteTemporaryUnlock(id: Int) {
+        focusDao.deleteTemporaryUnlock(id)
     }
 }

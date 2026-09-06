@@ -30,6 +30,22 @@ class FocusViewModel(
     
     private var timerJob: Job? = null
 
+    init {
+        // Recover state
+        viewModelScope.launch {
+            val settings = repository.userSettings.first()
+            if (settings.isFocusModeActive && settings.activeFocusEndTime > System.currentTimeMillis()) {
+                val remaining = ((settings.activeFocusEndTime - System.currentTimeMillis()) / 1000).toInt()
+                _remainingTimeSeconds.value = remaining
+                _isFocusActive.value = true
+                startTimer()
+            } else if (settings.isFocusModeActive) {
+                // Was active but expired while app was dead
+                endFocusSession(completed = true)
+            }
+        }
+    }
+
     fun setDuration(minutes: Int) {
         if (!_isFocusActive.value) {
             _selectedDurationMinutes.value = minutes
@@ -44,26 +60,56 @@ class FocusViewModel(
         
         viewModelScope.launch {
             val settings = repository.userSettings.first()
-            repository.updateSettings(settings.copy(isFocusModeActive = true))
+            val endTime = System.currentTimeMillis() + (_selectedDurationMinutes.value * 60 * 1000L)
+            repository.updateSettings(settings.copy(isFocusModeActive = true, activeFocusEndTime = endTime))
         }
         
+        startTimer()
+    }
+    
+    private fun startTimer() {
+        timerJob?.cancel()
         timerJob = viewModelScope.launch {
             while (_remainingTimeSeconds.value > 0) {
                 delay(1000)
                 _remainingTimeSeconds.value -= 1
             }
-            endFocusSession()
+            endFocusSession(completed = true)
         }
     }
     
-    fun endFocusSession() {
+    fun endFocusSession(completed: Boolean = false) {
         timerJob?.cancel()
         _isFocusActive.value = false
         _remainingTimeSeconds.value = 0
         
         viewModelScope.launch {
             val settings = repository.userSettings.first()
-            repository.updateSettings(settings.copy(isFocusModeActive = false))
+            var newXp = settings.xp
+            var newLevel = settings.level
+            
+            if (completed) {
+                newXp += 50
+                if (newXp >= newLevel * 100) {
+                    newXp -= (newLevel * 100)
+                    newLevel += 1
+                }
+                repository.insertFocusSession(
+                    com.example.database.FocusSession(
+                        startTime = System.currentTimeMillis(),
+                        durationMinutes = _selectedDurationMinutes.value,
+                        isCompleted = true,
+                        mode = "DEEP_FOCUS"
+                    )
+                )
+            }
+            
+            repository.updateSettings(settings.copy(
+                isFocusModeActive = false, 
+                activeFocusEndTime = 0L,
+                xp = newXp,
+                level = newLevel
+            ))
         }
     }
 

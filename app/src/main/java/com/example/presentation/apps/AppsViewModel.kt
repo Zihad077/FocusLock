@@ -1,7 +1,6 @@
 package com.example.presentation.apps
 
 import android.app.Application
-import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
@@ -13,8 +12,6 @@ import com.example.database.AppLimit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -36,11 +33,17 @@ class AppsViewModel(
         val limitMap = limits.associateBy { it.packageName }
         installed.map { app ->
             val limit = limitMap[app.packageName]
+            val isHigh = isHighImpactApp(app.packageName, app.appName)
             app.copy(
                 isLimited = limit != null && limit.isEnabled,
-                dailyLimitMinutes = limit?.dailyLimitMinutes ?: 0
+                dailyLimitMinutes = limit?.dailyLimitMinutes ?: 0,
+                isHighImpact = isHigh
             )
-        }.sortedByDescending { it.isLimited }
+        }.sortedWith(
+            compareByDescending<AppItem> { it.isLimited }
+                .thenByDescending { it.isHighImpact }
+                .thenBy { it.appName.lowercase() }
+        )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -59,9 +62,12 @@ class AppsViewModel(
                 val resolveInfoList = packageManager.queryIntentActivities(intent, 0)
                 
                 resolveInfoList.map { resolveInfo ->
+                    val pkg = resolveInfo.activityInfo.packageName
+                    val name = resolveInfo.loadLabel(packageManager).toString()
                     AppItem(
-                        packageName = resolveInfo.activityInfo.packageName,
-                        appName = resolveInfo.loadLabel(packageManager).toString()
+                        packageName = pkg,
+                        appName = name,
+                        isHighImpact = isHighImpactApp(pkg, name)
                     )
                 }.distinctBy { it.packageName }
                  .filter { it.packageName != getApplication<Application>().packageName }
@@ -70,14 +76,33 @@ class AppsViewModel(
         }
     }
     
+    fun setCustomLimit(app: AppItem, minutes: Int, isEnabled: Boolean = true) {
+        viewModelScope.launch {
+            repository.insertLimit(
+                AppLimit(
+                    packageName = app.packageName,
+                    appName = app.appName,
+                    isEnabled = isEnabled,
+                    dailyLimitMinutes = minutes
+                )
+            )
+        }
+    }
+
+    fun removeLimit(packageName: String) {
+        viewModelScope.launch {
+            repository.deleteLimit(packageName)
+        }
+    }
+
     fun toggleLimit(app: AppItem, isEnabled: Boolean) {
         viewModelScope.launch {
             if (isEnabled) {
-                // Set default limit of 30 minutes if none exists
                 val limit = repository.getLimit(app.packageName)
                 if (limit != null) {
                     repository.insertLimit(limit.copy(isEnabled = true))
                 } else {
+                    // Default to 30 mins if none exists
                     repository.insertLimit(
                         AppLimit(
                             packageName = app.packageName,
@@ -93,6 +118,41 @@ class AppsViewModel(
                     repository.insertLimit(limit.copy(isEnabled = false))
                 }
             }
+        }
+    }
+
+    companion object {
+        private val HIGH_IMPACT_PACKAGES = setOf(
+            "com.google.android.youtube",
+            "com.google.android.apps.youtube.music",
+            "com.instagram.android",
+            "com.zhiliaoapp.musically",
+            "com.ss.android.ugc.trill",
+            "com.facebook.katana",
+            "com.facebook.lite",
+            "com.facebook.orca",
+            "com.twitter.android",
+            "com.snapchat.android",
+            "com.reddit.frontpage",
+            "com.netflix.mediaclient",
+            "tv.twitch.android.app",
+            "com.discord",
+            "com.whatsapp",
+            "com.whatsapp.w4b",
+            "org.telegram.messenger",
+            "com.android.chrome",
+            "com.pinterest",
+            "com.tiktok.android"
+        )
+
+        fun isHighImpactApp(packageName: String, appName: String): Boolean {
+            if (HIGH_IMPACT_PACKAGES.contains(packageName)) return true
+            val lowerName = appName.lowercase()
+            val keywords = listOf(
+                "youtube", "instagram", "tiktok", "facebook", "twitter", "reddit",
+                "netflix", "snapchat", "twitch", "discord", "game", "browser"
+            )
+            return keywords.any { lowerName.contains(it) }
         }
     }
 
@@ -114,5 +174,6 @@ data class AppItem(
     val packageName: String,
     val appName: String,
     val isLimited: Boolean = false,
-    val dailyLimitMinutes: Int = 0
+    val dailyLimitMinutes: Int = 0,
+    val isHighImpact: Boolean = false
 )

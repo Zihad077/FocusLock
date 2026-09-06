@@ -36,6 +36,9 @@ interface FocusDao {
     @Query("SELECT * FROM daily_usage WHERE dateString = :dateString")
     fun getUsageForDate(dateString: String): Flow<List<DailyUsage>>
     
+    @Query("SELECT * FROM daily_usage")
+    fun getAllUsage(): Flow<List<DailyUsage>>
+    
     @Query("SELECT * FROM daily_usage WHERE packageName = :packageName AND dateString = :dateString")
     suspend fun getUsage(packageName: String, dateString: String): DailyUsage?
     
@@ -55,4 +58,14 @@ interface FocusDao {
     
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun updateSettings(settings: UserSettings)
+
+    // Temporary Unlocks
+    @Query("SELECT * FROM temporary_unlocks WHERE packageName = :packageName")
+    suspend fun getTemporaryUnlocks(packageName: String): List<TemporaryUnlock>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTemporaryUnlock(unlock: TemporaryUnlock)
+
+    @Query("DELETE FROM temporary_unlocks WHERE id = :id")
+    suspend fun deleteTemporaryUnlock(id: Int)
 }

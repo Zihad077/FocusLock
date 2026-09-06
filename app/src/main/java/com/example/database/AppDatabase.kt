@@ -11,9 +11,10 @@ import androidx.room.RoomDatabase
         AppSchedule::class, 
         DailyUsage::class, 
         FocusSession::class, 
-        UserSettings::class
+        UserSettings::class,
+        TemporaryUnlock::class
     ], 
-    version = 2, 
+    version = 5, 
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

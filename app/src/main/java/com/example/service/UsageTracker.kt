@@ -6,6 +6,7 @@ import android.util.Log
 import com.example.data.AppRepository
 import com.example.database.DailyUsage
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -35,6 +36,18 @@ class UsageTracker(
         val usedMinutes = (usedTimeMillis / (1000 * 60)).toInt()
 
         val currentDateString = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        
+        val settings = repository.userSettings.first()
+        if (settings.lastResetDateString != currentDateString) {
+            // It's a new day! Reset daily things
+            repository.updateSettings(
+                settings.copy(
+                    lastResetDateString = currentDateString,
+                    emergencyUnlocksRemaining = settings.maxEmergencyUnlocks
+                    // Also handle streak logic here if needed
+                )
+            )
+        }
         
         val existingUsage = repository.getUsage(packageName, currentDateString)
         if (existingUsage != null) {

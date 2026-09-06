@@ -1,0 +1,25 @@
+<resources>
+    <string name="app_name">FocusLock</string>
+    <string name="accessibility_service_description">يُستخدم بواسطة FocusLock لاكتشاف وقت فتح التطبيقات المشتتة للانتباه حتى يمكن حظرها.</string>
+    <string name="level_xp">المستوى %1$d • %2$d نقطة خبرة للتالي</string>
+    <string name="limits">الحدود</string>
+    <string name="schedules">الجداول الزمنية</string>
+    <string name="time_limits_today">الحدود الزمنية لهذا اليوم</string>
+    <string name="stats">الإحصائيات</string>
+    <string name="total_focus">التركيز الكلي</string>
+    <string name="time_saved">الوقت الموفر</string>
+    <string name="start_focus">ابدأ</string>
+    <string name="app_blocked">%1$s محظور</string>
+    <string name="limit_reached">لقد وصلت إلى الحد اليومي البالغ %1$d دقيقة.</string>
+    <string name="wait_and_breathe">انتظر وتنفس</string>
+    <string name="earn_more_time">اكسب المزيد من الوقت</string>
+    <string name="emergency_unlock">فتح طارئ</string>
+    <string name="take_a_deep_breath">خذ نفسا عميقا.</string>
+    <string name="challenge_instructions">اكتب النص أعلاه لفتح 5 دقائق إضافية.</string>
+    <string name="statistics">الإحصائيات</string>
+    <string name="most_distracting">الأكثر تشتيتا</string>
+    <string name="insufficient_data">بيانات غير كافية للتحديد.</string>
+    <string name="this_week">هذا الأسبوع</string>
+    <string name="total_usage">إجمالي الاستخدام: %1$dس %2$dد.</string>
+    <string name="unknown_app">تطبيق غير معروف</string>
+</resources>

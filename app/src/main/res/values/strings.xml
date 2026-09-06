@@ -1,4 +1,33 @@
 <resources>
     <string name="app_name">FocusLock</string>
     <string name="accessibility_service_description">Used by FocusLock to detect when distracting apps are opened so they can be blocked.</string>
+    
+    <!-- Home / Dashboard -->
+    <string name="level_xp">Level %1$d • %2$d XP to next</string>
+    <string name="limits">Limits</string>
+    <string name="schedules">Schedules</string>
+    <string name="time_limits_today">Time limits for today</string>
+    <string name="stats">Stats</string>
+    <string name="total_focus">Total Focus</string>
+    <string name="time_saved">Time Saved</string>
+    <string name="start_focus">Start Focus</string>
+    
+    <!-- Block Screen -->
+    <string name="app_blocked">%1$s is Blocked</string>
+    <string name="limit_reached">You\'ve reached your daily limit of %1$d minutes.</string>
+    <string name="wait_and_breathe">Wait &amp; Breathe</string>
+    <string name="earn_more_time">Earn More Time</string>
+    <string name="emergency_unlock">Emergency Unlock</string>
+    <string name="take_a_deep_breath">Take a deep breath.</string>
+    <string name="challenge_instructions">Type the text above to unlock 5 extra minutes.</string>
+    
+    <!-- Stats -->
+    <string name="statistics">Statistics</string>
+    <string name="most_distracting">Most Distracting</string>
+    <string name="insufficient_data">Insufficient data to determine.</string>
+    <string name="this_week">THIS WEEK</string>
+    <string name="total_usage">Total usage: %1$dh %2$dm.</string>
+    
+    <!-- General -->
+    <string name="unknown_app">Unknown App</string>
 </resources>

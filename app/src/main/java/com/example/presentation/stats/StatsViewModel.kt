@@ -10,26 +10,59 @@ import com.example.data.AppRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 
 class StatsViewModel(
     application: Application,
     private val repository: AppRepository
 ) : AndroidViewModel(application) {
 
-    // Mock data for the chart
-    private val _weeklyUsage = MutableStateFlow(
-        listOf(
-            DailyStat("Mon", 120),
-            DailyStat("Tue", 100),
-            DailyStat("Wed", 130),
-            DailyStat("Thu", 80),
-            DailyStat("Fri", 110),
-            DailyStat("Sat", 120),
-            DailyStat("Sun", 90)
-        )
+    val weeklyUsage = repository.getAllUsage().map { usages ->
+        val format = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val dayFormat = SimpleDateFormat("EEE", Locale.getDefault())
+        
+        val last7Days = (6 downTo 0).map { i ->
+            val cal = Calendar.getInstance()
+            cal.add(Calendar.DAY_OF_YEAR, -i)
+            val dateStr = format.format(cal.time)
+            val dayName = dayFormat.format(cal.time)
+            
+            val totalMinutes = usages.filter { it.dateString == dateStr }.sumOf { it.usedMinutes }
+            DailyStat(dayName, totalMinutes)
+        }
+        last7Days
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
     )
-    val weeklyUsage = _weeklyUsage.asStateFlow()
+
+    val mostDistracting = repository.getAllUsage().map { usages ->
+        val appUsageMap = usages.groupBy { it.packageName }
+            .mapValues { entry -> entry.value.sumOf { it.usedMinutes } }
+        
+        val maxEntry = appUsageMap.maxByOrNull { it.value }
+        if (maxEntry != null && maxEntry.value > 0) {
+            val appInfo = try {
+                val packageManager = application.packageManager
+                val info = packageManager.getApplicationInfo(maxEntry.key, 0)
+                packageManager.getApplicationLabel(info).toString()
+            } catch (e: Exception) {
+                maxEntry.key
+            }
+            Pair(appInfo, maxEntry.value)
+        } else {
+            null
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = null
+    )
 
     class Factory(private val application: Application) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {

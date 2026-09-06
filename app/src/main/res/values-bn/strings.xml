@@ -1,0 +1,25 @@
+<resources>
+    <string name="app_name">FocusLock</string>
+    <string name="accessibility_service_description">ফোকাসলক দ্বারা ব্যবহৃত হয় যখন বিভ্রান্তিকর অ্যাপগুলি খোলা হয় তা সনাক্ত করতে যাতে সেগুলি ব্লক করা যায়।</string>
+    <string name="level_xp">স্তর %1$d • পরবর্তী স্তরের জন্য %2$d XP</string>
+    <string name="limits">সীমা</string>
+    <string name="schedules">সময়সূচী</string>
+    <string name="time_limits_today">আজকের জন্য সময় সীমা</string>
+    <string name="stats">পরিসংখ্যান</string>
+    <string name="total_focus">মোট ফোকাস</string>
+    <string name="time_saved">বাঁচানো সময়</string>
+    <string name="start_focus">শুরু করুন</string>
+    <string name="app_blocked">%1$s ব্লক করা হয়েছে</string>
+    <string name="limit_reached">আপনি আপনার দৈনিক %1$d মিনিটের সীমায় পৌঁছেছেন।</string>
+    <string name="wait_and_breathe">অপেক্ষা করুন এবং শ্বাস নিন</string>
+    <string name="earn_more_time">আরও সময় উপার্জন করুন</string>
+    <string name="emergency_unlock">জরুরী আনলক</string>
+    <string name="take_a_deep_breath">একটি গভীর শ্বাস নিন।</string>
+    <string name="challenge_instructions">অতিরিক্ত ৫ মিনিট আনলক করতে উপরের লেখাটি টাইপ করুন।</string>
+    <string name="statistics">পরিসংখ্যান</string>
+    <string name="most_distracting">সবচেয়ে বেশি বিভ্রান্তিকর</string>
+    <string name="insufficient_data">নির্ধারণ করার জন্য অপর্যাপ্ত ডেটা।</string>
+    <string name="this_week">এই সপ্তাহে</string>
+    <string name="total_usage">মোট ব্যবহার: %1$dঘন্টা %2$dমিনিট।</string>
+    <string name="unknown_app">অজানা অ্যাপ</string>
+</resources>
