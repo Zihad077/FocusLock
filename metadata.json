@@ -1,0 +1,6 @@
+{
+  "name": "FocusLock",
+  "description": "A premium productivity and digital-wellbeing app to control distracting apps.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

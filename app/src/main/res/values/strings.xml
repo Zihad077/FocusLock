@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">FocusLock</string>
+    <string name="accessibility_service_description">Used by FocusLock to detect when distracting apps are opened so they can be blocked.</string>
+</resources>
