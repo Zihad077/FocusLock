@@ -9,11 +9,15 @@ import android.os.Looper
 import android.provider.Settings
 import android.util.Log
 import android.view.Gravity
+import android.view.KeyEvent
+import android.view.ViewGroup
 import android.view.WindowManager
+import android.widget.FrameLayout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -40,6 +44,11 @@ import kotlinx.coroutines.launch
 /**
  * Manages the floating WindowManager system overlay view that directly blocks apps
  * right above any screen when SYSTEM_ALERT_WINDOW permission is granted.
+ *
+ * Implements anti-bypass protections:
+ * - Back button intercepts on custom root FrameLayout and redirects to Home launcher rather than dismissing to the blocked app.
+ * - Touches cannot bleed through to underlying apps.
+ * - Thread-safe Main-Looper singleton initialization to prevent LifecycleRegistry crashes.
  */
 class BlockOverlayManager private constructor(private val context: Context) : LifecycleOwner, SavedStateRegistryOwner {
 
@@ -50,19 +59,52 @@ class BlockOverlayManager private constructor(private val context: Context) : Li
         private var instance: BlockOverlayManager? = null
 
         fun getInstance(context: Context): BlockOverlayManager {
-            return instance ?: synchronized(this) {
-                instance ?: BlockOverlayManager(context.applicationContext).also { instance = it }
+            val existing = instance
+            if (existing != null) return existing
+
+            return synchronized(this) {
+                instance ?: run {
+                    if (Looper.myLooper() == Looper.getMainLooper()) {
+                        BlockOverlayManager(context.applicationContext).also { instance = it }
+                    } else {
+                        // Safely initialize on Main thread
+                        var created: BlockOverlayManager? = null
+                        val latch = java.util.concurrent.CountDownLatch(1)
+                        Handler(Looper.getMainLooper()).post {
+                            try {
+                                if (instance == null) {
+                                    instance = BlockOverlayManager(context.applicationContext)
+                                }
+                                created = instance
+                            } finally {
+                                latch.countDown()
+                            }
+                        }
+                        try {
+                            latch.await(2, java.util.concurrent.TimeUnit.SECONDS)
+                        } catch (e: InterruptedException) {
+                            Log.e(TAG, "Interrupted while waiting for BlockOverlayManager initialization", e)
+                        }
+                        created ?: instance ?: BlockOverlayManager(context.applicationContext).also { instance = it }
+                    }
+                }
             }
         }
     }
 
     private val windowManager: WindowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-    private var overlayView: ComposeView? = null
+    private var rootOverlayLayout: FrameLayout? = null
     private var isOverlayShowing = false
 
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val savedStateRegistryController = SavedStateRegistryController.create(this)
     private val mainHandler = Handler(Looper.getMainLooper())
+
+    private val appNameState = mutableStateOf("Distracting App")
+    private val packageNameState = mutableStateOf("")
+    private val usedMinutesState = mutableIntStateOf(0)
+    private val limitMinutesState = mutableIntStateOf(0)
+    private val emergencyRemainingState = mutableIntStateOf(1)
 
     override val lifecycle: Lifecycle
         get() = lifecycleRegistry
@@ -71,8 +113,16 @@ class BlockOverlayManager private constructor(private val context: Context) : Li
         get() = savedStateRegistryController.savedStateRegistry
 
     init {
-        savedStateRegistryController.performRestore(null)
-        lifecycleRegistry.currentState = Lifecycle.State.CREATED
+        // Safe lifecycle attachment on main thread
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            savedStateRegistryController.performRestore(null)
+            lifecycleRegistry.currentState = Lifecycle.State.CREATED
+        } else {
+            mainHandler.post {
+                savedStateRegistryController.performRestore(null)
+                lifecycleRegistry.currentState = Lifecycle.State.CREATED
+            }
+        }
     }
 
     fun isShowing(): Boolean = isOverlayShowing
@@ -86,11 +136,27 @@ class BlockOverlayManager private constructor(private val context: Context) : Li
             return
         }
 
+        // Fetch remaining emergency unlocks
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val app = context.applicationContext as FocusLockApplication
+                val settings = app.repository.userSettings.first()
+                mainHandler.post {
+                    emergencyRemainingState.intValue = settings.emergencyUnlocksRemaining
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error fetching settings for overlay: ${e.message}")
+            }
+        }
+
         mainHandler.post {
             try {
-                if (isOverlayShowing && overlayView != null) {
-                    // Update content on existing overlay
-                    updateOverlayContent(appName, packageName, usedMinutes, limitMinutes)
+                appNameState.value = appName
+                packageNameState.value = packageName
+                usedMinutesState.intValue = usedMinutes
+                limitMinutesState.intValue = limitMinutes
+
+                if (isOverlayShowing && rootOverlayLayout != null) {
                     return@post
                 }
 
@@ -101,44 +167,74 @@ class BlockOverlayManager private constructor(private val context: Context) : Li
                     WindowManager.LayoutParams.TYPE_PHONE
                 }
 
+                // Anti-bypass window flags:
+                // - Covers the full screen
+                // - Hardware accelerated
+                // - Receives focus so back key and touch cannot bypass to underlying app
                 val params = WindowManager.LayoutParams(
                     WindowManager.LayoutParams.MATCH_PARENT,
                     WindowManager.LayoutParams.MATCH_PARENT,
                     layoutType,
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                            WindowManager.LayoutParams.FLAG_FULLSCREEN or
+                            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
                             WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
                     PixelFormat.TRANSLUCENT
                 ).apply {
                     gravity = Gravity.CENTER
                 }
 
-                val composeView = ComposeView(context).apply {
+                // Custom FrameLayout that intercepts hardware BACK key events
+                val rootLayout = object : FrameLayout(context) {
+                    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+                        if (event.keyCode == KeyEvent.KEYCODE_BACK && event.action == KeyEvent.ACTION_UP) {
+                            // Intercept back key: never allow back to dismiss the lock overlay back to the restricted app!
+                            exitToHome()
+                            return true
+                        }
+                        return super.dispatchKeyEvent(event)
+                    }
+                }.apply {
                     setViewTreeLifecycleOwner(this@BlockOverlayManager)
                     setViewTreeSavedStateRegistryOwner(this@BlockOverlayManager)
                 }
 
-                overlayView = composeView
-                updateOverlayContent(appName, packageName, usedMinutes, limitMinutes)
+                val composeView = ComposeView(context).apply {
+                    layoutParams = ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                    setViewTreeLifecycleOwner(this@BlockOverlayManager)
+                    setViewTreeSavedStateRegistryOwner(this@BlockOverlayManager)
+                }
 
-                windowManager.addView(composeView, params)
+                setupOverlayContent(composeView)
+                rootLayout.addView(composeView)
+
+                rootOverlayLayout = rootLayout
+                windowManager.addView(rootLayout, params)
                 isOverlayShowing = true
                 lifecycleRegistry.currentState = Lifecycle.State.RESUMED
-                Log.d(TAG, "System overlay successfully displayed for $appName ($packageName)")
+                Log.d(TAG, "System anti-bypass overlay successfully displayed for $appName ($packageName)")
             } catch (e: Exception) {
                 Log.e(TAG, "Error displaying system overlay: ${e.message}", e)
             }
         }
     }
 
-    private fun updateOverlayContent(appName: String, packageName: String, usedMinutes: Int, limitMinutes: Int) {
-        overlayView?.setContent {
+    private fun setupOverlayContent(view: ComposeView) {
+        view.setContent {
             FocusLockTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
                     var showChallenge by remember { mutableStateOf(false) }
+
+                    val currentAppName by appNameState
+                    val currentPackage by packageNameState
+                    val currentUsed by usedMinutesState
+                    val currentLimit by limitMinutesState
+                    val currentEmergencyRemaining by emergencyRemainingState
 
                     if (showChallenge) {
                         ChallengeScreen(
@@ -159,7 +255,7 @@ class BlockOverlayManager private constructor(private val context: Context) : Li
                                         repo.updateSettings(settings.copy(xp = newXp, level = newLevel))
                                         repo.insertTemporaryUnlock(
                                             TemporaryUnlock(
-                                                packageName = packageName,
+                                                packageName = currentPackage,
                                                 type = "CHALLENGE",
                                                 startTime = System.currentTimeMillis(),
                                                 durationMinutes = 5
@@ -172,15 +268,18 @@ class BlockOverlayManager private constructor(private val context: Context) : Li
                                 hideOverlay()
                             },
                             onCancel = {
+                                // Returning from challenge goes back to lock screen, NEVER to the blocked app
                                 showChallenge = false
                             }
                         )
                     } else {
                         BlockScreen(
-                            appName = appName,
-                            usedMinutes = usedMinutes,
-                            limitMinutes = limitMinutes,
+                            appName = currentAppName,
+                            usedMinutes = currentUsed,
+                            limitMinutes = currentLimit,
+                            emergencyRemaining = currentEmergencyRemaining,
                             onWaitClick = {
+                                // Explicit user action: close to launcher
                                 exitToHome()
                                 hideOverlay()
                             },
@@ -188,29 +287,31 @@ class BlockOverlayManager private constructor(private val context: Context) : Li
                                 showChallenge = true
                             },
                             onEmergencyUnlockClick = {
-                                CoroutineScope(Dispatchers.IO).launch {
-                                    try {
-                                        val app = context.applicationContext as FocusLockApplication
-                                        val repo = app.repository
-                                        val settings = repo.userSettings.first()
-                                        if (settings.emergencyUnlocksRemaining > 0) {
-                                            repo.updateSettings(
-                                                settings.copy(emergencyUnlocksRemaining = settings.emergencyUnlocksRemaining - 1)
-                                            )
-                                            repo.insertTemporaryUnlock(
-                                                TemporaryUnlock(
-                                                    packageName = packageName,
-                                                    type = "EMERGENCY",
-                                                    startTime = System.currentTimeMillis(),
-                                                    durationMinutes = 5
+                                if (currentEmergencyRemaining > 0) {
+                                    CoroutineScope(Dispatchers.IO).launch {
+                                        try {
+                                            val app = context.applicationContext as FocusLockApplication
+                                            val repo = app.repository
+                                            val settings = repo.userSettings.first()
+                                            if (settings.emergencyUnlocksRemaining > 0) {
+                                                repo.updateSettings(
+                                                    settings.copy(emergencyUnlocksRemaining = settings.emergencyUnlocksRemaining - 1)
                                                 )
-                                            )
+                                                repo.insertTemporaryUnlock(
+                                                    TemporaryUnlock(
+                                                        packageName = currentPackage,
+                                                        type = "EMERGENCY",
+                                                        startTime = System.currentTimeMillis(),
+                                                        durationMinutes = 5
+                                                    )
+                                                )
+                                            }
+                                        } catch (e: Exception) {
+                                            Log.e(TAG, "Error saving emergency unlock: ${e.message}")
                                         }
-                                    } catch (e: Exception) {
-                                        Log.e(TAG, "Error saving emergency unlock: ${e.message}")
                                     }
+                                    hideOverlay()
                                 }
-                                hideOverlay()
                             }
                         )
                     }
@@ -223,7 +324,7 @@ class BlockOverlayManager private constructor(private val context: Context) : Li
         try {
             val homeIntent = Intent(Intent.ACTION_MAIN).apply {
                 addCategory(Intent.CATEGORY_HOME)
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
             context.startActivity(homeIntent)
         } catch (e: Exception) {
@@ -234,9 +335,9 @@ class BlockOverlayManager private constructor(private val context: Context) : Li
     fun hideOverlay() {
         mainHandler.post {
             try {
-                if (isOverlayShowing && overlayView != null) {
-                    windowManager.removeView(overlayView)
-                    overlayView = null
+                if (isOverlayShowing && rootOverlayLayout != null) {
+                    windowManager.removeView(rootOverlayLayout)
+                    rootOverlayLayout = null
                     isOverlayShowing = false
                     lifecycleRegistry.currentState = Lifecycle.State.CREATED
                     Log.d(TAG, "System overlay dismissed successfully")

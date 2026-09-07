@@ -29,6 +29,7 @@ class BlockActivity : ComponentActivity() {
     private var packageNameState = mutableStateOf<String?>(null)
     private var usedMinutesState = mutableIntStateOf(0)
     private var limitMinutesState = mutableIntStateOf(0)
+    private var emergencyRemainingState = mutableIntStateOf(1)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,6 +56,16 @@ class BlockActivity : ComponentActivity() {
 
         extractIntentData(intent)
 
+        lifecycleScope.launch {
+            try {
+                val repo = (application as FocusLockApplication).repository
+                val settings = repo.userSettings.first()
+                emergencyRemainingState.intValue = settings.emergencyUnlocksRemaining
+            } catch (e: Exception) {
+                // Ignore
+            }
+        }
+
         setContent {
             var showChallenge by remember { mutableStateOf(false) }
 
@@ -62,6 +73,7 @@ class BlockActivity : ComponentActivity() {
             val packageName by packageNameState
             val usedMinutes by usedMinutesState
             val limitMinutes by limitMinutesState
+            val emergencyRemaining by emergencyRemainingState
 
             FocusLockTheme {
                 Surface(
@@ -104,6 +116,7 @@ class BlockActivity : ComponentActivity() {
                             appName = appName,
                             usedMinutes = usedMinutes,
                             limitMinutes = limitMinutes,
+                            emergencyRemaining = emergencyRemaining,
                             onWaitClick = {
                                 exitToHome()
                             },

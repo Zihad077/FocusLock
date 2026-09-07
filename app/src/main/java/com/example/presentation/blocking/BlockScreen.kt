@@ -18,6 +18,7 @@ fun BlockScreen(
     appName: String,
     usedMinutes: Int,
     limitMinutes: Int,
+    emergencyRemaining: Int = 1,
     onWaitClick: () -> Unit,
     onChallengeClick: () -> Unit,
     onEmergencyUnlockClick: () -> Unit
@@ -46,35 +47,34 @@ fun BlockScreen(
             color = MaterialTheme.colorScheme.onBackground
         )
         
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
         
         Text(
             text = if (limitMinutes == 0) {
-                "\"$appName\" is blocked to protect your deep focus."
+                "\"$appName\" is permanently restricted by your rules. Stay focused on what matters!"
             } else {
-                "You've reached your daily limit for $appName."
+                "You've reached your daily limit for $appName. Take a step back and breathe."
             },
             style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f),
-            textAlign = TextAlign.Center
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 16.dp)
         )
         
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(24.dp))
         
-        Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            shape = RoundedCornerShape(16.dp)
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            shape = RoundedCornerShape(12.dp)
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = if (limitMinutes == 0) "Enforcement Status:" else "Used today:",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    text = "Usage Today",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
@@ -119,12 +119,16 @@ fun BlockScreen(
             
             OutlinedButton(
                 onClick = onEmergencyUnlockClick,
+                enabled = emergencyRemaining > 0,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
                 shape = RoundedCornerShape(16.dp)
             ) {
-                Text("Emergency Unlock", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+                Text(
+                    text = if (emergencyRemaining > 0) "Emergency Unlock ($emergencyRemaining left)" else "No Emergency Unlocks Left",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
             }
         }
         
