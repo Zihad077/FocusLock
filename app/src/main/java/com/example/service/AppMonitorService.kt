@@ -22,7 +22,7 @@ import kotlinx.coroutines.flow.first
 import java.util.Calendar
 
 /**
- * Service to actively monitor and restrict access to distracting applications
+ * Foreground Service to continuously monitor and restrict access to distracting applications
  * identified in the user-configurable blocklist.
  */
 class AppMonitorService : Service() {
@@ -66,6 +66,8 @@ class AppMonitorService : Service() {
         UsageTracker(applicationContext, appRepository)
     }
 
+    private var currentForegroundPackage: String? = null
+    private var sessionStartTime: Long = 0L
     private var lastBlockedPackage: String? = null
     private var lastBlockTimestamp: Long = 0L
 
@@ -74,7 +76,7 @@ class AppMonitorService : Service() {
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, buildNotification())
         startMonitoringLoop()
-        Log.d(TAG, "AppMonitorService created and monitoring started")
+        Log.d(TAG, "AppMonitorService active and monitoring")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -108,8 +110,8 @@ class AppMonitorService : Service() {
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_lock_idle_lock)
-            .setContentTitle("FocusLock Monitor Active")
-            .setContentText("Actively monitoring and enforcing blocklist limits")
+            .setContentTitle("FocusLock Protection Active")
+            .setContentText("Actively monitoring and enforcing your blocklist limits")
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
@@ -121,46 +123,67 @@ class AppMonitorService : Service() {
             val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
             while (isActive) {
                 try {
-                    val foregroundPackage = getForegroundPackage(usageStatsManager)
-                    if (foregroundPackage != null && foregroundPackage != packageName) {
-                        checkAppRestriction(foregroundPackage)
+                    val foregroundPackage = detectForegroundPackage(usageStatsManager)
+                    if (foregroundPackage != null && 
+                        foregroundPackage != packageName && 
+                        foregroundPackage != "com.android.systemui" &&
+                        !foregroundPackage.contains("inputmethod")) {
+                        
+                        if (currentForegroundPackage != foregroundPackage) {
+                            currentForegroundPackage = foregroundPackage
+                            sessionStartTime = System.currentTimeMillis()
+                        }
+                        
+                        val sessionElapsed = System.currentTimeMillis() - sessionStartTime
+                        checkAppRestriction(foregroundPackage, sessionElapsed)
+                    } else if (foregroundPackage == packageName) {
+                        currentForegroundPackage = packageName
+                    } else if (foregroundPackage == null || foregroundPackage.contains("launcher") || foregroundPackage.contains("home")) {
+                        currentForegroundPackage = null
+                        BlockOverlayManager.getInstance(applicationContext).hideOverlay()
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Error during app monitor polling", e)
                 }
-                delay(1500) // Poll every 1.5 seconds
+                delay(800) // Poll every 800ms for snappy response
             }
         }
     }
 
-    private fun getForegroundPackage(usageStatsManager: UsageStatsManager?): String? {
+    private fun detectForegroundPackage(usageStatsManager: UsageStatsManager?): String? {
         if (usageStatsManager == null) return null
         val now = System.currentTimeMillis()
-        val events = usageStatsManager.queryEvents(now - 10000, now)
+        
+        // Check UsageEvents for recent activity lifecycle transitions
+        val events = usageStatsManager.queryEvents(now - 30000, now)
         val event = UsageEvents.Event()
-        var topPackage: String? = null
+        var latestPackage: String? = null
+        var latestTimestamp = 0L
+
         while (events.hasNextEvent()) {
             events.getNextEvent(event)
-            if (event.eventType == UsageEvents.Event.ACTIVITY_RESUMED ||
-                event.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND) {
-                topPackage = event.packageName
+            if ((event.eventType == UsageEvents.Event.ACTIVITY_RESUMED ||
+                 event.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND) &&
+                 event.timeStamp >= latestTimestamp) {
+                latestPackage = event.packageName
+                latestTimestamp = event.timeStamp
             }
         }
-        if (topPackage != null) return topPackage
+        if (latestPackage != null) return latestPackage
 
         // Fallback using queryUsageStats
-        val stats = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, now - 10000, now)
+        val stats = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, now - 30000, now)
         return stats?.maxByOrNull { it.lastTimeUsed }?.packageName
     }
 
-    private suspend fun checkAppRestriction(packageName: String) {
+    private suspend fun checkAppRestriction(packageName: String, sessionElapsedMillis: Long) {
         val limit = appRepository.getLimit(packageName) ?: return
         if (!limit.isEnabled) return
 
         val now = System.currentTimeMillis()
 
-        // Debounce if already blocked in the last 3 seconds
-        if (lastBlockedPackage == packageName && (now - lastBlockTimestamp) < 3000) {
+        // Debounce if blocked very recently to avoid looping
+        if (lastBlockedPackage == packageName && (now - lastBlockTimestamp) < 2500) {
             return
         }
 
@@ -209,12 +232,18 @@ class AppMonitorService : Service() {
         }
 
         // 3. Daily Limit restriction
-        val usedMillis = usageTracker.updateUsageForPackage(packageName)
-        val usedMinutes = (usedMillis / (1000 * 60)).toInt()
+        // 0 minutes means "Always Blocked"
+        if (limit.dailyLimitMinutes == 0) {
+            triggerBlock(limit.appName, packageName, 0, 0)
+            return
+        }
 
-        if (usedMinutes >= limit.dailyLimitMinutes) {
-            Log.d(TAG, "Distracting app $packageName exceeded daily limit ($usedMinutes / ${limit.dailyLimitMinutes} min). Restricting.")
-            triggerBlock(limit.appName, packageName, usedMinutes, limit.dailyLimitMinutes)
+        val baseUsedMillis = usageTracker.updateUsageForPackage(packageName)
+        val totalUsedMinutes = ((baseUsedMillis + sessionElapsedMillis) / (1000 * 60)).toInt()
+
+        if (totalUsedMinutes >= limit.dailyLimitMinutes) {
+            Log.d(TAG, "App $packageName exceeded limit ($totalUsedMinutes / ${limit.dailyLimitMinutes} min). Restricting.")
+            triggerBlock(limit.appName, packageName, totalUsedMinutes, limit.dailyLimitMinutes)
         }
     }
 
@@ -222,14 +251,40 @@ class AppMonitorService : Service() {
         lastBlockedPackage = packageName
         lastBlockTimestamp = System.currentTimeMillis()
 
+        Log.d(TAG, "Triggering block for $appName ($packageName)")
+
+        // 1. Show immediate system window overlay directly over the restricted app
+        try {
+            BlockOverlayManager.getInstance(applicationContext)
+                .showOverlay(appName, packageName, usedMinutes, limitMinutes)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to display block overlay: ${e.message}")
+        }
+
+        // 2. Launch BlockActivity directly over the distracting app
         val intent = Intent(this, BlockActivity::class.java).apply {
             putExtra("APP_NAME", appName)
             putExtra("PACKAGE_NAME", packageName)
             putExtra("USED_MINUTES", usedMinutes)
             putExtra("LIMIT_MINUTES", limitMinutes)
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP or 
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                    Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
         }
-        startActivity(intent)
+        try {
+            startActivity(intent)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to launch BlockActivity: ${e.message}")
+        }
+
+        // 3. Post full-screen alarm notification
+        try {
+            val notificationHelper = NotificationHelper(applicationContext)
+            notificationHelper.showBlockFullScreenNotification(appName, packageName, usedMinutes, limitMinutes)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to post block notification: ${e.message}")
+        }
     }
 
     override fun onDestroy() {

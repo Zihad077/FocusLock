@@ -29,25 +29,60 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.database.UserSettings
 import com.example.presentation.home.StatsSummary
 
+import android.content.Intent
+import android.provider.Settings
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.WarningAmber
+import com.example.util.PermissionHelper
+
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel = viewModel(
         factory = HomeViewModel.Factory(LocalContext.current.applicationContext as Application)
     )
 ) {
+    val context = LocalContext.current
     val settings by viewModel.userSettings.collectAsStateWithLifecycle()
     val limits by viewModel.limitsWithUsage.collectAsStateWithLifecycle()
     val stats by viewModel.statsSummary.collectAsStateWithLifecycle()
+
+    val isAccessibilityActive = remember(context) {
+        PermissionHelper.hasAccessibilityPermission(context)
+    }
+    val isOverlayActive = remember(context) {
+        PermissionHelper.hasOverlayPermission(context)
+    }
 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         item {
             HeaderSection()
+        }
+
+        item {
+            ProtectionStatusBanner(
+                isAccessibilityActive = isAccessibilityActive,
+                isOverlayActive = isOverlayActive,
+                onEnableAccessibility = {
+                    try {
+                        context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                    } catch (e: Exception) {
+                        context.startActivity(Intent(Settings.ACTION_SETTINGS))
+                    }
+                },
+                onEnableOverlay = {
+                    val intent = Intent(
+                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        android.net.Uri.parse("package:${context.packageName}")
+                    )
+                    context.startActivity(intent)
+                }
+            )
         }
         
         item {
@@ -387,3 +422,76 @@ private fun AppLimitCard(limit: AppLimitUIModel) {
         }
     }
 }
+
+@Composable
+fun ProtectionStatusBanner(
+    isAccessibilityActive: Boolean,
+    isOverlayActive: Boolean,
+    onEnableAccessibility: () -> Unit,
+    onEnableOverlay: () -> Unit
+) {
+    val isFullyActive = isAccessibilityActive && isOverlayActive
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isFullyActive) {
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+            } else {
+                MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f)
+            }
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = if (isFullyActive) Icons.Default.Shield else Icons.Default.WarningAmber,
+                contentDescription = null,
+                tint = if (isFullyActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(32.dp)
+            )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = if (isFullyActive) "App Blocker Active" else "App Blocker Inactive",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = if (isFullyActive) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = if (isFullyActive) {
+                        "Accessibility service & monitor are running. Blocked apps will be restricted."
+                    } else if (!isAccessibilityActive) {
+                        "Accessibility permission is required to detect and block restricted apps."
+                    } else {
+                        "Overlay permission is required to display the mindful blocking screen."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            if (!isFullyActive) {
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(
+                    onClick = {
+                        if (!isAccessibilityActive) onEnableAccessibility()
+                        else onEnableOverlay()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Text("Fix Now", style = MaterialTheme.typography.labelMedium)
+                }
+            }
+        }
+    }
+}
+

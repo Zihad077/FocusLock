@@ -41,7 +41,7 @@ fun BlockScreen(
         Spacer(modifier = Modifier.height(24.dp))
         
         Text(
-            text = "TIME'S UP",
+            text = if (limitMinutes == 0) "APP RESTRICTED" else "TIME'S UP",
             style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
             color = MaterialTheme.colorScheme.onBackground
         )
@@ -49,9 +49,13 @@ fun BlockScreen(
         Spacer(modifier = Modifier.height(16.dp))
         
         Text(
-            text = "You've reached your limit for $appName.",
+            text = if (limitMinutes == 0) {
+                "\"$appName\" is blocked to protect your deep focus."
+            } else {
+                "You've reached your daily limit for $appName."
+            },
             style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f),
             textAlign = TextAlign.Center
         )
         
@@ -62,18 +66,21 @@ fun BlockScreen(
             shape = RoundedCornerShape(16.dp)
         ) {
             Column(
-                modifier = Modifier.padding(16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Used today:",
+                    text = if (limitMinutes == 0) "Enforcement Status:" else "Used today:",
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                 )
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "$usedMinutes / $limitMinutes min",
+                    text = if (limitMinutes == 0) "Strict Block (0m limit)" else "$usedMinutes / $limitMinutes min",
                     style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (limitMinutes == 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -94,7 +101,7 @@ fun BlockScreen(
                     containerColor = MaterialTheme.colorScheme.primary
                 )
             ) {
-                Text("Wait Until Reset", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+                Text("Return to Home", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
             }
             
             Button(

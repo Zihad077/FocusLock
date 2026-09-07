@@ -1,6 +1,9 @@
 package com.example.presentation.apps
 
 import android.app.Application
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -21,8 +24,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.presentation.blocking.BlockActivity
+import com.example.service.BlockOverlayManager
+import com.example.util.PermissionHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,6 +40,23 @@ fun AppsScreen(
         factory = AppsViewModel.Factory(LocalContext.current.applicationContext as Application)
     )
 ) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    var hasAccessibility by remember { mutableStateOf(PermissionHelper.hasAccessibilityPermission(context)) }
+    var hasOverlay by remember { mutableStateOf(PermissionHelper.hasOverlayPermission(context)) }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                hasAccessibility = PermissionHelper.hasAccessibilityPermission(context)
+                hasOverlay = PermissionHelper.hasOverlayPermission(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     val appsList by viewModel.appsList.collectAsStateWithLifecycle()
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf("ALL") } // ALL, RESTRICTED, HIGH_IMPACT
@@ -63,6 +89,29 @@ fun AppsScreen(
                         style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
                     )
                 },
+                actions = {
+                    TextButton(
+                        onClick = {
+                            if (hasOverlay) {
+                                BlockOverlayManager.getInstance(context.applicationContext)
+                                    .showOverlay("Sample Distracting App", "com.example.sample", 45, 30)
+                            } else {
+                                val testIntent = Intent(context, BlockActivity::class.java).apply {
+                                    putExtra("APP_NAME", "Sample Distracting App")
+                                    putExtra("PACKAGE_NAME", "com.example.sample")
+                                    putExtra("USED_MINUTES", 45)
+                                    putExtra("LIMIT_MINUTES", 30)
+                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                                }
+                                context.startActivity(testIntent)
+                            }
+                        }
+                    ) {
+                        Icon(Icons.Default.Visibility, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Test Screen", style = MaterialTheme.typography.labelSmall)
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
                     titleContentColor = MaterialTheme.colorScheme.onBackground
@@ -78,6 +127,68 @@ fun AppsScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            if (!hasAccessibility || !hasOverlay) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Warning,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Blocking Inactive",
+                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                                Text(
+                                    text = if (!hasAccessibility) "Enable Accessibility to detect and block apps."
+                                    else "Enable Display Over Other Apps to show the block screen.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Button(
+                                onClick = {
+                                    if (!hasAccessibility) {
+                                        try {
+                                            context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                                        } catch (e: Exception) {
+                                            context.startActivity(Intent(Settings.ACTION_SETTINGS))
+                                        }
+                                    } else {
+                                        val intent = Intent(
+                                            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                            Uri.parse("package:${context.packageName}")
+                                        )
+                                        context.startActivity(intent)
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                modifier = Modifier.height(32.dp)
+                            ) {
+                                Text("Enable", style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                    }
+                }
+            }
             item {
                 Spacer(modifier = Modifier.height(4.dp))
                 
@@ -165,9 +276,9 @@ fun AppsScreen(
                         },
                         onCheckedChange = { isChecked ->
                             if (isChecked) {
-                                if (app.isHighImpact && !app.isLimited) {
-                                    // High-impact app verification before adding to active blocklist
-                                    highImpactAppPending = Pair(app, if (app.dailyLimitMinutes > 0) app.dailyLimitMinutes else 30)
+                                if (!app.isLimited) {
+                                    // Open custom time dialog directly so user can choose limit or Always Block
+                                    appToConfigure = app
                                 } else {
                                     viewModel.toggleLimit(app, true)
                                 }
@@ -389,22 +500,14 @@ fun CustomTimeLimitDialog(
     var minutes by remember { mutableIntStateOf(initialMinutes) }
     var textInput by remember { mutableStateOf(initialMinutes.toString()) }
 
-    val presetOptions = listOf(
-        0 to "Always Block (0m)",
-        15 to "15m",
-        30 to "30m",
-        45 to "45m",
-        60 to "1h",
-        90 to "1.5h",
-        120 to "2h"
-    )
+    val presetMinutes = listOf(15, 30, 45, 60, 90, 120)
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Column {
                 Text(
-                    text = "Custom Time Limit",
+                    text = "Configure App Restriction",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
@@ -418,7 +521,7 @@ fun CustomTimeLimitDialog(
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 if (app.isHighImpact) {
                     Card(
@@ -433,7 +536,7 @@ fun CustomTimeLimitDialog(
                             Icon(Icons.Default.Whatshot, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "High-impact distracting app. Setting a strict daily limit helps reclaim focused time.",
+                                text = "High-impact distracting app. Setting a strict limit or full block helps reclaim your focus.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.error
                             )
@@ -441,45 +544,86 @@ fun CustomTimeLimitDialog(
                     }
                 }
 
+                // Dedicated "Always Block" Card
+                Surface(
+                    onClick = {
+                        minutes = 0
+                        textInput = "0"
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (minutes == 0) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f)
+                            else MaterialTheme.colorScheme.surfaceVariant,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Block,
+                            contentDescription = null,
+                            tint = if (minutes == 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Always Block (0 min)",
+                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                color = if (minutes == 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Blocks app immediately when opened",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        RadioButton(
+                            selected = minutes == 0,
+                            onClick = {
+                                minutes = 0
+                                textInput = "0"
+                            }
+                        )
+                    }
+                }
+
                 Text(
-                    text = "Quick Presets",
+                    text = "Or Set Daily Usage Allowance",
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.SemiBold
                 )
 
-                // Presets Flow / Row
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        presetOptions.take(4).forEach { (presetMin, label) ->
-                            FilterChip(
-                                selected = (minutes == presetMin),
-                                onClick = {
-                                    minutes = presetMin
-                                    textInput = presetMin.toString()
-                                },
-                                label = { Text(label) },
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
+                // Presets
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    presetMinutes.take(3).forEach { presetMin ->
+                        FilterChip(
+                            selected = (minutes == presetMin),
+                            onClick = {
+                                minutes = presetMin
+                                textInput = presetMin.toString()
+                            },
+                            label = { Text("${presetMin}m") },
+                            modifier = Modifier.weight(1f)
+                        )
                     }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        presetOptions.drop(4).forEach { (presetMin, label) ->
-                            FilterChip(
-                                selected = (minutes == presetMin),
-                                onClick = {
-                                    minutes = presetMin
-                                    textInput = presetMin.toString()
-                                },
-                                label = { Text(label) },
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    presetMinutes.drop(3).forEach { presetMin ->
+                        FilterChip(
+                            selected = (minutes == presetMin),
+                            onClick = {
+                                minutes = presetMin
+                                textInput = presetMin.toString()
+                            },
+                            label = { Text(if (presetMin >= 60) "${presetMin / 60}h" else "${presetMin}m") },
+                            modifier = Modifier.weight(1f)
+                        )
                     }
                 }
 
