@@ -28,19 +28,32 @@ class AppsViewModel(
     
     val appsList = combine(
         _installedApps,
-        repository.allLimits
-    ) { installed, limits ->
+        repository.allLimits,
+        repository.allTemporaryUnlocks
+    ) { installed, limits, tempUnlocks ->
         val limitMap = limits.associateBy { it.packageName }
+        val currentMillis = System.currentTimeMillis()
+        val tempUnlockMap = tempUnlocks
+            .filter { it.startTime + (it.durationMinutes * 60 * 1000L) > currentMillis }
+            .associateBy { it.packageName }
+            
         installed.map { app ->
             val limit = limitMap[app.packageName]
             val isHigh = isHighImpactApp(app.packageName, app.appName)
+            val unlock = tempUnlockMap[app.packageName]
             app.copy(
                 isLimited = limit != null && limit.isEnabled,
                 dailyLimitMinutes = limit?.dailyLimitMinutes ?: 0,
-                isHighImpact = isHigh
+                sessionLimitMinutes = limit?.sessionLimitMinutes,
+                isHighImpact = isHigh,
+                activeUnlockMethod = unlock?.type,
+                activeUnlockRemainingMinutes = if (unlock != null) {
+                    ((unlock.startTime + (unlock.durationMinutes * 60 * 1000L) - currentMillis) / (60 * 1000L)).toInt().coerceAtLeast(1)
+                } else null
             )
         }.sortedWith(
-            compareByDescending<AppItem> { it.isLimited }
+            compareByDescending<AppItem> { it.activeUnlockMethod != null }
+                .thenByDescending { it.isLimited }
                 .thenByDescending { it.isHighImpact }
                 .thenBy { it.appName.lowercase() }
         )
@@ -76,14 +89,15 @@ class AppsViewModel(
         }
     }
     
-    fun setCustomLimit(app: AppItem, minutes: Int, isEnabled: Boolean = true) {
+    fun setCustomLimit(app: AppItem, minutes: Int, sessionMinutes: Int? = null, isEnabled: Boolean = true) {
         viewModelScope.launch {
             repository.insertLimit(
                 AppLimit(
                     packageName = app.packageName,
                     appName = app.appName,
                     isEnabled = isEnabled,
-                    dailyLimitMinutes = minutes
+                    dailyLimitMinutes = minutes,
+                    sessionLimitMinutes = sessionMinutes
                 )
             )
         }
@@ -175,5 +189,8 @@ data class AppItem(
     val appName: String,
     val isLimited: Boolean = false,
     val dailyLimitMinutes: Int = 0,
-    val isHighImpact: Boolean = false
+    val sessionLimitMinutes: Int? = null,
+    val isHighImpact: Boolean = false,
+    val activeUnlockMethod: String? = null,
+    val activeUnlockRemainingMinutes: Int? = null
 )

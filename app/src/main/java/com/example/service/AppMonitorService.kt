@@ -66,10 +66,15 @@ class AppMonitorService : Service() {
         UsageTracker(applicationContext, appRepository)
     }
 
+    private val enforcementEngine by lazy {
+        EnforcementEngine(applicationContext, appRepository, usageTracker)
+    }
+
     private var currentForegroundPackage: String? = null
     private var sessionStartTime: Long = 0L
     private var lastBlockedPackage: String? = null
     private var lastBlockTimestamp: Long = 0L
+    private val warnedPackages = mutableSetOf<String>()
 
     override fun onCreate() {
         super.onCreate()
@@ -177,9 +182,6 @@ class AppMonitorService : Service() {
     }
 
     private suspend fun checkAppRestriction(packageName: String, sessionElapsedMillis: Long) {
-        val limit = appRepository.getLimit(packageName) ?: return
-        if (!limit.isEnabled) return
-
         val now = System.currentTimeMillis()
 
         // Debounce if blocked very recently to avoid looping
@@ -187,63 +189,33 @@ class AppMonitorService : Service() {
             return
         }
 
-        // Check Temporary Unlocks
-        val tempUnlocks = appRepository.getTemporaryUnlocks(packageName)
-        val activeUnlock = tempUnlocks.find {
-            it.startTime + (it.durationMinutes * 60 * 1000L) > now
-        }
-        if (activeUnlock != null) {
-            return
-        }
-
-        // Clean up expired unlocks
-        tempUnlocks.filter {
-            it.startTime + (it.durationMinutes * 60 * 1000L) <= now
-        }.forEach {
-            appRepository.deleteTemporaryUnlock(it.id)
-        }
-
-        val settings = appRepository.userSettings.first()
-
-        // 1. Focus Mode restriction
-        if (settings.isFocusModeActive) {
-            triggerBlock(limit.appName, packageName, 0, limit.dailyLimitMinutes)
-            return
-        }
-
-        // 2. Schedule restriction
-        val calendar = Calendar.getInstance()
-        val currentMinuteOfDay = calendar.get(Calendar.HOUR_OF_DAY) * 60 + calendar.get(Calendar.MINUTE)
-        val currentDayOfWeek = calendar.get(Calendar.DAY_OF_WEEK).toString()
-
-        val schedules = appRepository.getSchedulesForApp(packageName).first()
-        for (schedule in schedules) {
-            if (schedule.daysOfWeek.contains(currentDayOfWeek)) {
-                val isWithinSchedule = if (schedule.startTimeMinuteOfDay <= schedule.endTimeMinuteOfDay) {
-                    currentMinuteOfDay in schedule.startTimeMinuteOfDay..schedule.endTimeMinuteOfDay
-                } else {
-                    currentMinuteOfDay >= schedule.startTimeMinuteOfDay || currentMinuteOfDay <= schedule.endTimeMinuteOfDay
-                }
-                if (isWithinSchedule) {
-                    triggerBlock(limit.appName, packageName, 0, limit.dailyLimitMinutes)
-                    return
+        when (val decision = enforcementEngine.evaluate(packageName, sessionElapsedMillis, now)) {
+            is EnforcementDecision.Allow -> {
+                // Check if approaching daily limit (>= 80% used and not yet warned today)
+                val limit = appRepository.getLimit(packageName)
+                if (limit != null && limit.isEnabled && limit.dailyLimitMinutes > 5) {
+                    val usedMillis = usageTracker.updateUsageForPackage(packageName)
+                    val usedMinutes = ((usedMillis + sessionElapsedMillis) / (1000 * 60)).toInt()
+                    val threshold = (limit.dailyLimitMinutes * 0.8).toInt()
+                    if (usedMinutes in threshold until limit.dailyLimitMinutes && !warnedPackages.contains(packageName)) {
+                        warnedPackages.add(packageName)
+                        NotificationHelper(applicationContext).showLimitWarningNotification(
+                            appName = limit.appName,
+                            usedMinutes = usedMinutes,
+                            limitMinutes = limit.dailyLimitMinutes
+                        )
+                    }
                 }
             }
-        }
-
-        // 3. Daily Limit restriction
-        // 0 minutes means "Always Blocked"
-        if (limit.dailyLimitMinutes == 0) {
-            triggerBlock(limit.appName, packageName, 0, 0)
-            return
-        }
-
-        val baseUsedMillis = usageTracker.updateUsageForPackage(packageName)
-        val totalUsedMinutes = ((baseUsedMillis + sessionElapsedMillis) / (1000 * 60)).toInt()
-
-        if (totalUsedMinutes >= limit.dailyLimitMinutes) {
-            Log.d(TAG, "App $packageName exceeded limit ($totalUsedMinutes / ${limit.dailyLimitMinutes} min). Restricting.")
-            triggerBlock(limit.appName, packageName, totalUsedMinutes, limit.dailyLimitMinutes)
+            is EnforcementDecision.Block -> {
+                Log.d(TAG, "EnforcementEngine decision: BLOCK ${decision.packageName} due to ${decision.reason}")
+                triggerBlock(
+                    appName = decision.appName,
+                    packageName = decision.packageName,
+                    usedMinutes = decision.usedMinutes,
+                    limitMinutes = decision.limitMinutes
+                )
+            }
         }
     }
 

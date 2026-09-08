@@ -9,6 +9,7 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.example.MainActivity
+import com.example.R
 
 class NotificationHelper(private val context: Context) {
 
@@ -30,19 +31,19 @@ class NotificationHelper(private val context: Context) {
 
             val generalChannel = NotificationChannel(
                 CHANNEL_ID,
-                "FocusLock Notifications",
+                context.getString(R.string.notification_channel_name),
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
-                description = "Notifications for focus sessions and app limits"
+                description = context.getString(R.string.notification_channel_desc)
             }
             notificationManager.createNotificationChannel(generalChannel)
 
             val blockChannel = NotificationChannel(
                 BLOCK_CHANNEL_ID,
-                "FocusLock Block Alerts",
+                context.getString(R.string.block_channel_name),
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Displays the mindful blocking screen when restricted apps are opened"
+                description = context.getString(R.string.block_channel_desc)
                 setBypassDnd(true)
                 lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
             }
@@ -105,7 +106,7 @@ class NotificationHelper(private val context: Context) {
         )
 
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_dialog_info) // TODO: use real icon
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(title)
             .setContentText(message)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
@@ -115,6 +116,73 @@ class NotificationHelper(private val context: Context) {
         try {
             with(NotificationManagerCompat.from(context)) {
                 notify(NOTIFICATION_ID, builder.build())
+            }
+        } catch (e: SecurityException) {
+            // Permission not granted
+        }
+    }
+
+    fun showLimitWarningNotification(appName: String, usedMinutes: Int, limitMinutes: Int) {
+        val remaining = (limitMinutes - usedMinutes).coerceAtLeast(0)
+        val title = "Approaching Limit: $appName"
+        val message = "You have $remaining min remaining of your $limitMinutes min daily limit."
+
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            appName.hashCode() + 500,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_dialog_alert)
+            .setContentTitle(title)
+            .setContentText(message)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+
+        try {
+            with(NotificationManagerCompat.from(context)) {
+                notify(appName.hashCode() + 500, builder.build())
+            }
+        } catch (e: SecurityException) {
+            // Permission not granted
+        }
+    }
+
+    fun showFocusModeNotification(isActive: Boolean, remainingMinutes: Int? = null) {
+        val title = if (isActive) "Deep Focus Active" else "Deep Focus Complete!"
+        val message = if (isActive) {
+            "FocusLock is actively blocking distractions. ${remainingMinutes ?: ""} minutes remaining."
+        } else {
+            "Great job! Your deep focus session is finished. +50 XP earned."
+        }
+
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            3003,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(if (isActive) android.R.drawable.ic_lock_lock else android.R.drawable.ic_dialog_info)
+            .setContentTitle(title)
+            .setContentText(message)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+
+        try {
+            with(NotificationManagerCompat.from(context)) {
+                notify(3003, builder.build())
             }
         } catch (e: SecurityException) {
             // Permission not granted

@@ -62,10 +62,52 @@ interface FocusDao {
     // Temporary Unlocks
     @Query("SELECT * FROM temporary_unlocks WHERE packageName = :packageName")
     suspend fun getTemporaryUnlocks(packageName: String): List<TemporaryUnlock>
+    
+    @Query("SELECT * FROM temporary_unlocks")
+    fun getAllTemporaryUnlocks(): Flow<List<TemporaryUnlock>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTemporaryUnlock(unlock: TemporaryUnlock)
 
     @Query("DELETE FROM temporary_unlocks WHERE id = :id")
     suspend fun deleteTemporaryUnlock(id: Int)
+
+    // Goals
+    @Query("SELECT * FROM goals")
+    fun getAllGoals(): Flow<List<Goal>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertGoal(goal: Goal)
+
+    @Query("DELETE FROM goals WHERE id = :id")
+    suspend fun deleteGoal(id: Int)
+
+    // Achievements
+    @Query("SELECT * FROM achievements")
+    fun getAllAchievements(): Flow<List<Achievement>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAchievement(achievement: Achievement)
+    
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertAchievements(achievements: List<Achievement>)
+
+    // App Groups
+    @Query("SELECT * FROM app_groups")
+    fun getAllAppGroups(): Flow<List<AppGroup>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAppGroup(group: AppGroup)
+
+    @Query("DELETE FROM app_groups WHERE id = :id")
+    suspend fun deleteAppGroup(id: Int)
+
+    @Query("SELECT * FROM app_group_members WHERE groupId = :groupId")
+    fun getAppGroupMembers(groupId: Int): Flow<List<AppGroupMember>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAppGroupMember(member: AppGroupMember)
+
+    @Query("DELETE FROM app_group_members WHERE id = :id")
+    suspend fun deleteAppGroupMember(id: Int)
 }

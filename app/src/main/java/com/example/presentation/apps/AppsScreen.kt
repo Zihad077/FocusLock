@@ -64,8 +64,8 @@ fun AppsScreen(
     // App being configured in Custom Time Dialog
     var appToConfigure by remember { mutableStateOf<AppItem?>(null) }
     
-    // App pending confirmation before being added to high-impact blocklist
-    var highImpactAppPending by remember { mutableStateOf<Pair<AppItem, Int>?>(null) }
+    // App pending confirmation before being added to high-impact blocklist: (AppItem, dailyMinutes, sessionMinutes?)
+    var highImpactAppPending by remember { mutableStateOf<Triple<AppItem, Int, Int?>?>(null) }
 
     val filteredApps = remember(appsList, searchQuery, selectedFilter) {
         appsList.filter { app ->
@@ -300,13 +300,13 @@ fun AppsScreen(
         CustomTimeLimitDialog(
             app = app,
             onDismiss = { appToConfigure = null },
-            onSaveLimit = { customMinutes ->
+            onSaveLimit = { customMinutes, sessionMinutes ->
                 appToConfigure = null
                 if (app.isHighImpact && !app.isLimited) {
                     // Trigger confirmation dialog for high-impact app before adding
-                    highImpactAppPending = Pair(app, customMinutes)
+                    highImpactAppPending = Triple(app, customMinutes, sessionMinutes)
                 } else {
-                    viewModel.setCustomLimit(app, customMinutes, isEnabled = true)
+                    viewModel.setCustomLimit(app, customMinutes, sessionMinutes, isEnabled = true)
                 }
             },
             onRemoveLimit = {
@@ -318,7 +318,7 @@ fun AppsScreen(
 
     // --- HIGH-IMPACT APP CONFIRMATION DIALOG ---
     if (highImpactAppPending != null) {
-        val (app, minutes) = highImpactAppPending!!
+        val (app, minutes, sessionMinutes) = highImpactAppPending!!
         AlertDialog(
             onDismissRequest = { highImpactAppPending = null },
             icon = {
@@ -343,7 +343,7 @@ fun AppsScreen(
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = "This application has been identified as a high-impact distraction. Once added, access will be restricted according to your custom daily allowance of ${if (minutes == 0) "0 minutes (Always Blocked)" else "$minutes minutes/day"} and active focus schedules.",
+                        text = "This application has been identified as a high-impact distraction. Once added, access will be restricted according to your custom daily allowance of ${if (minutes == 0) "0 minutes (Always Blocked)" else "$minutes minutes/day"}${if (sessionMinutes != null) " (Session limit: ${sessionMinutes}m)" else ""} and active focus schedules.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -358,7 +358,7 @@ fun AppsScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        viewModel.setCustomLimit(app, minutes, isEnabled = true)
+                        viewModel.setCustomLimit(app, minutes, sessionMinutes, isEnabled = true)
                         highImpactAppPending = null
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
@@ -447,11 +447,19 @@ fun AppListItem(
 
                 Spacer(modifier = Modifier.height(2.dp))
 
-                if (app.isLimited) {
+                if (app.activeUnlockMethod != null && app.activeUnlockRemainingMinutes != null) {
+                    Text(
+                        text = "Unlocked: ${app.activeUnlockRemainingMinutes}m left (${app.activeUnlockMethod})",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                } else if (app.isLimited) {
                     val limitText = if (app.dailyLimitMinutes == 0) {
                         "Always Blocked (0 min/day)"
                     } else {
-                        "Limit: ${app.dailyLimitMinutes} min/day"
+                        val sessionInfo = if (app.sessionLimitMinutes != null) " • Session: ${app.sessionLimitMinutes}m" else ""
+                        "Limit: ${app.dailyLimitMinutes} min/day$sessionInfo"
                     }
                     Text(
                         text = limitText,
@@ -493,12 +501,16 @@ fun AppListItem(
 fun CustomTimeLimitDialog(
     app: AppItem,
     onDismiss: () -> Unit,
-    onSaveLimit: (Int) -> Unit,
+    onSaveLimit: (dailyMinutes: Int, sessionMinutes: Int?) -> Unit,
     onRemoveLimit: () -> Unit
 ) {
     val initialMinutes = if (app.dailyLimitMinutes > 0) app.dailyLimitMinutes else 30
     var minutes by remember { mutableIntStateOf(initialMinutes) }
     var textInput by remember { mutableStateOf(initialMinutes.toString()) }
+    
+    var hasSessionLimit by remember { mutableStateOf(app.sessionLimitMinutes != null && app.sessionLimitMinutes > 0) }
+    var sessionMinutes by remember { mutableIntStateOf(app.sessionLimitMinutes ?: 15) }
+    var sessionTextInput by remember { mutableStateOf((app.sessionLimitMinutes ?: 15).toString()) }
 
     val presetMinutes = listOf(15, 30, 45, 60, 90, 120)
 
@@ -689,12 +701,88 @@ fun CustomTimeLimitDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+
+                Divider()
+
+                // Session Limit (Continuous usage in single session)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Enforce Session Limit",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = "Limits uninterrupted continuous use per session",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = hasSessionLimit,
+                        onCheckedChange = { hasSessionLimit = it }
+                    )
+                }
+
+                if (hasSessionLimit) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        IconButton(
+                            onClick = {
+                                val newSession = (sessionMinutes - 5).coerceAtLeast(5)
+                                sessionMinutes = newSession
+                                sessionTextInput = newSession.toString()
+                            },
+                            modifier = Modifier
+                                .size(44.dp)
+                                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
+                        ) {
+                            Icon(Icons.Default.Remove, contentDescription = "Decrease session limit")
+                        }
+
+                        OutlinedTextField(
+                            value = sessionTextInput,
+                            onValueChange = { input ->
+                                sessionTextInput = input
+                                val parsed = input.toIntOrNull()
+                                if (parsed != null && parsed > 0) {
+                                    sessionMinutes = parsed
+                                }
+                            },
+                            label = { Text("Session Minutes") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.weight(1f),
+                            singleLine = true
+                        )
+
+                        IconButton(
+                            onClick = {
+                                val newSession = sessionMinutes + 5
+                                sessionMinutes = newSession
+                                sessionTextInput = newSession.toString()
+                            },
+                            modifier = Modifier
+                                .size(44.dp)
+                                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = "Increase session limit")
+                        }
+                    }
+                }
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    onSaveLimit(minutes)
+                    val finalSession = if (hasSessionLimit) sessionMinutes else null
+                    onSaveLimit(minutes, finalSession)
                 }
             ) {
                 Text("Save Limit")

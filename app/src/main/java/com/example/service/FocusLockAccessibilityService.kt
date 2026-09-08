@@ -30,6 +30,10 @@ class FocusLockAccessibilityService : AccessibilityService() {
         UsageTracker(applicationContext, appRepository)
     }
 
+    private val enforcementEngine by lazy {
+        EnforcementEngine(applicationContext, appRepository, usageTracker)
+    }
+
     override fun onServiceConnected() {
         super.onServiceConnected()
         val info = AccessibilityServiceInfo().apply {
@@ -77,22 +81,18 @@ class FocusLockAccessibilityService : AccessibilityService() {
         activeAppTimerJob = serviceScope.launch {
             val limit = appRepository.getLimit(packageName)
             if (limit != null && limit.isEnabled) {
-                // If Always Block (0m limit) or Focus Mode / Active Schedule, block immediately
-                val blockedImmediately = checkAndBlock(packageName, limit, sessionElapsedMillis = 0L)
+                // Initial check (sessionElapsed = 0)
+                val blockedImmediately = checkAndBlock(packageName, sessionElapsedMillis = 0L)
                 if (blockedImmediately) return@launch
 
-                // If daily limit configured, track real-time session seconds
                 val sessionStartTime = System.currentTimeMillis()
-                val baseUsedMillis = usageTracker.updateUsageForPackage(packageName)
 
                 while (isActive && currentForegroundPackage == packageName) {
                     delay(1000) // 1-second precision timer
                     if (currentForegroundPackage == packageName) {
                         val sessionElapsed = System.currentTimeMillis() - sessionStartTime
-                        val totalMinutes = ((baseUsedMillis + sessionElapsed) / (1000 * 60)).toInt()
-
-                        if (totalMinutes >= limit.dailyLimitMinutes) {
-                            checkAndBlock(packageName, limit, sessionElapsed)
+                        val blocked = checkAndBlock(packageName, sessionElapsed)
+                        if (blocked) {
                             break
                         }
                     }
@@ -122,81 +122,29 @@ class FocusLockAccessibilityService : AccessibilityService() {
     }
 
     /**
-     * Checks restrictions and triggers block if limits, focus mode, or schedules apply.
+     * Checks restrictions via centralized EnforcementEngine and triggers block if needed.
      * Returns true if the app was blocked.
      */
     private suspend fun checkAndBlock(
         packageName: String, 
-        limit: com.example.database.AppLimit,
         sessionElapsedMillis: Long
     ): Boolean {
-        val currentTimeMillis = System.currentTimeMillis()
-        
-        // 1. Check Temporary Unlocks
-        val tempUnlocks = appRepository.getTemporaryUnlocks(packageName)
-        val activeUnlock = tempUnlocks.find { 
-            it.startTime + (it.durationMinutes * 60 * 1000L) > currentTimeMillis 
-        }
-        if (activeUnlock != null) {
-            Log.d("FocusLock", "App $packageName has active temporary unlock. Allowing.")
-            return false
-        }
-
-        // Clean up expired unlocks
-        tempUnlocks.filter { 
-            it.startTime + (it.durationMinutes * 60 * 1000L) <= currentTimeMillis 
-        }.forEach {
-            appRepository.deleteTemporaryUnlock(it.id)
-        }
-        
-        val settings = appRepository.userSettings.first()
-        
-        // 2. Check Focus Mode
-        if (settings.isFocusModeActive) {
-            Log.d("FocusLock", "Focus Mode Active. Blocking $packageName.")
-            blockApp(limit.appName, packageName, 0, limit.dailyLimitMinutes)
-            return true
-        }
-
-        // 3. Check Schedules
-        val calendar = java.util.Calendar.getInstance()
-        val currentMinuteOfDay = calendar.get(java.util.Calendar.HOUR_OF_DAY) * 60 + calendar.get(java.util.Calendar.MINUTE)
-        val currentDayOfWeek = calendar.get(java.util.Calendar.DAY_OF_WEEK).toString()
-        
-        val schedules = appRepository.getSchedulesForApp(packageName).first()
-        for (schedule in schedules) {
-            if (schedule.daysOfWeek.contains(currentDayOfWeek)) {
-                val isWithinSchedule = if (schedule.startTimeMinuteOfDay <= schedule.endTimeMinuteOfDay) {
-                    currentMinuteOfDay in schedule.startTimeMinuteOfDay..schedule.endTimeMinuteOfDay
-                } else {
-                    currentMinuteOfDay >= schedule.startTimeMinuteOfDay || currentMinuteOfDay <= schedule.endTimeMinuteOfDay
-                }
-                if (isWithinSchedule) {
-                    Log.d("FocusLock", "Active schedule matched. Blocking $packageName.")
-                    blockApp(limit.appName, packageName, 0, limit.dailyLimitMinutes)
-                    return true
-                }
+        val now = System.currentTimeMillis()
+        when (val decision = enforcementEngine.evaluate(packageName, sessionElapsedMillis, now)) {
+            is EnforcementDecision.Allow -> {
+                return false
+            }
+            is EnforcementDecision.Block -> {
+                Log.d("FocusLock", "Accessibility block triggered: ${decision.packageName} due to ${decision.reason}")
+                blockApp(
+                    appName = decision.appName,
+                    packageName = decision.packageName,
+                    usedMinutes = decision.usedMinutes,
+                    limitMinutes = decision.limitMinutes
+                )
+                return true
             }
         }
-
-        // 4. Check Daily Limit
-        // If dailyLimitMinutes == 0, it means "Always Blocked"
-        if (limit.dailyLimitMinutes == 0) {
-            Log.d("FocusLock", "App $packageName is configured as Always Block (0m). Blocking immediately.")
-            blockApp(limit.appName, packageName, 0, 0)
-            return true
-        }
-
-        val baseUsedMillis = usageTracker.updateUsageForPackage(packageName)
-        val totalUsedMinutes = ((baseUsedMillis + sessionElapsedMillis) / (1000 * 60)).toInt()
-        
-        if (totalUsedMinutes >= limit.dailyLimitMinutes) {
-            Log.d("FocusLock", "App $packageName exceeded limit ($totalUsedMinutes / ${limit.dailyLimitMinutes}). Blocking.")
-            blockApp(limit.appName, packageName, totalUsedMinutes, limit.dailyLimitMinutes)
-            return true
-        }
-
-        return false
     }
 
     private fun blockApp(appName: String, packageName: String, usedMinutes: Int, limitMinutes: Int) {

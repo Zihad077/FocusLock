@@ -56,6 +56,8 @@ class AppRepository(private val focusDao: FocusDao) {
     }
 
     suspend fun getTemporaryUnlocks(packageName: String) = focusDao.getTemporaryUnlocks(packageName)
+    
+    val allTemporaryUnlocks: Flow<List<com.example.database.TemporaryUnlock>> = focusDao.getAllTemporaryUnlocks()
 
     suspend fun insertTemporaryUnlock(unlock: com.example.database.TemporaryUnlock) {
         focusDao.insertTemporaryUnlock(unlock)
@@ -63,5 +65,48 @@ class AppRepository(private val focusDao: FocusDao) {
 
     suspend fun deleteTemporaryUnlock(id: Int) {
         focusDao.deleteTemporaryUnlock(id)
+    }
+
+    // Goals
+    val allGoals: Flow<List<com.example.database.Goal>> = focusDao.getAllGoals()
+    
+    suspend fun insertGoal(goal: com.example.database.Goal) {
+        focusDao.insertGoal(goal)
+    }
+
+    suspend fun deleteGoal(id: Int) {
+        focusDao.deleteGoal(id)
+    }
+
+    // Achievements
+    val allAchievements: Flow<List<com.example.database.Achievement>> = focusDao.getAllAchievements()
+
+    suspend fun insertAchievement(achievement: com.example.database.Achievement) {
+        focusDao.insertAchievement(achievement)
+    }
+    
+    suspend fun insertAchievements(achievements: List<com.example.database.Achievement>) {
+        focusDao.insertAchievements(achievements)
+    }
+
+    // App Groups
+    val allAppGroups: Flow<List<com.example.database.AppGroup>> = focusDao.getAllAppGroups()
+
+    suspend fun insertAppGroup(group: com.example.database.AppGroup) {
+        focusDao.insertAppGroup(group)
+    }
+
+    suspend fun deleteAppGroup(id: Int) {
+        focusDao.deleteAppGroup(id)
+    }
+    
+    fun getAppGroupMembers(groupId: Int): Flow<List<com.example.database.AppGroupMember>> = focusDao.getAppGroupMembers(groupId)
+    
+    suspend fun insertAppGroupMember(member: com.example.database.AppGroupMember) {
+        focusDao.insertAppGroupMember(member)
+    }
+
+    suspend fun deleteAppGroupMember(id: Int) {
+        focusDao.deleteAppGroupMember(id)
     }
 }

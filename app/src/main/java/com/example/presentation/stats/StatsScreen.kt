@@ -27,6 +27,8 @@ fun StatsScreen(
 ) {
     val weeklyUsage by viewModel.weeklyUsage.collectAsStateWithLifecycle()
     val mostDistracting by viewModel.mostDistracting.collectAsStateWithLifecycle()
+    val totalFocusSessions by viewModel.totalFocusSessions.collectAsStateWithLifecycle()
+    val totalFocusTime by viewModel.totalFocusTime.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -57,6 +59,36 @@ fun StatsScreen(
                 WeeklyChartCard(weeklyUsage)
             }
             
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Card(
+                        modifier = Modifier.weight(1f),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("Focus Sessions", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("$totalFocusSessions", style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        }
+                    }
+                    Card(
+                        modifier = Modifier.weight(1f),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("Focus Time", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("${totalFocusTime/60}h ${totalFocusTime%60}m", style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSecondaryContainer)
+                        }
+                    }
+                }
+            }
+
             item {
                 Text(
                     text = "Most Distracting",

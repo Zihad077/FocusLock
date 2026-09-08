@@ -62,6 +62,13 @@ class FocusViewModel(
             val settings = repository.userSettings.first()
             val endTime = System.currentTimeMillis() + (_selectedDurationMinutes.value * 60 * 1000L)
             repository.updateSettings(settings.copy(isFocusModeActive = true, activeFocusEndTime = endTime))
+            
+            try {
+                com.example.service.NotificationHelper(getApplication())
+                    .showFocusModeNotification(isActive = true, remainingMinutes = _selectedDurationMinutes.value)
+            } catch (e: Exception) {
+                // Ignore if notifications restricted
+            }
         }
         
         startTimer()
@@ -110,6 +117,15 @@ class FocusViewModel(
                 xp = newXp,
                 level = newLevel
             ))
+
+            if (completed) {
+                try {
+                    com.example.service.NotificationHelper(getApplication())
+                        .showFocusModeNotification(isActive = false)
+                } catch (e: Exception) {
+                    // Ignore
+                }
+            }
         }
     }
 

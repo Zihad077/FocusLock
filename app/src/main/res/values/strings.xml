@@ -28,6 +28,30 @@
     <string name="this_week">THIS WEEK</string>
     <string name="total_usage">Total usage: %1$dh %2$dm.</string>
     
+    <!-- Settings & Permissions -->
+    <string name="settings_title">Settings</string>
+    <string name="permissions_manager">System Permissions Manager</string>
+    <string name="permissions_manager_desc">Verify overlay, usage &amp; accessibility permissions</string>
+    <string name="display_over_apps">Display Over Other Apps</string>
+    <string name="usage_access">Usage Access</string>
+    <string name="accessibility_service">Accessibility Service</string>
+    <string name="granted">Active &amp; Granted</string>
+    <string name="grant">Grant</string>
+    <string name="done">Done</string>
+    <string name="close">Close</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_name">FocusLock Notifications</string>
+    <string name="notification_channel_desc">Notifications for focus sessions and app limits</string>
+    <string name="block_channel_name">FocusLock Block Alerts</string>
+    <string name="block_channel_desc">Displays the mindful blocking screen when restricted apps are opened</string>
+    <string name="approaching_limit_title">Approaching Limit: %1$s</string>
+    <string name="approaching_limit_desc">You have %1$d min remaining of your %2$d min daily limit.</string>
+    <string name="deep_focus_active_title">Deep Focus Active</string>
+    <string name="deep_focus_active_desc">FocusLock is actively blocking distractions. %1$d minutes remaining.</string>
+    <string name="deep_focus_complete_title">Deep Focus Complete!</string>
+    <string name="deep_focus_complete_desc">Great job! Your deep focus session is finished. +50 XP earned.</string>
+
     <!-- General -->
     <string name="unknown_app">Unknown App</string>
 </resources>

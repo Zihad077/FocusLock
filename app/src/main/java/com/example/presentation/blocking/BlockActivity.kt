@@ -15,9 +15,11 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
 import com.example.FocusLockApplication
+import com.example.database.UserSettings
 import com.example.presentation.challenge.ChallengeScreen
 import com.example.ui.theme.FocusLockTheme
 import kotlinx.coroutines.flow.first
@@ -74,6 +76,17 @@ class BlockActivity : ComponentActivity() {
             val usedMinutes by usedMinutesState
             val limitMinutes by limitMinutesState
             val emergencyRemaining by emergencyRemainingState
+            
+            var settings by remember { mutableStateOf(UserSettings()) }
+            
+            LaunchedEffect(Unit) {
+                try {
+                    val repo = (application as FocusLockApplication).repository
+                    settings = repo.userSettings.first()
+                } catch (e: Exception) {
+                    // Ignore
+                }
+            }
 
             FocusLockTheme {
                 Surface(
@@ -82,27 +95,28 @@ class BlockActivity : ComponentActivity() {
                 ) {
                     if (showChallenge) {
                         ChallengeScreen(
-                            onChallengeComplete = {
+                            settings = settings,
+                            onChallengeComplete = { challengeType ->
                                 packageName?.let { pkg ->
                                     lifecycleScope.launch {
                                         val repo = (application as FocusLockApplication).repository
-                                        val settings = repo.userSettings.first()
+                                        val currentSettings = repo.userSettings.first()
                                         
-                                        var newXp = settings.xp + 20
-                                        var newLevel = settings.level
+                                        var newXp = currentSettings.xp + 20
+                                        var newLevel = currentSettings.level
                                         if (newXp >= newLevel * 100) {
                                             newXp -= (newLevel * 100)
                                             newLevel += 1
                                         }
                                         
-                                        repo.updateSettings(settings.copy(xp = newXp, level = newLevel))
+                                        repo.updateSettings(currentSettings.copy(xp = newXp, level = newLevel))
                                         
                                         repo.insertTemporaryUnlock(
                                             com.example.database.TemporaryUnlock(
                                                 packageName = pkg,
-                                                type = "CHALLENGE",
+                                                type = challengeType.name,
                                                 startTime = System.currentTimeMillis(),
-                                                durationMinutes = 5
+                                                durationMinutes = currentSettings.tempUnlockDurationMinutes
                                             )
                                         )
                                         finish()

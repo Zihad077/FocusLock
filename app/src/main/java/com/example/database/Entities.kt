@@ -45,21 +45,68 @@ data class UserSettings(
     val language: String = "en",
     val focusScore: Int = 0,
     val currentStreak: Int = 0,
+    val bestStreak: Int = 0,
+    val consecutiveSuccessfulDays: Int = 0,
     val emergencyUnlocksRemaining: Int = 2,
     val maxEmergencyUnlocks: Int = 2,
     val isFocusModeActive: Boolean = false,
     val xp: Int = 0,
     val level: Int = 1,
     val lastResetDateString: String = "",
-    val activeFocusEndTime: Long = 0L // 0 if no active focus session
+    val activeFocusEndTime: Long = 0L,
+    
+    // Verification Settings
+    val mindChallengeEnabled: Boolean = true,
+    val focusChallengeEnabled: Boolean = true,
+    val typingChallengeEnabled: Boolean = true,
+    val pinUnlockEnabled: Boolean = false,
+    val pinHash: String = "",
+    val difficulty: String = "NORMAL", // EASY, NORMAL, HARD
+    val tempUnlockDurationMinutes: Int = 5,
+    val tempUnlockOptions: String = "5,10,15"
 )
 
 @Entity(tableName = "temporary_unlocks")
 data class TemporaryUnlock(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val packageName: String,
-    val type: String, // "CHALLENGE" or "EMERGENCY"
+    val type: String, // "MIND", "FOCUS", "TYPING", "PIN", "EMERGENCY"
     val startTime: Long,
     val durationMinutes: Int
+)
+
+@Entity(tableName = "goals")
+data class Goal(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val title: String,
+    val type: String, // "USAGE_LIMIT", "FOCUS_TIME", "PRODUCTIVITY"
+    val targetValue: Int,
+    val currentValue: Int = 0,
+    val isCompleted: Boolean = false,
+    val createdAt: Long = System.currentTimeMillis()
+)
+
+@Entity(tableName = "achievements")
+data class Achievement(
+    @PrimaryKey val id: String,
+    val title: String,
+    val description: String,
+    val isUnlocked: Boolean = false,
+    val unlockedAt: Long? = null,
+    val xpReward: Int
+)
+
+@Entity(tableName = "app_groups")
+data class AppGroup(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val name: String,
+    val color: Int? = null
+)
+
+@Entity(tableName = "app_group_members")
+data class AppGroupMember(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val groupId: Int,
+    val packageName: String
 )
 

@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -34,6 +35,7 @@ import com.example.presentation.apps.AppsScreen
 import com.example.presentation.focus.FocusScreen
 import com.example.presentation.stats.StatsScreen
 import com.example.presentation.settings.SettingsScreen
+import com.example.presentation.goals.GoalsScreen
 
 @Composable
 fun FocusLockApp() {
@@ -72,6 +74,7 @@ fun MainTabScreen() {
         BottomNavItem("Home", Route.Home, Icons.Default.Home),
         BottomNavItem("Apps", Route.Apps, Icons.Default.Lock),
         BottomNavItem("Focus", Route.Focus, Icons.Default.Timer),
+        BottomNavItem("Goals", Route.Goals, Icons.Default.EmojiEvents),
         BottomNavItem("Stats", Route.Stats, Icons.Default.BarChart),
         BottomNavItem("Settings", Route.Settings, Icons.Default.Settings)
     )
@@ -114,6 +117,7 @@ fun MainTabScreen() {
             composable<Route.Home> { HomeScreen() }
             composable<Route.Apps> { AppsScreen() }
             composable<Route.Focus> { FocusScreen() }
+            composable<Route.Goals> { GoalsScreen() }
             composable<Route.Stats> { StatsScreen() }
             composable<Route.Settings> { 
                 SettingsScreen(

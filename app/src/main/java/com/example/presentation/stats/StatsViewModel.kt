@@ -64,6 +64,22 @@ class StatsViewModel(
         initialValue = null
     )
 
+    val totalFocusSessions = repository.allFocusSessions.map { sessions ->
+        sessions.size
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = 0
+    )
+
+    val totalFocusTime = repository.allFocusSessions.map { sessions ->
+        sessions.sumOf { it.durationMinutes }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = 0
+    )
+
     class Factory(private val application: Application) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(StatsViewModel::class.java)) {

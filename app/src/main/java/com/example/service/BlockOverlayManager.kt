@@ -21,6 +21,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.lifecycle.Lifecycle
@@ -33,6 +34,7 @@ import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.example.FocusLockApplication
 import com.example.database.TemporaryUnlock
+import com.example.database.UserSettings
 import com.example.presentation.blocking.BlockScreen
 import com.example.presentation.challenge.ChallengeScreen
 import com.example.ui.theme.FocusLockTheme
@@ -235,30 +237,42 @@ class BlockOverlayManager private constructor(private val context: Context) : Li
                     val currentUsed by usedMinutesState
                     val currentLimit by limitMinutesState
                     val currentEmergencyRemaining by emergencyRemainingState
+                    
+                    var settings by remember { mutableStateOf(UserSettings()) }
+                    
+                    LaunchedEffect(Unit) {
+                        try {
+                            val repo = (context.applicationContext as FocusLockApplication).repository
+                            settings = repo.userSettings.first()
+                        } catch (e: Exception) {
+                            // Ignore
+                        }
+                    }
 
                     if (showChallenge) {
                         ChallengeScreen(
-                            onChallengeComplete = {
+                            settings = settings,
+                            onChallengeComplete = { challengeType ->
                                 CoroutineScope(Dispatchers.IO).launch {
                                     try {
                                         val app = context.applicationContext as FocusLockApplication
                                         val repo = app.repository
-                                        val settings = repo.userSettings.first()
+                                        val currentSettings = repo.userSettings.first()
 
-                                        var newXp = settings.xp + 20
-                                        var newLevel = settings.level
+                                        var newXp = currentSettings.xp + 20
+                                        var newLevel = currentSettings.level
                                         if (newXp >= newLevel * 100) {
                                             newXp -= (newLevel * 100)
                                             newLevel += 1
                                         }
 
-                                        repo.updateSettings(settings.copy(xp = newXp, level = newLevel))
+                                        repo.updateSettings(currentSettings.copy(xp = newXp, level = newLevel))
                                         repo.insertTemporaryUnlock(
                                             TemporaryUnlock(
                                                 packageName = currentPackage,
-                                                type = "CHALLENGE",
+                                                type = challengeType.name,
                                                 startTime = System.currentTimeMillis(),
-                                                durationMinutes = 5
+                                                durationMinutes = currentSettings.tempUnlockDurationMinutes
                                             )
                                         )
                                     } catch (e: Exception) {

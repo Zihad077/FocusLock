@@ -48,6 +48,7 @@ fun SettingsScreen(
     var showChallengeDialog by remember { mutableStateOf(false) }
     var showPrivacyDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
+    var showPermissionsDialog by remember { mutableStateOf(false) }
 
     val themeLabel = when (settings.theme) {
         "DARK" -> "Dark mode"
@@ -151,6 +152,12 @@ fun SettingsScreen(
                         title = "Emergency Unlock",
                         subtitle = "${settings.emergencyUnlocksRemaining} of ${settings.maxEmergencyUnlocks} remaining today",
                         onClick = { showEmergencyDialog = true }
+                    )
+                    SettingsRow(
+                        icon = Icons.Default.AdminPanelSettings,
+                        title = "System Permissions Manager",
+                        subtitle = "Verify overlay, usage & accessibility permissions",
+                        onClick = { showPermissionsDialog = true }
                     )
                 }
             }
@@ -522,59 +529,93 @@ fun SettingsScreen(
         )
     }
 
-    // 6. Practice Challenges Dialog
+    // 6. Verification Settings Dialog
     if (showChallengeDialog) {
-        var challengeText by remember { mutableStateOf("") }
-        val targetQuote = "Take a deep breath and reconnect with your focus."
-        val isMatched = challengeText.trim().equals(targetQuote.trim(), ignoreCase = true)
-
         AlertDialog(
             onDismissRequest = { showChallengeDialog = false },
-            title = { Text("Anti-Distraction Challenge", fontWeight = FontWeight.Bold) },
+            title = { Text("Verification Settings", fontWeight = FontWeight.Bold) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Text(
-                        "When an app is blocked, typing this mindful reflection unlocks 5 extra minutes of mindful usage:",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = "\"$targetQuote\"",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.padding(12.dp)
-                        )
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    item {
+                        Text("Enable verification methods for temporary unlocks.", style = MaterialTheme.typography.bodySmall)
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
-
-                    OutlinedTextField(
-                        value = challengeText,
-                        onValueChange = { challengeText = it },
-                        placeholder = { Text("Type quote here...") },
-                        modifier = Modifier.fillMaxWidth(),
-                        maxLines = 3
-                    )
-
-                    if (isMatched) {
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    "Challenge verified! Unlocks 5 minutes.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    fontWeight = FontWeight.Bold
+                    
+                    item {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                            Text("Quick Mind Challenge", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
+                            Switch(checked = settings.mindChallengeEnabled, onCheckedChange = { viewModel.updateSettings(settings.copy(mindChallengeEnabled = it)) })
+                        }
+                        Text("Math and logic questions.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Divider(modifier = Modifier.padding(vertical = 12.dp))
+                    }
+                    
+                    item {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                            Text("Focus Challenge", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
+                            Switch(checked = settings.focusChallengeEnabled, onCheckedChange = { viewModel.updateSettings(settings.copy(focusChallengeEnabled = it)) })
+                        }
+                        Text("Wait on screen for a countdown.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Divider(modifier = Modifier.padding(vertical = 12.dp))
+                    }
+                    
+                    item {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                            Text("Typing Challenge", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
+                            Switch(checked = settings.typingChallengeEnabled, onCheckedChange = { viewModel.updateSettings(settings.copy(typingChallengeEnabled = it)) })
+                        }
+                        Text("Type a phrase correctly.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Divider(modifier = Modifier.padding(vertical = 12.dp))
+                    }
+                    
+                    item {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                            Text("PIN Unlock", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
+                            Switch(checked = settings.pinUnlockEnabled, onCheckedChange = { viewModel.updateSettings(settings.copy(pinUnlockEnabled = it)) })
+                        }
+                        if (settings.pinUnlockEnabled) {
+                            var pinInput by remember { mutableStateOf(settings.pinHash) }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            OutlinedTextField(
+                                value = pinInput,
+                                onValueChange = { 
+                                    pinInput = it
+                                    viewModel.updateSettings(settings.copy(pinHash = it))
+                                },
+                                label = { Text("Set PIN") },
+                                singleLine = true,
+                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword)
+                            )
+                        }
+                        Divider(modifier = Modifier.padding(vertical = 12.dp))
+                    }
+                    
+                    item {
+                        Text("Challenge Difficulty", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
+                        Spacer(modifier = Modifier.height(8.dp))
+                        val difficulties = listOf("EASY", "NORMAL", "HARD")
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            difficulties.forEach { diff ->
+                                FilterChip(
+                                    selected = settings.difficulty == diff,
+                                    onClick = { viewModel.updateSettings(settings.copy(difficulty = diff)) },
+                                    label = { Text(diff) }
+                                )
+                            }
+                        }
+                        Divider(modifier = Modifier.padding(vertical = 12.dp))
+                    }
+                    
+                    item {
+                        Text("Temporary Unlock Duration (Minutes)", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
+                        Spacer(modifier = Modifier.height(8.dp))
+                        val durations = listOf(5, 10, 15)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            durations.forEach { duration ->
+                                FilterChip(
+                                    selected = settings.tempUnlockDurationMinutes == duration,
+                                    onClick = { viewModel.updateSettings(settings.copy(tempUnlockDurationMinutes = duration)) },
+                                    label = { Text("$duration") }
                                 )
                             }
                         }
@@ -681,6 +722,158 @@ fun SettingsScreen(
             confirmButton = {
                 TextButton(onClick = { showAboutDialog = false }) {
                     Text("Close")
+                }
+            }
+        )
+    }
+
+    // 9. System Permissions Manager Dialog
+    if (showPermissionsDialog) {
+        val hasUsage = com.example.util.PermissionHelper.hasUsageAccess(context)
+        val hasOverlay = com.example.util.PermissionHelper.hasOverlayPermission(context)
+        val hasAccessibility = com.example.util.PermissionHelper.hasAccessibilityPermission(context)
+
+        AlertDialog(
+            onDismissRequest = { showPermissionsDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.AdminPanelSettings,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Permissions Manager", fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        "FocusLock requires these system permissions to enforce mindful boundaries and protect deep work.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+
+                    // 1. Overlay
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (hasOverlay) MaterialTheme.colorScheme.surfaceVariant
+                            else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Display Over Other Apps", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    if (hasOverlay) "Active & Granted" else "Required for lock screen overlay",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (hasOverlay) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                                )
+                            }
+                            if (!hasOverlay) {
+                                TextButton(
+                                    onClick = {
+                                        val intent = Intent(
+                                            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                            android.net.Uri.parse("package:${context.packageName}")
+                                        )
+                                        context.startActivity(intent)
+                                    }
+                                ) {
+                                    Text("Grant")
+                                }
+                            } else {
+                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    }
+
+                    // 2. Usage Access
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (hasUsage) MaterialTheme.colorScheme.surfaceVariant
+                            else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Usage Access", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    if (hasUsage) "Active & Granted" else "Required to calculate screen time",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (hasUsage) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                                )
+                            }
+                            if (!hasUsage) {
+                                TextButton(
+                                    onClick = {
+                                        val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+                                        context.startActivity(intent)
+                                    }
+                                ) {
+                                    Text("Grant")
+                                }
+                            } else {
+                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    }
+
+                    // 3. Accessibility Service
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (hasAccessibility) MaterialTheme.colorScheme.surfaceVariant
+                            else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Accessibility Service", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    if (hasAccessibility) "Active & Enforcing" else "Zero-latency instant app detection",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (hasAccessibility) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                                )
+                            }
+                            if (!hasAccessibility) {
+                                TextButton(
+                                    onClick = {
+                                        val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                                        context.startActivity(intent)
+                                    }
+                                ) {
+                                    Text("Enable")
+                                }
+                            } else {
+                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showPermissionsDialog = false }) {
+                    Text("Done")
                 }
             }
         )
