@@ -50,6 +50,19 @@ class GoalsViewModel(
         }
     }
 
+    fun awardBonusXP(amount: Int = 100) {
+        viewModelScope.launch {
+            val settings = userSettings.value ?: return@launch
+            var newXp = settings.xp + amount
+            var newLevel = settings.level
+            if (newXp >= newLevel * 100) {
+                newXp -= (newLevel * 100)
+                newLevel += 1
+            }
+            repository.updateSettings(settings.copy(xp = newXp, level = newLevel))
+        }
+    }
+
     class Factory(private val application: Application) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(GoalsViewModel::class.java)) {

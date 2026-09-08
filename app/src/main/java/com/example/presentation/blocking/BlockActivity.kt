@@ -119,9 +119,13 @@ class BlockActivity : ComponentActivity() {
                                                 durationMinutes = currentSettings.tempUnlockDurationMinutes
                                             )
                                         )
+                                        com.example.service.BlockOverlayManager.getInstance(applicationContext).hideOverlay()
                                         finish()
                                     }
-                                } ?: finish()
+                                } ?: run {
+                                    com.example.service.BlockOverlayManager.getInstance(applicationContext).hideOverlay()
+                                    finish()
+                                }
                             },
                             onCancel = { showChallenge = false }
                         )
@@ -153,9 +157,13 @@ class BlockActivity : ComponentActivity() {
                                                 )
                                             )
                                         }
+                                        com.example.service.BlockOverlayManager.getInstance(applicationContext).hideOverlay()
                                         finish()
                                     }
-                                } ?: finish()
+                                } ?: run {
+                                    com.example.service.BlockOverlayManager.getInstance(applicationContext).hideOverlay()
+                                    finish()
+                                }
                             }
                         )
                     }
@@ -184,6 +192,7 @@ class BlockActivity : ComponentActivity() {
     }
 
     private fun exitToHome() {
+        com.example.service.BlockOverlayManager.getInstance(applicationContext).hideOverlay()
         val homeIntent = Intent(Intent.ACTION_MAIN).apply {
             addCategory(Intent.CATEGORY_HOME)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK

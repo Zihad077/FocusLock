@@ -170,6 +170,30 @@ class AppsViewModel(
         }
     }
 
+    fun applyTemplate(templateName: String) {
+        viewModelScope.launch {
+            val installedApps = _installedApps.value
+            val limitsToApply = mutableListOf<com.example.database.AppLimit>()
+            when (templateName) {
+                "Social Media" -> {
+                    installedApps.filter { it.packageName.contains("facebook") || it.packageName.contains("instagram") || it.packageName.contains("twitter") || it.packageName.contains("tiktok") }
+                        .forEach { limitsToApply.add(com.example.database.AppLimit(it.packageName, it.appName, true, 30)) }
+                }
+                "Gaming" -> {
+                    installedApps.filter { it.packageName.contains("game") || it.packageName.contains("pubg") || it.packageName.contains("minecraft") }
+                        .forEach { limitsToApply.add(com.example.database.AppLimit(it.packageName, it.appName, true, 45)) }
+                }
+                "Entertainment" -> {
+                    installedApps.filter { it.packageName.contains("youtube") || it.packageName.contains("netflix") || it.packageName.contains("spotify") }
+                        .forEach { limitsToApply.add(com.example.database.AppLimit(it.packageName, it.appName, true, 60)) }
+                }
+            }
+            limitsToApply.forEach {
+                repository.insertLimit(it)
+            }
+        }
+    }
+
     class Factory(private val application: Application) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(AppsViewModel::class.java)) {

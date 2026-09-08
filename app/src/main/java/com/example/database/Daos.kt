@@ -8,7 +8,6 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface FocusDao {
-    
     // Limits
     @Query("SELECT * FROM app_limits")
     fun getAllLimits(): Flow<List<AppLimit>>
@@ -45,12 +44,47 @@ interface FocusDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertUsage(usage: DailyUsage)
     
+    // Usage Events (Timeline)
+    @Query("SELECT * FROM usage_events WHERE dateString = :dateString ORDER BY startTime ASC")
+    fun getUsageEventsForDate(dateString: String): Flow<List<UsageEvent>>
+    
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertUsageEvent(event: UsageEvent)
+    
     // Focus Sessions
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertFocusSession(session: FocusSession)
     
     @Query("SELECT * FROM focus_sessions ORDER BY startTime DESC")
     fun getAllFocusSessions(): Flow<List<FocusSession>>
+    
+    // Focus Profiles
+    @Query("SELECT * FROM focus_profiles")
+    fun getAllFocusProfiles(): Flow<List<FocusProfile>>
+    
+    @Query("SELECT * FROM focus_profiles WHERE isActive = 1")
+    suspend fun getActiveFocusProfiles(): List<FocusProfile>
+
+    @Query("SELECT * FROM focus_profiles WHERE id = :id")
+    suspend fun getFocusProfile(id: Int): FocusProfile?
+    
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertFocusProfile(profile: FocusProfile): Long
+    
+    @Query("DELETE FROM focus_profiles WHERE id = :id")
+    suspend fun deleteFocusProfile(id: Int)
+    
+    @Query("SELECT * FROM focus_profile_apps WHERE profileId = :profileId")
+    fun getAppsForProfile(profileId: Int): Flow<List<FocusProfileApp>>
+
+    @Query("SELECT * FROM focus_profile_apps WHERE profileId = :profileId")
+    suspend fun getAppsListForProfile(profileId: Int): List<FocusProfileApp>
+    
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertFocusProfileApp(app: FocusProfileApp)
+    
+    @Query("DELETE FROM focus_profile_apps WHERE profileId = :profileId")
+    suspend fun deleteAppsForProfile(profileId: Int)
     
     // Settings
     @Query("SELECT * FROM user_settings WHERE id = 1")

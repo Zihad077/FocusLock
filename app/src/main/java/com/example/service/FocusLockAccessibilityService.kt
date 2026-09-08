@@ -150,11 +150,17 @@ class FocusLockAccessibilityService : AccessibilityService() {
      * Checks restrictions via centralized EnforcementEngine and triggers block if needed.
      * Returns true if the app was blocked.
      */
+    private var lastBlockedPackage: String? = null
+    private var lastBlockTimestamp: Long = 0L
+
     private suspend fun checkAndBlock(
         packageName: String, 
         sessionElapsedMillis: Long
     ): Boolean {
         val now = System.currentTimeMillis()
+        if (lastBlockedPackage == packageName && (now - lastBlockTimestamp) < 2500) {
+            return true
+        }
         when (val decision = enforcementEngine.evaluate(packageName, sessionElapsedMillis, now)) {
             is EnforcementDecision.Allow -> {
                 return false
@@ -174,6 +180,8 @@ class FocusLockAccessibilityService : AccessibilityService() {
 
     private fun blockApp(appName: String, packageName: String, usedMinutes: Int, limitMinutes: Int) {
         Log.d("FocusLock", "Enforcing block on $appName ($packageName)")
+        lastBlockedPackage = packageName
+        lastBlockTimestamp = System.currentTimeMillis()
 
         // 1. Show immediate system window overlay directly over the restricted app
         try {

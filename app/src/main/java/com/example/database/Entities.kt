@@ -9,7 +9,19 @@ data class AppLimit(
     val appName: String,
     val isEnabled: Boolean = true,
     val dailyLimitMinutes: Int, 
-    val sessionLimitMinutes: Int? = null 
+    val sessionLimitMinutes: Int? = null,
+    
+    // Adaptive Limits
+    val suggestedDailyLimitMinutes: Int? = null,
+    
+    // Weekly Planning overrides
+    val mondayLimitMinutes: Int? = null,
+    val tuesdayLimitMinutes: Int? = null,
+    val wednesdayLimitMinutes: Int? = null,
+    val thursdayLimitMinutes: Int? = null,
+    val fridayLimitMinutes: Int? = null,
+    val saturdayLimitMinutes: Int? = null,
+    val sundayLimitMinutes: Int? = null
 )
 
 @Entity(tableName = "app_schedules")
@@ -29,13 +41,50 @@ data class DailyUsage(
     val usedMinutes: Int
 )
 
+@Entity(tableName = "usage_events")
+data class UsageEvent(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val packageName: String,
+    val startTime: Long,
+    val endTime: Long,
+    val durationMinutes: Int,
+    val dateString: String
+)
+
 @Entity(tableName = "focus_sessions")
 data class FocusSession(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val startTime: Long,
     val durationMinutes: Int,
     val isCompleted: Boolean,
-    val mode: String = "Deep Work"
+    val mode: String = "Deep Work",
+    val profileId: Int? = null,
+    val journalEntry: String? = null
+)
+
+@Entity(tableName = "focus_profiles")
+data class FocusProfile(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val name: String,
+    val icon: String = "Study",
+    val focusDuration: Int = 25,
+    val isBedtime: Boolean = false,
+    
+    // Location Trigger
+    val isLocationEnabled: Boolean = false,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val radiusMeters: Float? = null,
+    
+    // Automation
+    val isActive: Boolean = false
+)
+
+@Entity(tableName = "focus_profile_apps")
+data class FocusProfileApp(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val profileId: Int,
+    val packageName: String
 )
 
 @Entity(tableName = "user_settings")
@@ -72,7 +121,19 @@ data class UserSettings(
     val permissionProtectionEnabled: Boolean = true,
     val escapeAttemptDetectionEnabled: Boolean = true,
     val autoServiceRecoveryEnabled: Boolean = true,
-    val focusProtectionEnabled: Boolean = true
+    val focusProtectionEnabled: Boolean = true,
+    
+    // Bedtime Mode
+    val bedtimeEnabled: Boolean = false,
+    val bedtimeStartMinuteOfDay: Int = 1380, // 23:00
+    val bedtimeEndMinuteOfDay: Int = 420,    // 07:00
+    val isBedtimeActive: Boolean = false,
+    
+    // Distraction-Free Focus
+    val distractionFreeFocusEnabled: Boolean = true,
+
+    // Premium status (Zero ads & unlimited unlocks when true)
+    val isPremium: Boolean = false
 )
 
 @Entity(tableName = "escape_attempts")
@@ -126,4 +187,3 @@ data class AppGroupMember(
     val groupId: Int,
     val packageName: String
 )
-

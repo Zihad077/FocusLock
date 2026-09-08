@@ -29,7 +29,11 @@ class FocusViewModel(
     
     private val _selectedDurationMinutes = MutableStateFlow(25)
     val selectedDurationMinutes = _selectedDurationMinutes.asStateFlow()
+    private val _showJournalDialog = MutableStateFlow(false)
+    val showJournalDialog = _showJournalDialog.asStateFlow()
     
+    val userSettings = repository.userSettings
+
     private var timerJob: Job? = null
 
     init {
@@ -110,6 +114,21 @@ class FocusViewModel(
             
             if (completed) {
                 newXp += 50
+                try {
+                    val achievements = repository.allAchievements.first()
+                    achievements.find { it.id == "first_step" && !it.isUnlocked }?.let {
+                        repository.insertAchievement(it.copy(isUnlocked = true))
+                        newXp += it.xpReward
+                    }
+                    if (_selectedDurationMinutes.value >= 120) {
+                        achievements.find { it.id == "deep_diver" && !it.isUnlocked }?.let {
+                            repository.insertAchievement(it.copy(isUnlocked = true))
+                            newXp += it.xpReward
+                        }
+                    }
+                } catch (e: Exception) {
+                    // Ignore
+                }
                 if (newXp >= newLevel * 100) {
                     newXp -= (newLevel * 100)
                     newLevel += 1
@@ -122,6 +141,7 @@ class FocusViewModel(
                         mode = "DEEP_FOCUS"
                     )
                 )
+                _showJournalDialog.value = true
             }
             
             repository.updateSettings(settings.copy(
@@ -150,6 +170,33 @@ class FocusViewModel(
                     // Ignore
                 }
             }
+        }
+    }
+
+    fun saveJournalEntry(entry: String) {
+        viewModelScope.launch {
+            val sessions = repository.allFocusSessions.first()
+            val latest = sessions.firstOrNull()
+            if (latest != null) {
+                repository.insertFocusSession(latest.copy(journalEntry = entry))
+            }
+            _showJournalDialog.value = false
+        }
+    }
+    fun dismissJournalDialog() {
+        _showJournalDialog.value = false
+    }
+
+    fun awardBonusXP(amount: Int = 100) {
+        viewModelScope.launch {
+            val settings = repository.userSettings.first()
+            var newXp = settings.xp + amount
+            var newLevel = settings.level
+            if (newXp >= newLevel * 100) {
+                newXp -= (newLevel * 100)
+                newLevel += 1
+            }
+            repository.updateSettings(settings.copy(xp = newXp, level = newLevel))
         }
     }
 

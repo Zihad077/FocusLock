@@ -62,10 +62,51 @@ class EnforcementEngine(
             }
         }
 
-        // 3. App Schedules Check (Time-window & overnight support)
-        val schedules = repository.getSchedulesForApp(packageName).first()
         val calendar = Calendar.getInstance().apply { timeInMillis = currentTimestamp }
         val currentMinuteOfDay = calendar.get(Calendar.HOUR_OF_DAY) * 60 + calendar.get(Calendar.MINUTE)
+        val currentDayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
+
+        // 3. Bedtime Protection Check
+        if (settings.bedtimeEnabled) {
+            val isBedtime = if (settings.bedtimeStartMinuteOfDay <= settings.bedtimeEndMinuteOfDay) {
+                currentMinuteOfDay in settings.bedtimeStartMinuteOfDay..settings.bedtimeEndMinuteOfDay
+            } else {
+                currentMinuteOfDay >= settings.bedtimeStartMinuteOfDay || currentMinuteOfDay <= settings.bedtimeEndMinuteOfDay
+            }
+            if (isBedtime) {
+                Log.d(TAG, "Bedtime protection active. Blocking $packageName.")
+                return EnforcementDecision.Block(
+                    reason = BlockReason.BEDTIME_ACTIVE,
+                    appName = limit.appName,
+                    packageName = packageName,
+                    usedMinutes = 0,
+                    limitMinutes = limit.dailyLimitMinutes
+                )
+            }
+        }
+
+        // 4. Focus Profiles Check
+        try {
+            val activeProfiles = repository.getActiveFocusProfiles()
+            for (profile in activeProfiles) {
+                val profileApps = repository.getAppsListForProfile(profile.id)
+                if (profileApps.any { it.packageName == packageName }) {
+                    Log.d(TAG, "Active focus profile '${profile.name}' blocks $packageName.")
+                    return EnforcementDecision.Block(
+                        reason = BlockReason.FOCUS_MODE_ACTIVE,
+                        appName = limit.appName,
+                        packageName = packageName,
+                        usedMinutes = 0,
+                        limitMinutes = limit.dailyLimitMinutes
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking focus profiles: ${e.message}")
+        }
+
+        // 5. App Schedules Check (Time-window & overnight support)
+        val schedules = repository.getSchedulesForApp(packageName).first()
 
         for (schedule in schedules) {
             if (isScheduleActive(schedule, currentMinuteOfDay, calendar)) {
@@ -80,7 +121,7 @@ class EnforcementEngine(
             }
         }
 
-        // 4. Always Blocked (dailyLimitMinutes == 0)
+        // 6. Always Blocked (dailyLimitMinutes == 0)
         if (limit.dailyLimitMinutes == 0) {
             Log.d(TAG, "App $packageName is strictly blocked (0m daily limit).")
             return EnforcementDecision.Block(
@@ -92,7 +133,7 @@ class EnforcementEngine(
             )
         }
 
-        // 5. Session Limit Check (Continuous usage limit in single session)
+        // 7. Session Limit Check (Continuous usage limit in single session)
         val sessionLimit = limit.sessionLimitMinutes
         if (sessionLimit != null && sessionLimit > 0) {
             val sessionElapsedMinutes = (sessionElapsedMillis / (1000 * 60)).toInt()
@@ -108,18 +149,30 @@ class EnforcementEngine(
             }
         }
 
-        // 6. Daily Usage Limit Check
+        // 8. Daily Usage Limit Check (with Weekly Planning day-by-day overrides)
+        val daySpecificLimit = when (currentDayOfWeek) {
+            Calendar.MONDAY -> limit.mondayLimitMinutes
+            Calendar.TUESDAY -> limit.tuesdayLimitMinutes
+            Calendar.WEDNESDAY -> limit.wednesdayLimitMinutes
+            Calendar.THURSDAY -> limit.thursdayLimitMinutes
+            Calendar.FRIDAY -> limit.fridayLimitMinutes
+            Calendar.SATURDAY -> limit.saturdayLimitMinutes
+            Calendar.SUNDAY -> limit.sundayLimitMinutes
+            else -> null
+        }
+        val effectiveDailyLimit = daySpecificLimit ?: limit.dailyLimitMinutes
+
         val baseUsedMillis = usageTracker.updateUsageForPackage(packageName)
         val totalUsedMinutes = ((baseUsedMillis + sessionElapsedMillis) / (1000 * 60)).toInt()
 
-        if (totalUsedMinutes >= limit.dailyLimitMinutes) {
-            Log.d(TAG, "Daily limit exceeded for $packageName ($totalUsedMinutes / ${limit.dailyLimitMinutes} min).")
+        if (totalUsedMinutes >= effectiveDailyLimit) {
+            Log.d(TAG, "Daily limit exceeded for $packageName ($totalUsedMinutes / $effectiveDailyLimit min).")
             return EnforcementDecision.Block(
                 reason = BlockReason.DAILY_LIMIT_EXCEEDED,
                 appName = limit.appName,
                 packageName = packageName,
                 usedMinutes = totalUsedMinutes,
-                limitMinutes = limit.dailyLimitMinutes
+                limitMinutes = effectiveDailyLimit
             )
         }
 

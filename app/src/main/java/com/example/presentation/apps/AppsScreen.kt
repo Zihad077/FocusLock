@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -21,9 +22,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material.icons.filled.List
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -31,6 +34,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.presentation.blocking.BlockActivity
 import com.example.service.BlockOverlayManager
+import com.example.ui.theme.liquidGlass
 import com.example.util.PermissionHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -81,12 +85,13 @@ fun AppsScreen(
     }
 
     Scaffold(
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = {
             TopAppBar(
                 title = { 
                     Text(
                         text = "App Blocklist & Limits",
-                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold)
                     )
                 },
                 actions = {
@@ -109,37 +114,58 @@ fun AppsScreen(
                     ) {
                         Icon(Icons.Default.Visibility, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Test Screen", style = MaterialTheme.typography.labelSmall)
+                        Text("Test Screen", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
+                    containerColor = androidx.compose.ui.graphics.Color.Transparent,
                     titleContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
         }
     ) { innerPadding ->
+        var showTemplatesDialog by remember { mutableStateOf(false) }
+        if (showTemplatesDialog) {
+            AlertDialog(
+                onDismissRequest = { showTemplatesDialog = false },
+                title = { Text("App Limit Templates") },
+                text = {
+                    Column {
+                        Text("Select a template to auto-apply limits:")
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(onClick = { viewModel.applyTemplate("Social Media"); showTemplatesDialog = false }, modifier = Modifier.fillMaxWidth()) { Text("Social Media (30 min)") }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Button(onClick = { viewModel.applyTemplate("Gaming"); showTemplatesDialog = false }, modifier = Modifier.fillMaxWidth()) { Text("Gaming (45 min)") }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Button(onClick = { viewModel.applyTemplate("Entertainment"); showTemplatesDialog = false }, modifier = Modifier.fillMaxWidth()) { Text("Entertainment (60 min)") }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showTemplatesDialog = false }) { Text("Close") }
+                }
+            )
+        }
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            contentPadding = PaddingValues(bottom = 96.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             if (!hasAccessibility || !hasOverlay) {
                 item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
-                        )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .liquidGlass(
+                                shape = RoundedCornerShape(18.dp),
+                                isHighlight = true
+                            )
+                            .padding(14.dp)
                     ) {
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
+                            modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
@@ -159,7 +185,7 @@ fun AppsScreen(
                                     text = if (!hasAccessibility) "Enable Accessibility to detect and block apps."
                                     else "Enable Display Over Other Apps to show the block screen.",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
                                 )
                             }
                             Spacer(modifier = Modifier.width(8.dp))
@@ -190,9 +216,9 @@ fun AppsScreen(
                 }
             }
             item {
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(2.dp))
                 
-                // Search Input
+                // Search Input with frosted background
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
@@ -205,8 +231,13 @@ fun AppsScreen(
                             }
                         }
                     },
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .liquidGlass(
+                            shape = RoundedCornerShape(20.dp),
+                            isElevated = false
+                        ),
                     singleLine = true
                 )
 
@@ -221,7 +252,8 @@ fun AppsScreen(
                         FilterChip(
                             selected = selectedFilter == "ALL",
                             onClick = { selectedFilter = "ALL" },
-                            label = { Text("All (${appsList.size})") }
+                            label = { Text("All (${appsList.size})") },
+                            shape = RoundedCornerShape(14.dp)
                         )
                     }
                     item {
@@ -229,6 +261,7 @@ fun AppsScreen(
                             selected = selectedFilter == "RESTRICTED",
                             onClick = { selectedFilter = "RESTRICTED" },
                             label = { Text("Restricted (${appsList.count { it.isLimited }})") },
+                            shape = RoundedCornerShape(14.dp),
                             leadingIcon = {
                                 Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(16.dp))
                             }
@@ -239,6 +272,7 @@ fun AppsScreen(
                             selected = selectedFilter == "HIGH_IMPACT",
                             onClick = { selectedFilter = "HIGH_IMPACT" },
                             label = { Text("High-Impact (${appsList.count { it.isHighImpact }})") },
+                            shape = RoundedCornerShape(14.dp),
                             leadingIcon = {
                                 Icon(Icons.Default.Whatshot, contentDescription = null, modifier = Modifier.size(16.dp))
                             }
@@ -382,40 +416,42 @@ fun AppListItem(
     onConfigureClick: () -> Unit,
     onCheckedChange: (Boolean) -> Unit
 ) {
-    Card(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onItemClick),
-        colors = CardDefaults.cardColors(
-            containerColor = if (app.isLimited) {
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-            } else {
-                MaterialTheme.colorScheme.surface
-            }
-        ),
-        shape = RoundedCornerShape(16.dp)
+            .liquidGlass(
+                shape = RoundedCornerShape(20.dp),
+                isHighlight = app.isHighImpact || app.isLimited
+            )
+            .clickable(onClick = onItemClick)
+            .padding(16.dp)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // App Avatar / Initial
+            // App Avatar / Initial with Glass gradient rim
             Box(
                 modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
+                    .size(46.dp)
+                    .clip(RoundedCornerShape(14.dp))
                     .background(
-                        if (app.isHighImpact) MaterialTheme.colorScheme.errorContainer
-                        else MaterialTheme.colorScheme.secondaryContainer
-                    ),
+                        if (app.isHighImpact) {
+                            androidx.compose.ui.graphics.Brush.linearGradient(
+                                listOf(androidx.compose.ui.graphics.Color(0xFFFF5252), androidx.compose.ui.graphics.Color(0xFFD50000))
+                            )
+                        } else {
+                            androidx.compose.ui.graphics.Brush.linearGradient(
+                                listOf(androidx.compose.ui.graphics.Color(0xFF0077D6), androidx.compose.ui.graphics.Color(0xFF00B4D8))
+                            )
+                        }
+                    )
+                    .border(1.dp, androidx.compose.ui.graphics.Color.White.copy(alpha = 0.5f), RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = app.appName.take(1).uppercase(),
-                    color = if (app.isHighImpact) MaterialTheme.colorScheme.onErrorContainer
-                    else MaterialTheme.colorScheme.onSecondaryContainer,
+                    color = androidx.compose.ui.graphics.Color.White,
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                 )
             }
@@ -426,26 +462,32 @@ fun AppListItem(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = app.appName,
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                        color = MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.weight(1f, fill = false)
                     )
                     if (app.isHighImpact) {
                         Spacer(modifier = Modifier.width(6.dp))
-                        SuggestionChip(
-                            onClick = {},
-                            label = { Text("High-Impact", style = MaterialTheme.typography.labelSmall) },
-                            colors = SuggestionChipDefaults.suggestionChipColors(
-                                containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f),
-                                labelColor = MaterialTheme.colorScheme.error
-                            ),
-                            border = null,
-                            modifier = Modifier.height(24.dp)
-                        )
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(MaterialTheme.colorScheme.error.copy(alpha = 0.2f))
+                                .border(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                "High-Impact",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(3.dp))
 
                 if (app.activeUnlockMethod != null && app.activeUnlockRemainingMinutes != null) {
                     Text(
@@ -465,13 +507,13 @@ fun AppListItem(
                         text = limitText,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.SemiBold
                     )
                 } else {
                     Text(
                         text = "Tap to set custom time limit",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f)
                     )
                 }
             }
@@ -480,7 +522,7 @@ fun AppListItem(
                 Icon(
                     imageVector = Icons.Default.Tune,
                     contentDescription = "Configure custom limit",
-                    tint = if (app.isLimited) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    tint = if (app.isLimited) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                 )
             }
             

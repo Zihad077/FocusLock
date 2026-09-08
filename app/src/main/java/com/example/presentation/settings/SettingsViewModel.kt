@@ -14,7 +14,7 @@ import kotlinx.coroutines.launch
 
 class SettingsViewModel(
     application: Application,
-    private val repository: AppRepository
+    val repository: AppRepository
 ) : AndroidViewModel(application) {
 
     val userSettings = repository.userSettings.stateIn(

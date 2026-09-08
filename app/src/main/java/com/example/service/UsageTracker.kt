@@ -17,7 +17,16 @@ class UsageTracker(
     private val context: Context,
     private val repository: AppRepository
 ) {
+    private val cache = mutableMapOf<String, Pair<Long, Long>>()
+
     suspend fun updateUsageForPackage(packageName: String): Long = withContext(Dispatchers.IO) {
+        val now = System.currentTimeMillis()
+        val cached = cache[packageName]
+        // Cache for 60 seconds to prevent battery drain from constant polling
+        if (cached != null && (now - cached.first) < 60000) {
+            return@withContext cached.second
+        }
+
         val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
         
         val calendar = Calendar.getInstance().apply {
@@ -27,26 +36,41 @@ class UsageTracker(
             set(Calendar.MILLISECOND, 0)
         }
         val startTime = calendar.timeInMillis
-        val endTime = System.currentTimeMillis()
         
-        val stats = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, startTime, endTime)
-        
-        val appStats = stats?.find { it.packageName == packageName }
+        // Use queryAndAggregateUsageStats for better accuracy over queryUsageStats
+        val stats = usageStatsManager.queryAndAggregateUsageStats(startTime, now)
+        val appStats = stats[packageName]
         val usedTimeMillis = appStats?.totalTimeInForeground ?: 0L
         val usedMinutes = (usedTimeMillis / (1000 * 60)).toInt()
+        
+        cache[packageName] = Pair(now, usedTimeMillis)
 
         val currentDateString = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
         
         val settings = repository.userSettings.first()
         if (settings.lastResetDateString != currentDateString) {
-            // It's a new day! Reset daily things
+            val yesterdayCalendar = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -1) }
+            val yesterdayDateString = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(yesterdayCalendar.time)
+            
+            var newStreak = settings.currentStreak
+            if (settings.lastResetDateString == yesterdayDateString) {
+                newStreak += 1
+            } else if (settings.lastResetDateString.isNotEmpty()) {
+                newStreak = 1
+            } else {
+                newStreak = 1
+            }
+            val newBestStreak = maxOf(settings.bestStreak, newStreak)
+
             repository.updateSettings(
                 settings.copy(
                     lastResetDateString = currentDateString,
-                    emergencyUnlocksRemaining = settings.maxEmergencyUnlocks
-                    // Also handle streak logic here if needed
+                    emergencyUnlocksRemaining = settings.maxEmergencyUnlocks,
+                    currentStreak = newStreak,
+                    bestStreak = newBestStreak
                 )
             )
+            cache.clear() // Invalidate cache on new day
         }
         
         val existingUsage = repository.getUsage(packageName, currentDateString)

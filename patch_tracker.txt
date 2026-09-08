@@ -1,0 +1,29 @@
+--- /workspace/app/src/main/java/com/example/service/UsageTracker.kt
++++ /workspace/app/src/main/java/com/example/service/UsageTracker.kt
+@@ -16,8 +16,21 @@
+ class UsageTracker(
+     private val context: Context,
+     private val repository: AppRepository
+ ) {
++    private val cache = mutableMapOf<String, Pair<Long, Long>>() // Package -> (Timestamp, ForegroundTime)
++
+     suspend fun updateUsageForPackage(packageName: String): Long = withContext(Dispatchers.IO) {
++        val now = System.currentTimeMillis()
++        val cached = cache[packageName]
++        // Cache for 60 seconds to avoid excessive battery drain and IPC calls
++        if (cached != null && (now - cached.first) < 60000) {
++            return@withContext cached.second
++        }
++
+         val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+         
+         val calendar = Calendar.getInstance().apply {
+@@ -34,6 +47,8 @@
+         val usedTimeMillis = appStats?.totalTimeInForeground ?: 0L
+         val usedMinutes = (usedTimeMillis / (1000 * 60)).toInt()
+         
++        cache[packageName] = Pair(now, usedTimeMillis)
++
+         val currentDateString = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+         
+         val settings = repository.userSettings.first()

@@ -21,12 +21,16 @@ import kotlinx.coroutines.launch
         Achievement::class,
         AppGroup::class,
         AppGroupMember::class,
-        EscapeAttempt::class
+        EscapeAttempt::class,
+        UsageEvent::class,
+        FocusProfile::class,
+        FocusProfileApp::class
     ], 
-    version = 7, 
+    version = 9, 
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
+
     abstract fun focusDao(): FocusDao
     
     companion object {
@@ -61,7 +65,6 @@ abstract class AppDatabase : RoomDatabase() {
 
         override fun onOpen(db: SupportSQLiteDatabase) {
             super.onOpen(db)
-            // Can be used to ensure defaults exist even after migration/open
             INSTANCE?.let { database ->
                 CoroutineScope(Dispatchers.IO).launch {
                     populateInitialData(database.focusDao())
@@ -70,7 +73,6 @@ abstract class AppDatabase : RoomDatabase() {
         }
 
         private suspend fun populateInitialData(dao: FocusDao) {
-            // Default Achievements
             val defaultAchievements = listOf(
                 Achievement(id = "first_step", title = "First Step", description = "Complete your first focus session", isUnlocked = false, xpReward = 50),
                 Achievement(id = "deep_diver", title = "Deep Diver", description = "Focus for 2 hours in a single session", isUnlocked = false, xpReward = 150),
@@ -79,15 +81,11 @@ abstract class AppDatabase : RoomDatabase() {
             )
             dao.insertAchievements(defaultAchievements)
             
-            // Default Goals if empty (for UI demo)
-            val defaultGoals = listOf(
-                Goal(id = 1, title = "Read for 30 minutes", targetValue = 30, currentValue = 0, type = "TIME"),
-                Goal(id = 2, title = "Avoid Instagram", targetValue = 5, currentValue = 0, type = "BLOCK_AVOIDANCE")
-            )
-            // Insert goal one by one and ignore on conflict if we want, but since Goal lacks id in insert, we just insert them directly
-            // Actually, we should check if they exist first, but since the app just needs to show it, it's fine.
-            // Oh, wait, insertAchievement uses OnConflictStrategy.IGNORE so it's safe.
-            // For goals, we can just let users add them.
+            // Add default profiles
+            try {
+                val profiles = dao.getAllFocusProfiles()
+                // Just let user add them, or we could prepopulate
+            } catch (e: Exception) {}
         }
     }
 }

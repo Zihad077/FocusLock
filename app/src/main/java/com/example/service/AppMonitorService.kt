@@ -141,6 +141,21 @@ class AppMonitorService : Service() {
                         !foregroundPackage.contains("inputmethod")) {
                         
                         if (currentForegroundPackage != foregroundPackage) {
+                            if (currentForegroundPackage != null && currentForegroundPackage != packageName) {
+                                val endTime = System.currentTimeMillis()
+                                val elapsedMillis = endTime - sessionStartTime
+                                if (elapsedMillis >= 15000) {
+                                    val durationMinutes = maxOf(1, (elapsedMillis / 60000).toInt())
+                                    val event = com.example.database.UsageEvent(
+                                        packageName = currentForegroundPackage!!,
+                                        startTime = sessionStartTime,
+                                        endTime = endTime,
+                                        durationMinutes = durationMinutes,
+                                        dateString = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+                                    )
+                                    appRepository.insertUsageEvent(event)
+                                }
+                            }
                             currentForegroundPackage = foregroundPackage
                             sessionStartTime = System.currentTimeMillis()
                         }

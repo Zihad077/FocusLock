@@ -21,6 +21,12 @@ class StatsViewModel(
     private val repository: AppRepository
 ) : AndroidViewModel(application) {
 
+    val userSettings = repository.userSettings.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = null
+    )
+
     val weeklyUsage = repository.getAllUsage().map { usages ->
         val format = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
         val dayFormat = SimpleDateFormat("EEE", Locale.getDefault())
