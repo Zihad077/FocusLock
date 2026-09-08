@@ -33,6 +33,7 @@ import java.util.Locale
 fun SettingsScreen(
     onNavigateToApps: () -> Unit = {},
     onNavigateToFocus: () -> Unit = {},
+    onNavigateToEscapePrevention: () -> Unit = {},
     viewModel: SettingsViewModel = viewModel(
         factory = SettingsViewModel.Factory(LocalContext.current.applicationContext as Application)
     )
@@ -158,6 +159,12 @@ fun SettingsScreen(
                         title = "System Permissions Manager",
                         subtitle = "Verify overlay, usage & accessibility permissions",
                         onClick = { showPermissionsDialog = true }
+                    )
+                    SettingsRow(
+                        icon = Icons.Default.Security,
+                        title = "Escape Prevention",
+                        subtitle = "Configure anti-delete & stable lock modes",
+                        onClick = { onNavigateToEscapePrevention() }
                     )
                 }
             }

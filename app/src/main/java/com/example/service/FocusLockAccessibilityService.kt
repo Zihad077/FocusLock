@@ -62,6 +62,31 @@ class FocusLockAccessibilityService : AccessibilityService() {
         // Skip system overlays, status bar, and soft keyboards
         if (packageName == "com.android.systemui" || packageName.contains("inputmethod")) return
 
+        if (packageName == "com.android.settings") {
+            serviceScope.launch {
+                val settings = appRepository.userSettings.first()
+                if (settings.antiDeleteProtectionEnabled) {
+                    val textList = event.text.joinToString(" ")
+                    val contentDesc = event.contentDescription?.toString() ?: ""
+                    val allText = "$textList $contentDesc".lowercase()
+                    
+                    if (allText.contains("focuslock")) {
+                        if (allText.contains("force stop") || allText.contains("uninstall") || allText.contains("disable")) {
+                            performGlobalAction(GLOBAL_ACTION_BACK)
+                            if (settings.escapeAttemptDetectionEnabled) {
+                                appRepository.insertEscapeAttempt(
+                                    com.example.database.EscapeAttempt(
+                                        packageName = "com.android.settings",
+                                        type = "UNINSTALL_OR_FORCE_STOP_ATTEMPT"
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // If launcher is active, clear tracking and cancel active session timer
         if (isLauncherPackage(packageName)) {
             currentForegroundPackage = packageName

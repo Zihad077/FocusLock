@@ -63,7 +63,24 @@ data class UserSettings(
     val pinHash: String = "",
     val difficulty: String = "NORMAL", // EASY, NORMAL, HARD
     val tempUnlockDurationMinutes: Int = 5,
-    val tempUnlockOptions: String = "5,10,15"
+    val tempUnlockOptions: String = "5,10,15",
+    
+    // Escape Prevention Settings
+    val notificationProtectionEnabled: Boolean = false,
+    val antiDeleteProtectionEnabled: Boolean = false,
+    val stableLockModeEnabled: Boolean = true,
+    val permissionProtectionEnabled: Boolean = true,
+    val escapeAttemptDetectionEnabled: Boolean = true,
+    val autoServiceRecoveryEnabled: Boolean = true,
+    val focusProtectionEnabled: Boolean = true
+)
+
+@Entity(tableName = "escape_attempts")
+data class EscapeAttempt(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val packageName: String?,
+    val attemptTime: Long = System.currentTimeMillis(),
+    val type: String // e.g. "SERVICE_STOP", "UNINSTALL_ATTEMPT", "PERMISSION_REVOKE"
 )
 
 @Entity(tableName = "temporary_unlocks")

@@ -2,12 +2,18 @@ package com.example.util
 
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.AppOpsManager
+import android.app.NotificationManager
 import android.content.Context
 import android.os.Process
 import android.provider.Settings
 import android.view.accessibility.AccessibilityManager
 
 object PermissionHelper {
+
+    fun hasNotificationPolicyAccess(context: Context): Boolean {
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+        return notificationManager?.isNotificationPolicyAccessGranted == true
+    }
 
     fun hasUsageAccess(context: Context): Boolean {
         return try {

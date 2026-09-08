@@ -24,12 +24,13 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
         if (intent?.action != Intent.ACTION_BOOT_COMPLETED &&
             intent?.action != Intent.ACTION_MY_PACKAGE_REPLACED &&
-            intent?.action != "android.intent.action.QUICKBOOT_POWERON"
+            intent?.action != "android.intent.action.QUICKBOOT_POWERON" &&
+            intent?.action != "com.example.service.RESTART_MONITOR"
         ) {
             return
         }
 
-        Log.d(TAG, "Device booted or app replaced. Restoring FocusLock services and session state.")
+        Log.d(TAG, "Device booted, replaced or restart requested. Restoring FocusLock services.")
 
         val appContext = context.applicationContext
         val app = appContext as? FocusLockApplication

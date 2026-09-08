@@ -88,6 +88,21 @@ fun StatsScreen(
                     }
                 }
             }
+            
+            item {
+                val totalEscapeAttempts by viewModel.totalEscapeAttempts.collectAsStateWithLifecycle()
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("Escape Attempts Prevented", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onErrorContainer)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("$totalEscapeAttempts", style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onErrorContainer)
+                    }
+                }
+            }
 
             item {
                 Text(

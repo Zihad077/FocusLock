@@ -20,9 +20,10 @@ import kotlinx.coroutines.launch
         Goal::class,
         Achievement::class,
         AppGroup::class,
-        AppGroupMember::class
+        AppGroupMember::class,
+        EscapeAttempt::class
     ], 
-    version = 6, 
+    version = 7, 
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

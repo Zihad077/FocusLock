@@ -126,8 +126,14 @@ class AppMonitorService : Service() {
     private fun startMonitoringLoop() {
         serviceScope.launch {
             val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
+            var loopCount = 0
             while (isActive) {
                 try {
+                    loopCount++
+                    if (loopCount % 10 == 0) { // Every ~8 seconds
+                        checkPermissionsAndNotify()
+                    }
+
                     val foregroundPackage = detectForegroundPackage(usageStatsManager)
                     if (foregroundPackage != null && 
                         foregroundPackage != packageName && 
@@ -151,6 +157,50 @@ class AppMonitorService : Service() {
                     Log.e(TAG, "Error during app monitor polling", e)
                 }
                 delay(800) // Poll every 800ms for snappy response
+            }
+        }
+    }
+
+    private suspend fun checkPermissionsAndNotify() {
+        val settings = appRepository.userSettings.first()
+        if (!settings.permissionProtectionEnabled) return
+        
+        val context = applicationContext
+        val missingPermissions = mutableListOf<String>()
+        if (!com.example.util.PermissionHelper.hasUsageAccess(context)) missingPermissions.add("Usage Access")
+        if (!com.example.util.PermissionHelper.hasOverlayPermission(context)) missingPermissions.add("Display Over Other Apps")
+        if (!com.example.util.PermissionHelper.hasAccessibilityPermission(context)) missingPermissions.add("Accessibility Service")
+
+        if (missingPermissions.isNotEmpty()) {
+            if (settings.escapeAttemptDetectionEnabled) {
+                appRepository.insertEscapeAttempt(
+                    com.example.database.EscapeAttempt(
+                        packageName = "system",
+                        type = "PERMISSION_REVOKED: ${missingPermissions.joinToString()}"
+                    )
+                )
+            }
+            
+            // Show notification to restore permissions
+            try {
+                val intent = Intent(context, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                }
+                val pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+                
+                val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+                    .setSmallIcon(android.R.drawable.ic_dialog_alert)
+                    .setContentTitle("Protection Compromised")
+                    .setContentText("Required permissions were removed: ${missingPermissions.joinToString()}. Tap to restore.")
+                    .setPriority(NotificationCompat.PRIORITY_HIGH)
+                    .setContentIntent(pendingIntent)
+                    .setAutoCancel(true)
+                    .build()
+                
+                val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                nm.notify(2003, notification)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to show permission warning notification", e)
             }
         }
     }
@@ -259,9 +309,40 @@ class AppMonitorService : Service() {
         }
     }
 
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        Log.w(TAG, "AppMonitorService onTaskRemoved (swiped from recents)")
+        serviceScope.launch {
+            handleServiceInterrupt("TASK_REMOVED")
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         serviceJob.cancel()
         Log.d(TAG, "AppMonitorService destroyed")
+        // Can't run coroutines here easily since job is cancelled, but we could fire a broadcast.
+        val intent = Intent(applicationContext, BootReceiver::class.java).apply {
+            action = "com.example.service.RESTART_MONITOR"
+        }
+        sendBroadcast(intent)
+    }
+    
+    private suspend fun handleServiceInterrupt(reason: String) {
+        val settings = appRepository.userSettings.first()
+        if (settings.escapeAttemptDetectionEnabled) {
+            appRepository.insertEscapeAttempt(
+                com.example.database.EscapeAttempt(
+                    packageName = "com.android.systemui",
+                    type = reason
+                )
+            )
+        }
+        if (settings.autoServiceRecoveryEnabled) {
+            val intent = Intent(applicationContext, BootReceiver::class.java).apply {
+                action = "com.example.service.RESTART_MONITOR"
+            }
+            sendBroadcast(intent)
+        }
     }
 }

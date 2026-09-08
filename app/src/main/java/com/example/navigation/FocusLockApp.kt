@@ -36,6 +36,7 @@ import com.example.presentation.focus.FocusScreen
 import com.example.presentation.stats.StatsScreen
 import com.example.presentation.settings.SettingsScreen
 import com.example.presentation.goals.GoalsScreen
+import com.example.presentation.escape.EscapeScreen
 
 @Composable
 fun FocusLockApp() {
@@ -138,8 +139,16 @@ fun MainTabScreen() {
                             launchSingleTop = true
                             restoreState = true
                         }
+                    },
+                    onNavigateToEscapePrevention = {
+                        navController.navigate(Route.EscapePrevention)
                     }
                 ) 
+            }
+            composable<Route.EscapePrevention> {
+                EscapeScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
             }
         }
     }

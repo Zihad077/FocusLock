@@ -14,6 +14,7 @@ sealed class Route {
     @Serializable data object Stats : Route()
     @Serializable data object Settings : Route()
     @Serializable data object Goals : Route()
+    @Serializable data object EscapePrevention : Route()
     
     // Deep pages
     @Serializable data class AppLimitDetail(val packageName: String) : Route()

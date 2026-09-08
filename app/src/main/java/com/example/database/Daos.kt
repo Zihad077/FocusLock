@@ -110,4 +110,11 @@ interface FocusDao {
 
     @Query("DELETE FROM app_group_members WHERE id = :id")
     suspend fun deleteAppGroupMember(id: Int)
+
+    // Escape Attempts
+    @Query("SELECT * FROM escape_attempts ORDER BY attemptTime DESC")
+    fun getAllEscapeAttempts(): Flow<List<EscapeAttempt>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertEscapeAttempt(attempt: EscapeAttempt)
 }

@@ -1,6 +1,8 @@
 package com.example.presentation.focus
 
 import android.app.Application
+import android.app.NotificationManager
+import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -69,6 +71,17 @@ class FocusViewModel(
             } catch (e: Exception) {
                 // Ignore if notifications restricted
             }
+
+            if (settings.focusProtectionEnabled && settings.notificationProtectionEnabled) {
+                try {
+                    val nm = getApplication<Application>().getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+                    if (nm?.isNotificationPolicyAccessGranted == true) {
+                        nm.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_PRIORITY)
+                    }
+                } catch (e: Exception) {
+                    // Ignore
+                }
+            }
         }
         
         startTimer()
@@ -117,6 +130,17 @@ class FocusViewModel(
                 xp = newXp,
                 level = newLevel
             ))
+
+            if (settings.focusProtectionEnabled && settings.notificationProtectionEnabled) {
+                try {
+                    val nm = getApplication<Application>().getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+                    if (nm?.isNotificationPolicyAccessGranted == true) {
+                        nm.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_ALL)
+                    }
+                } catch (e: Exception) {
+                    // Ignore
+                }
+            }
 
             if (completed) {
                 try {

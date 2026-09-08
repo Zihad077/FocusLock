@@ -109,4 +109,11 @@ class AppRepository(private val focusDao: FocusDao) {
     suspend fun deleteAppGroupMember(id: Int) {
         focusDao.deleteAppGroupMember(id)
     }
+
+    // Escape Attempts
+    val allEscapeAttempts: Flow<List<com.example.database.EscapeAttempt>> = focusDao.getAllEscapeAttempts()
+
+    suspend fun insertEscapeAttempt(attempt: com.example.database.EscapeAttempt) {
+        focusDao.insertEscapeAttempt(attempt)
+    }
 }
