@@ -38,6 +38,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.ads.AdsterraSocialBar
+import com.example.ads.LiquidGlassAdaptiveBanner
 import com.example.ads.LiquidGlassNativeAdCard
 import com.example.database.UserSettings
 import com.example.ui.theme.liquidGlass
@@ -145,6 +147,21 @@ fun HomeScreen(
             items(limits) { limit ->
                 AppLimitCard(limit = limit)
             }
+        }
+
+        // 320x50 Banner in lower content area (Zero ads for premium)
+        item {
+            LiquidGlassAdaptiveBanner(
+                isPremium = settings?.isPremium ?: false
+            )
+        }
+
+        // Social Bar format (cooldown protected, zero ads for premium)
+        item {
+            AdsterraSocialBar(
+                isPremium = settings?.isPremium ?: false,
+                isFocusActive = settings?.isFocusModeActive ?: false
+            )
         }
     }
 }

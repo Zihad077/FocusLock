@@ -26,6 +26,7 @@ class InsightsViewModel(
 
     private val _state = MutableStateFlow(InsightsState())
     val state: StateFlow<InsightsState> = _state.asStateFlow()
+    val userSettings = repository.userSettings
 
     init {
         loadInsights()

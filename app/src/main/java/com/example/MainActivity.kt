@@ -11,7 +11,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.ads.AdsManager
 import com.example.database.UserSettings
 import com.example.ui.theme.FocusLockTheme
 import com.example.navigation.FocusLockApp
@@ -20,9 +19,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        
-        // Request UMP Privacy Consent & initialize AdMob SDK
-        AdsManager.requestConsentAndInit(this)
 
         // Start foreground monitoring service for blocklist enforcement
         com.example.service.AppMonitorService.startService(this)
@@ -48,3 +44,4 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+

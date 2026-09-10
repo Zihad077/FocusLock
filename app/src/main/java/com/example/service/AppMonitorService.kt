@@ -232,9 +232,10 @@ class AppMonitorService : Service() {
 
         while (events.hasNextEvent()) {
             events.getNextEvent(event)
-            if ((event.eventType == UsageEvents.Event.ACTIVITY_RESUMED ||
-                 event.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND) &&
-                 event.timeStamp >= latestTimestamp) {
+            @Suppress("DEPRECATION")
+            val isForeground = event.eventType == UsageEvents.Event.ACTIVITY_RESUMED ||
+                    event.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND
+            if (isForeground && event.timeStamp >= latestTimestamp) {
                 latestPackage = event.packageName
                 latestTimestamp = event.timeStamp
             }

@@ -1,5 +1,6 @@
 package com.example.navigation
 
+import android.content.Context
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
@@ -16,9 +17,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -27,9 +26,13 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -48,12 +51,66 @@ import com.example.presentation.onboarding.WelcomeScreen
 import com.example.presentation.settings.SettingsScreen
 import com.example.presentation.stats.StatsScreen
 import com.example.ui.theme.LiquidBackground
+import com.example.util.PermissionHelper
+
+private const val PREFS_NAME = "focuslock_onboarding_prefs"
+private const val KEY_ONBOARDING_COMPLETED = "key_onboarding_completed"
 
 @Composable
 fun FocusLockApp() {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val sharedPrefs = remember { context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
+    
+    var isOnboardingCompleted by remember {
+        mutableStateOf(sharedPrefs.getBoolean(KEY_ONBOARDING_COMPLETED, false))
+    }
+    
+    var allRequiredPermissionsGranted by remember {
+        mutableStateOf(PermissionHelper.areAllRequiredPermissionsGranted(context))
+    }
+
+    // Determine initial route:
+    // 1. If first launch (onboarding not completed) -> Welcome
+    // 2. If onboarding completed but required permissions missing -> Permissions
+    // 3. If onboarding completed and all required permissions granted -> MainTab
+    val initialDestination: Route = remember {
+        when {
+            !isOnboardingCompleted -> Route.Welcome
+            !allRequiredPermissionsGranted -> Route.Permissions
+            else -> Route.MainTab
+        }
+    }
+
     val navController = rememberNavController()
 
-    NavHost(navController = navController, startDestination = Route.Welcome) {
+    // Re-check permissions whenever app returns to the foreground
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                val currentGranted = PermissionHelper.areAllRequiredPermissionsGranted(context)
+                allRequiredPermissionsGranted = currentGranted
+                
+                // If user has finished onboarding previously, but a required permission is revoked:
+                val isCompleted = sharedPrefs.getBoolean(KEY_ONBOARDING_COMPLETED, false)
+                if (isCompleted && !currentGranted) {
+                    // Check current route; if not already on Permissions, navigate to Permissions
+                    val currentRoute = navController.currentBackStackEntry?.destination?.route
+                    val isAlreadyOnPermissions = currentRoute?.contains("Permissions") == true
+                    if (!isAlreadyOnPermissions) {
+                        navController.navigate(Route.Permissions) {
+                            popUpTo(0) { inclusive = false }
+                            launchSingleTop = true
+                        }
+                    }
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    NavHost(navController = navController, startDestination = initialDestination) {
         composable<Route.Welcome> {
             WelcomeScreen(
                 onNavigateToPermissions = { 
@@ -65,7 +122,13 @@ fun FocusLockApp() {
         }
         composable<Route.Permissions> {
             PermissionsScreen(
+                isFromSettings = false,
                 onPermissionsGranted = {
+                    // Mark onboarding complete in persistent storage
+                    sharedPrefs.edit().putBoolean(KEY_ONBOARDING_COMPLETED, true).apply()
+                    isOnboardingCompleted = true
+                    allRequiredPermissionsGranted = true
+                    
                     navController.navigate(Route.MainTab) {
                         popUpTo(Route.Permissions) { inclusive = true }
                     }
@@ -262,12 +325,22 @@ fun MainTabScreen() {
                         },
                         onNavigateToEscapePrevention = {
                             navController.navigate(Route.EscapePrevention)
+                        },
+                        onNavigateToPermissions = {
+                            navController.navigate(Route.Permissions)
                         }
                     ) 
                 }
                 composable<Route.EscapePrevention> {
                     EscapeScreen(
                         onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+                composable<Route.Permissions> {
+                    PermissionsScreen(
+                        isFromSettings = true,
+                        onNavigateBack = { navController.popBackStack() },
+                        onPermissionsGranted = { navController.popBackStack() }
                     )
                 }
             }

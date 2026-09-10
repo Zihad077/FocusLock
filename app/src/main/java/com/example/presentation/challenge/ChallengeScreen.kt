@@ -48,7 +48,7 @@ fun ChallengeScreen(
                 onCancel = onCancel
             )
         } else {
-            when (selectedChallenge) {
+            when (val challenge = selectedChallenge) {
                 ChallengeType.MIND -> MindChallenge(
                     difficulty = settings.difficulty,
                     onComplete = { onChallengeComplete(ChallengeType.MIND) },

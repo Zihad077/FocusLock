@@ -32,6 +32,9 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.ads.AdsterraSocialBar
+import com.example.ads.LiquidGlassAdaptiveBanner
+import com.example.ads.LiquidGlassNativeAdCard
 import com.example.presentation.blocking.BlockActivity
 import com.example.service.BlockOverlayManager
 import com.example.ui.theme.liquidGlass
@@ -62,6 +65,7 @@ fun AppsScreen(
     }
 
     val appsList by viewModel.appsList.collectAsStateWithLifecycle()
+    val userSettings by viewModel.userSettings.collectAsStateWithLifecycle(initialValue = null)
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf("ALL") } // ALL, RESTRICTED, HIGH_IMPACT
 
@@ -299,7 +303,12 @@ fun AppsScreen(
                     }
                 }
             } else {
-                items(filteredApps, key = { it.packageName }) { app ->
+                // Split items to insert Native ad between usage sections
+                val halfSize = (filteredApps.size / 2).coerceAtLeast(1)
+                val firstBatch = filteredApps.take(halfSize)
+                val secondBatch = filteredApps.drop(halfSize)
+
+                items(firstBatch, key = { it.packageName }) { app ->
                     AppListItem(
                         app = app,
                         onItemClick = {
@@ -311,7 +320,6 @@ fun AppsScreen(
                         onCheckedChange = { isChecked ->
                             if (isChecked) {
                                 if (!app.isLimited) {
-                                    // Open custom time dialog directly so user can choose limit or Always Block
                                     appToConfigure = app
                                 } else {
                                     viewModel.toggleLimit(app, true)
@@ -322,6 +330,51 @@ fun AppsScreen(
                         }
                     )
                 }
+
+                // Native ad between usage sections
+                item {
+                    LiquidGlassNativeAdCard(
+                        isPremium = userSettings?.isPremium ?: false
+                    )
+                }
+
+                items(secondBatch, key = { it.packageName }) { app ->
+                    AppListItem(
+                        app = app,
+                        onItemClick = {
+                            appToConfigure = app
+                        },
+                        onConfigureClick = {
+                            appToConfigure = app
+                        },
+                        onCheckedChange = { isChecked ->
+                            if (isChecked) {
+                                if (!app.isLimited) {
+                                    appToConfigure = app
+                                } else {
+                                    viewModel.toggleLimit(app, true)
+                                }
+                            } else {
+                                viewModel.toggleLimit(app, false)
+                            }
+                        }
+                    )
+                }
+            }
+
+            // 320x50 banner near the bottom (Zero ads for premium)
+            item {
+                LiquidGlassAdaptiveBanner(
+                    isPremium = userSettings?.isPremium ?: false
+                )
+            }
+
+            // Social Bar format (cooldown protected, zero ads for premium)
+            item {
+                AdsterraSocialBar(
+                    isPremium = userSettings?.isPremium ?: false,
+                    isFocusActive = userSettings?.isFocusModeActive ?: false
+                )
             }
 
             item { Spacer(modifier = Modifier.height(24.dp)) }
@@ -681,7 +734,7 @@ fun CustomTimeLimitDialog(
                     }
                 }
 
-                Divider()
+                HorizontalDivider()
 
                 Text(
                     text = "Custom Daily Minutes",
@@ -744,7 +797,7 @@ fun CustomTimeLimitDialog(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                Divider()
+                HorizontalDivider()
 
                 // Session Limit (Continuous usage in single session)
                 Row(

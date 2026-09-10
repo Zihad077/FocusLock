@@ -1,8 +1,17 @@
 package com.example.ads
 
-import android.app.Activity
-import android.util.DisplayMetrics
-import android.view.ViewGroup
+import android.annotation.SuppressLint
+import android.content.Context
+import android.content.Intent
+import android.graphics.Color as AndroidColor
+import android.net.Uri
+import android.view.View
+import android.webkit.WebChromeClient
+import android.webkit.WebResourceError
+import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -18,24 +27,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.ui.theme.liquidGlass
-import com.google.android.gms.ads.AdListener
-import com.google.android.gms.ads.AdRequest
-import com.google.android.gms.ads.AdSize
-import com.google.android.gms.ads.AdView
-import com.google.android.gms.ads.LoadAdError
 
 /**
- * Liquid Glass Adaptive Banner Ad Component for FocusLock.
+ * Liquid Glass 320x50 Fixed Mobile Banner Container for FocusLock.
  *
- * Automatically sizes itself according to the current window width,
- * handles lifecycle cleanup safely, and hides automatically for Premium users.
+ * Implements Adsterra's 320x50 Banner in a sleek glass container:
+ * - Subtle sponsored header tag
+ * - Clean safe WebView lifecycle disposal
+ * - External link handling that opens standard browser
+ * - Hides completely for Premium users (`isPremium == true`)
  */
+@SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun LiquidGlassAdaptiveBanner(
     isPremium: Boolean,
@@ -43,70 +50,95 @@ fun LiquidGlassAdaptiveBanner(
 ) {
     if (isPremium) return
 
-    val context = LocalContext.current
-    val configuration = LocalConfiguration.current
     val isDark = isSystemInDarkTheme()
-    var isLoaded by remember { mutableStateOf(false) }
-    var adViewInstance by remember { mutableStateOf<AdView?>(null) }
-
-    val adWidth = configuration.screenWidthDp
+    var webViewInstance by remember { mutableStateOf<WebView?>(null) }
+    val primaryCyan = if (isDark) Color(0xFF00E5FF) else Color(0xFF0077D6)
 
     DisposableEffect(Unit) {
         onDispose {
-            adViewInstance?.destroy()
-            adViewInstance = null
+            try {
+                webViewInstance?.apply {
+                    stopLoading()
+                    loadUrl("about:blank")
+                    clearHistory()
+                    removeAllViews()
+                    destroy()
+                }
+            } catch (e: Exception) {
+                // Ignore
+            }
+            webViewInstance = null
         }
     }
 
-    AnimatedVisibility(
-        visible = isLoaded,
-        enter = fadeIn(),
-        exit = fadeOut()
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .liquidGlass(
+                shape = RoundedCornerShape(18.dp),
+                isElevated = false,
+                borderWidth = 0.6.dp
+            )
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Box(
-            modifier = modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 6.dp)
-                .liquidGlass(
-                    shape = RoundedCornerShape(18.dp),
-                    isElevated = false,
-                    borderWidth = 0.6.dp
-                )
-                .padding(horizontal = 8.dp, vertical = 6.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                // Subtle Ad attribution tag
-                Text(
-                    text = "SPONSORED ADVERTISEMENT",
-                    fontSize = 8.sp,
-                    color = if (isDark) Color(0x8000E5FF) else Color(0x800077D6),
-                    modifier = Modifier.padding(bottom = 4.dp)
-                )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            // Subtle attribution tag
+            Text(
+                text = "SPONSORED ADVERTISEMENT",
+                fontSize = 8.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 0.8.sp,
+                color = if (isDark) Color(0x8000E5FF) else Color(0x800077D6),
+                modifier = Modifier.padding(bottom = 4.dp)
+            )
 
-                AndroidView(
-                    modifier = Modifier.fillMaxWidth(),
-                    factory = { ctx ->
-                        val adView = AdView(ctx).apply {
-                            setAdUnitId(AdsManager.getBannerAdUnitId())
-                            val adSize = AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(ctx, adWidth)
-                            setAdSize(adSize)
-                            adListener = object : AdListener() {
-                                override fun onAdLoaded() {
-                                    isLoaded = true
-                                }
+            AndroidView(
+                modifier = Modifier
+                    .width(320.dp)
+                    .height(52.dp)
+                    .clip(RoundedCornerShape(8.dp)),
+                factory = { ctx ->
+                    WebView(ctx).apply {
+                        webViewInstance = this
+                        setBackgroundColor(AndroidColor.TRANSPARENT)
+                        setLayerType(View.LAYER_TYPE_HARDWARE, null)
+                        
+                        settings.apply {
+                            javaScriptEnabled = true
+                            domStorageEnabled = true
+                            loadWithOverviewMode = true
+                            useWideViewPort = true
+                            cacheMode = WebSettings.LOAD_DEFAULT
+                            mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                        }
 
-                                override fun onAdFailedToLoad(error: LoadAdError) {
-                                    isLoaded = false
+                        webViewClient = object : WebViewClient() {
+                            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                                val url = request?.url?.toString() ?: return false
+                                if (url.startsWith("http://") || url.startsWith("https://")) {
+                                    try {
+                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                        }
+                                        ctx.startActivity(intent)
+                                        return true
+                                    } catch (e: Exception) {
+                                        // Ignore
+                                    }
                                 }
+                                return false
                             }
                         }
-                        adViewInstance = adView
-                        adView.loadAd(AdRequest.Builder().build())
-                        adView
+
+                        webChromeClient = WebChromeClient()
+
+                        val html = AdsterraManager.getBanner320x50Html(isDark)
+                        loadDataWithBaseURL("https://effectivegatecontent.com", html, "text/html", "UTF-8", null)
                     }
-                )
-            }
+                }
+            )
         }
     }
 }

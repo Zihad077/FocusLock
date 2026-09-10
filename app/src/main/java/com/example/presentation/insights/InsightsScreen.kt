@@ -10,9 +10,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Lightbulb
-import androidx.compose.material.icons.filled.Timeline
-import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,6 +27,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.ads.AdsterraSocialBar
+import com.example.ads.LiquidGlassAdaptiveBanner
+import com.example.ads.LiquidGlassNativeAdCard
 import com.example.ui.theme.liquidGlass
 import java.text.SimpleDateFormat
 import java.util.*
@@ -40,6 +42,7 @@ fun InsightsScreen(
     )
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val userSettings by viewModel.userSettings.collectAsStateWithLifecycle(initialValue = null)
     val isDark = isSystemInDarkTheme()
     val primaryCyan = if (isDark) Color(0xFF00E5FF) else Color(0xFF0077D6)
 
@@ -88,7 +91,7 @@ fun InsightsScreen(
                                 .padding(12.dp)
                         ) {
                             Icon(
-                                Icons.Default.TrendingUp,
+                                Icons.AutoMirrored.Filled.TrendingUp,
                                 contentDescription = null,
                                 tint = primaryCyan,
                                 modifier = Modifier.size(32.dp)
@@ -156,6 +159,13 @@ fun InsightsScreen(
                         )
                     }
                 }
+            }
+
+            // Native ad after main insight cards (Zero ads for premium)
+            item {
+                LiquidGlassNativeAdCard(
+                    isPremium = userSettings?.isPremium ?: false
+                )
             }
 
             // Usage Timeline
@@ -238,6 +248,21 @@ fun InsightsScreen(
                         }
                     }
                 }
+            }
+
+            // 320x50 Banner near the bottom (Zero ads for premium)
+            item {
+                LiquidGlassAdaptiveBanner(
+                    isPremium = userSettings?.isPremium ?: false
+                )
+            }
+
+            // Social Bar format (cooldown protected, zero ads for premium)
+            item {
+                AdsterraSocialBar(
+                    isPremium = userSettings?.isPremium ?: false,
+                    isFocusActive = userSettings?.isFocusModeActive ?: false
+                )
             }
         }
     }

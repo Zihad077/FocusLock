@@ -24,6 +24,8 @@ class AppsViewModel(
 
     private val packageManager: PackageManager = application.packageManager
 
+    val userSettings = repository.userSettings
+
     private val _installedApps = MutableStateFlow<List<AppItem>>(emptyList())
     
     val appsList = combine(

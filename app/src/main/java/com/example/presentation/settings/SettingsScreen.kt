@@ -25,7 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
-import com.example.ads.AdsManager
+import com.example.ads.LiquidGlassAdaptiveBanner
 import com.example.ui.theme.liquidGlass
 import com.example.util.DataExportHelper
 import androidx.compose.ui.unit.sp
@@ -40,6 +40,7 @@ fun SettingsScreen(
     onNavigateToApps: () -> Unit = {},
     onNavigateToFocus: () -> Unit = {},
     onNavigateToEscapePrevention: () -> Unit = {},
+    onNavigateToPermissions: () -> Unit = {},
     viewModel: SettingsViewModel = viewModel(
         factory = SettingsViewModel.Factory(LocalContext.current.applicationContext as Application)
     )
@@ -101,28 +102,6 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                SettingsSection("Data & Privacy") {
-                    SettingsRow(
-                        icon = androidx.compose.material.icons.Icons.Default.Share,
-                        title = "Export Data (CSV)",
-                        subtitle = "Save a local copy of your usage data",
-                        onClick = { scope.launch { DataExportHelper.exportDataAsCsv(context, viewModel.repository) } }
-                    )
-                }
-            }
-            item { Spacer(modifier = Modifier.height(8.dp)) }
-            
-            item {
-                SettingsSection("Data & Privacy") {
-                    SettingsRow(
-                        icon = androidx.compose.material.icons.Icons.Default.Share,
-                        title = "Export Data (CSV)",
-                        subtitle = "Save a local copy of your usage data",
-                        onClick = { scope.launch { DataExportHelper.exportDataAsCsv(context, viewModel.repository) } }
-                    )
-                }
-            }
-            item {
                 SettingsSection("ACCOUNT") {
                     SettingsRow(
                         icon = Icons.Default.Person,
@@ -132,17 +111,7 @@ fun SettingsScreen(
                     )
                 }
             }
-            
-            item {
-                SettingsSection("Data & Privacy") {
-                    SettingsRow(
-                        icon = androidx.compose.material.icons.Icons.Default.Share,
-                        title = "Export Data (CSV)",
-                        subtitle = "Save a local copy of your usage data",
-                        onClick = { scope.launch { DataExportHelper.exportDataAsCsv(context, viewModel.repository) } }
-                    )
-                }
-            }
+
             item {
                 SettingsSection("PREFERENCES") {
                     SettingsRow(
@@ -165,17 +134,7 @@ fun SettingsScreen(
                     )
                 }
             }
-            
-            item {
-                SettingsSection("Data & Privacy") {
-                    SettingsRow(
-                        icon = androidx.compose.material.icons.Icons.Default.Share,
-                        title = "Export Data (CSV)",
-                        subtitle = "Save a local copy of your usage data",
-                        onClick = { scope.launch { DataExportHelper.exportDataAsCsv(context, viewModel.repository) } }
-                    )
-                }
-            }
+
             item {
                 SettingsSection("FEATURES") {
                     SettingsRow(
@@ -204,9 +163,9 @@ fun SettingsScreen(
                     )
                     SettingsRow(
                         icon = Icons.Default.AdminPanelSettings,
-                        title = "System Permissions Manager",
-                        subtitle = "Verify overlay, usage & accessibility permissions",
-                        onClick = { showPermissionsDialog = true }
+                        title = "Permission Center",
+                        subtitle = "Manage required & optional system guards",
+                        onClick = onNavigateToPermissions
                     )
                     SettingsRow(
                         icon = Icons.Default.Security,
@@ -216,27 +175,18 @@ fun SettingsScreen(
                     )
                 }
             }
-            
+
             item {
-                SettingsSection("Data & Privacy") {
+                SettingsSection("DATA & PRIVACY") {
                     SettingsRow(
-                        icon = androidx.compose.material.icons.Icons.Default.Share,
+                        icon = Icons.Default.Share,
                         title = "Export Data (CSV)",
                         subtitle = "Save a local copy of your usage data",
                         onClick = { scope.launch { DataExportHelper.exportDataAsCsv(context, viewModel.repository) } }
                     )
-                    SettingsRow(
-                        icon = Icons.Default.PrivacyTip,
-                        title = "Ad & Privacy Preferences",
-                        subtitle = "Manage Google UMP consent & targeted ads preferences",
-                        onClick = {
-                            (context as? Activity)?.let { act ->
-                                AdsManager.showPrivacyOptionsForm(act)
-                            }
-                        }
-                    )
                 }
             }
+
             item {
                 SettingsSection("ABOUT") {
                     SettingsRow(
@@ -253,6 +203,12 @@ fun SettingsScreen(
                     )
                 }
             }
+
+            // 320x50 Banner near bottom (Zero ads for premium)
+            item {
+                LiquidGlassAdaptiveBanner(isPremium = settings.isPremium)
+            }
+
             item { Spacer(modifier = Modifier.height(32.dp)) }
         }
     }
@@ -610,88 +566,38 @@ fun SettingsScreen(
             title = { Text("Verification Settings", fontWeight = FontWeight.Bold) },
             text = {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            item {
-                SettingsSection("Data & Privacy") {
-                    SettingsRow(
-                        icon = androidx.compose.material.icons.Icons.Default.Share,
-                        title = "Export Data (CSV)",
-                        subtitle = "Save a local copy of your usage data",
-                        onClick = { scope.launch { DataExportHelper.exportDataAsCsv(context, viewModel.repository) } }
-                    )
-                }
-            }
                     item {
                         Text("Enable verification methods for temporary unlocks.", style = MaterialTheme.typography.bodySmall)
                         Spacer(modifier = Modifier.height(16.dp))
                     }
                     
-            item {
-                SettingsSection("Data & Privacy") {
-                    SettingsRow(
-                        icon = androidx.compose.material.icons.Icons.Default.Share,
-                        title = "Export Data (CSV)",
-                        subtitle = "Save a local copy of your usage data",
-                        onClick = { scope.launch { DataExportHelper.exportDataAsCsv(context, viewModel.repository) } }
-                    )
-                }
-            }
                     item {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                             Text("Quick Mind Challenge", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
                             Switch(checked = settings.mindChallengeEnabled, onCheckedChange = { viewModel.updateSettings(settings.copy(mindChallengeEnabled = it)) })
                         }
                         Text("Math and logic questions.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Divider(modifier = Modifier.padding(vertical = 12.dp))
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
                     }
                     
-            item {
-                SettingsSection("Data & Privacy") {
-                    SettingsRow(
-                        icon = androidx.compose.material.icons.Icons.Default.Share,
-                        title = "Export Data (CSV)",
-                        subtitle = "Save a local copy of your usage data",
-                        onClick = { scope.launch { DataExportHelper.exportDataAsCsv(context, viewModel.repository) } }
-                    )
-                }
-            }
                     item {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                             Text("Focus Challenge", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
                             Switch(checked = settings.focusChallengeEnabled, onCheckedChange = { viewModel.updateSettings(settings.copy(focusChallengeEnabled = it)) })
                         }
                         Text("Wait on screen for a countdown.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Divider(modifier = Modifier.padding(vertical = 12.dp))
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
                     }
                     
-            item {
-                SettingsSection("Data & Privacy") {
-                    SettingsRow(
-                        icon = androidx.compose.material.icons.Icons.Default.Share,
-                        title = "Export Data (CSV)",
-                        subtitle = "Save a local copy of your usage data",
-                        onClick = { scope.launch { DataExportHelper.exportDataAsCsv(context, viewModel.repository) } }
-                    )
-                }
-            }
                     item {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                             Text("Typing Challenge", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
                             Switch(checked = settings.typingChallengeEnabled, onCheckedChange = { viewModel.updateSettings(settings.copy(typingChallengeEnabled = it)) })
                         }
                         Text("Type a phrase correctly.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Divider(modifier = Modifier.padding(vertical = 12.dp))
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
                     }
                     
-            item {
-                SettingsSection("Data & Privacy") {
-                    SettingsRow(
-                        icon = androidx.compose.material.icons.Icons.Default.Share,
-                        title = "Export Data (CSV)",
-                        subtitle = "Save a local copy of your usage data",
-                        onClick = { scope.launch { DataExportHelper.exportDataAsCsv(context, viewModel.repository) } }
-                    )
-                }
-            }
                     item {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                             Text("PIN Unlock", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
@@ -711,19 +617,9 @@ fun SettingsScreen(
                                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword)
                             )
                         }
-                        Divider(modifier = Modifier.padding(vertical = 12.dp))
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
                     }
                     
-            item {
-                SettingsSection("Data & Privacy") {
-                    SettingsRow(
-                        icon = androidx.compose.material.icons.Icons.Default.Share,
-                        title = "Export Data (CSV)",
-                        subtitle = "Save a local copy of your usage data",
-                        onClick = { scope.launch { DataExportHelper.exportDataAsCsv(context, viewModel.repository) } }
-                    )
-                }
-            }
                     item {
                         Text("Challenge Difficulty", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
                         Spacer(modifier = Modifier.height(8.dp))
@@ -737,19 +633,9 @@ fun SettingsScreen(
                                 )
                             }
                         }
-                        Divider(modifier = Modifier.padding(vertical = 12.dp))
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
                     }
                     
-            item {
-                SettingsSection("Data & Privacy") {
-                    SettingsRow(
-                        icon = androidx.compose.material.icons.Icons.Default.Share,
-                        title = "Export Data (CSV)",
-                        subtitle = "Save a local copy of your usage data",
-                        onClick = { scope.launch { DataExportHelper.exportDataAsCsv(context, viewModel.repository) } }
-                    )
-                }
-            }
                     item {
                         Text("Temporary Unlock Duration (Minutes)", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
                         Spacer(modifier = Modifier.height(8.dp))
@@ -1030,7 +916,7 @@ private fun applyLocale(context: Context, languageCode: String) {
             val localeManager = context.getSystemService(Context.LOCALE_SERVICE) as? android.app.LocaleManager
             localeManager?.applicationLocales = android.os.LocaleList.forLanguageTags(languageCode)
         } else {
-            val locale = Locale(languageCode)
+            val locale = Locale.forLanguageTag(languageCode)
             Locale.setDefault(locale)
             val res = context.resources
             val config = res.configuration

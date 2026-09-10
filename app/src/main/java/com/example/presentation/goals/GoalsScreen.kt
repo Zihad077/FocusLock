@@ -31,8 +31,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.ads.AdsterraSocialBar
+import com.example.ads.LiquidGlassAdaptiveBanner
 import com.example.ads.LiquidGlassNativeAdCard
-import com.example.ads.LiquidGlassRewardedAdCard
 import com.example.database.Achievement
 import com.example.database.Goal
 import com.example.database.UserSettings
@@ -148,13 +149,18 @@ fun GoalsScreen(
                 }
             }
 
-            // Optional Rewarded Ad Card for XP Boost (Zero ads for premium)
+            // 320x50 Banner near the bottom (Zero ads for premium)
             item {
-                LiquidGlassRewardedAdCard(
+                LiquidGlassAdaptiveBanner(
+                    isPremium = userSettings?.isPremium ?: false
+                )
+            }
+
+            // Social Bar format (cooldown protected, zero ads for premium)
+            item {
+                AdsterraSocialBar(
                     isPremium = userSettings?.isPremium ?: false,
-                    onRewardEarned = { amount ->
-                        viewModel.awardBonusXP(amount)
-                    }
+                    isFocusActive = userSettings?.isFocusModeActive ?: false
                 )
             }
         }
