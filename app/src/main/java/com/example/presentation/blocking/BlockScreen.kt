@@ -27,6 +27,10 @@ import androidx.compose.ui.unit.sp
 import com.example.ui.theme.LiquidBackground
 import com.example.ui.theme.liquidGlass
 
+import com.example.ui.theme.SleekPrimaryDark
+import com.example.ui.theme.SleekPrimaryLight
+import com.example.ui.theme.SleekError
+
 @Composable
 fun BlockScreen(
     appName: String,
@@ -38,8 +42,8 @@ fun BlockScreen(
     onEmergencyUnlockClick: () -> Unit
 ) {
     val isDark = isSystemInDarkTheme()
-    val primaryCyan = if (isDark) Color(0xFF00E5FF) else Color(0xFF0077D6)
-    val accentRed = if (isDark) Color(0xFFFF5252) else Color(0xFFD32F2F)
+    val primaryCyan = if (isDark) SleekPrimaryDark else SleekPrimaryLight
+    val accentRed = SleekError
 
     LiquidBackground {
         Column(
@@ -162,8 +166,8 @@ fun BlockScreen(
                         .clip(RoundedCornerShape(18.dp))
                         .background(
                             Brush.horizontalGradient(
-                                if (isDark) listOf(Color(0xFF00E5FF), Color(0xFF0091EA))
-                                else listOf(Color(0xFF0077D6), Color(0xFF0288D1))
+                                if (isDark) listOf(com.example.ui.theme.SleekPrimaryDark, com.example.ui.theme.SleekPrimaryDark.copy(alpha = 0.8f))
+                                else listOf(com.example.ui.theme.SleekPrimaryLight, com.example.ui.theme.SleekPrimaryLight.copy(alpha = 0.8f))
                             )
                         )
                         .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(18.dp)),

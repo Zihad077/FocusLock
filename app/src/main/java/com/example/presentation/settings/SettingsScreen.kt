@@ -27,7 +27,6 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import com.example.ads.LiquidGlassAdaptiveBanner
 import com.example.ui.theme.liquidGlass
-import com.example.util.DataExportHelper
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -41,6 +40,7 @@ fun SettingsScreen(
     onNavigateToFocus: () -> Unit = {},
     onNavigateToEscapePrevention: () -> Unit = {},
     onNavigateToPermissions: () -> Unit = {},
+    onNavigateToDataBackup: () -> Unit = {},
     viewModel: SettingsViewModel = viewModel(
         factory = SettingsViewModel.Factory(LocalContext.current.applicationContext as Application)
     )
@@ -177,12 +177,12 @@ fun SettingsScreen(
             }
 
             item {
-                SettingsSection("DATA & PRIVACY") {
+                SettingsSection("DATA MANAGEMENT") {
                     SettingsRow(
-                        icon = Icons.Default.Share,
-                        title = "Export Data (CSV)",
-                        subtitle = "Save a local copy of your usage data",
-                        onClick = { scope.launch { DataExportHelper.exportDataAsCsv(context, viewModel.repository) } }
+                        icon = Icons.Default.Storage,
+                        title = "Data & Backup",
+                        subtitle = "Export, import, and backup your data",
+                        onClick = { onNavigateToDataBackup() }
                     )
                 }
             }

@@ -20,6 +20,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import android.content.Context
+import android.os.PowerManager
+import android.provider.Settings
+import androidx.compose.ui.platform.LocalContext
 
 /**
  * Liquid Glass design system utilities for FocusLock.
@@ -40,22 +44,16 @@ object LiquidGlass {
     val GlassBorderLight = Color(0x60FFFFFF)    // High gloss white specular rim
     val GlassBorderSubtleLight = Color(0x30386699)
 
-    // Glow and neon accent colors
-    val NeonCyan = Color(0xFF00E5FF)
-    val NeonBlue = Color(0xFF2979FF)
-    val NeonPurple = Color(0xFF7C4DFF)
-    val NeonTeal = Color(0xFF00BFA5)
-    val NeonAmber = Color(0xFFFFAB00)
-    val NeonCoral = Color(0xFFFF5252)
+    // Glow and neon accent colors (Removed in favor of Premium Palette)
 
     @Composable
     fun cardColor(isElevated: Boolean = false): Color {
         val isDark = isSystemInDarkTheme()
         return when {
-            isDark && isElevated -> GlassSurfaceElevatedDark
-            isDark -> GlassSurfaceDark
-            isElevated -> GlassSurfaceElevatedLight
-            else -> GlassSurfaceLight
+            isDark && isElevated -> SleekSurfaceVariantDark.copy(alpha = 0.5f)
+            isDark -> SleekSurfaceDark.copy(alpha = 0.4f)
+            isElevated -> SleekSurfaceVariantLight.copy(alpha = 0.9f)
+            else -> SleekSurfaceLight.copy(alpha = 0.7f)
         }
     }
 
@@ -63,10 +61,10 @@ object LiquidGlass {
     fun borderColor(isHighlight: Boolean = false): Color {
         val isDark = isSystemInDarkTheme()
         return when {
-            isDark && isHighlight -> GlassBorderDark
-            isDark -> GlassBorderSubtleDark
-            isHighlight -> GlassBorderLight
-            else -> GlassBorderSubtleLight
+            isDark && isHighlight -> SleekPrimaryDark.copy(alpha = 0.4f)
+            isDark -> SleekOutlineDark.copy(alpha = 0.2f)
+            isHighlight -> SleekPrimaryLight.copy(alpha = 0.6f)
+            else -> SleekOutlineLight.copy(alpha = 0.3f)
         }
     }
 
@@ -77,17 +75,17 @@ object LiquidGlass {
             Brush.linearGradient(
                 colors = if (isHighlight) {
                     listOf(
-                        Color(0x9080D8FF),
-                        Color(0x3000E5FF),
-                        Color(0x15FFFFFF),
-                        Color(0x6000E5FF)
+                        SleekPrimaryDark.copy(alpha = 0.9f),
+                        SleekPrimaryDark.copy(alpha = 0.3f),
+                        Color.White.copy(alpha = 0.15f),
+                        SleekPrimaryDark.copy(alpha = 0.6f)
                     )
                 } else {
                     listOf(
-                        Color(0x55FFFFFF),
-                        Color(0x1580D8FF),
-                        Color(0x05FFFFFF),
-                        Color(0x30FFFFFF)
+                        Color.White.copy(alpha = 0.55f),
+                        SleekOutlineDark.copy(alpha = 0.15f),
+                        Color.White.copy(alpha = 0.05f),
+                        Color.White.copy(alpha = 0.30f)
                     )
                 },
                 start = Offset(0f, 0f),
@@ -132,7 +130,7 @@ fun Modifier.liquidGlass(
         elevation = if (isElevated) 12.dp else 4.dp,
         shape = shape,
         ambientColor = Color(0x40001025),
-        spotColor = Color(0x3000E5FF)
+        spotColor = Color(0x200D6EFD) // SleekPrimaryLight but very faint
     )
     .clip(shape)
     .background(
@@ -148,9 +146,9 @@ fun Modifier.liquidGlass(
         brush = Brush.linearGradient(
             colors = listOf(
                 Color.White.copy(alpha = if (isHighlight) 0.55f else 0.35f),
-                Color(0xFF00E5FF).copy(alpha = if (isHighlight) 0.40f else 0.15f),
+                Color(0xFF4D9BFF).copy(alpha = if (isHighlight) 0.40f else 0.15f), // SleekPrimaryDark
                 Color.White.copy(alpha = 0.08f),
-                Color(0xFF2979FF).copy(alpha = if (isHighlight) 0.30f else 0.12f)
+                Color(0xFF0D6EFD).copy(alpha = if (isHighlight) 0.30f else 0.12f)  // SleekPrimaryLight
             ),
             start = Offset(0f, 0f),
             end = Offset(1000f, 1000f)
@@ -168,18 +166,30 @@ fun LiquidBackground(
     content: @Composable BoxScope.() -> Unit
 ) {
     val isDark = isSystemInDarkTheme()
+    val context = LocalContext.current
+    
+    // Check constraints for animations
+    val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
+    val isPowerSaveMode = powerManager?.isPowerSaveMode == true
+    val animatorDurationScale = Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f)
+    val animationsDisabled = isPowerSaveMode || animatorDurationScale == 0f
 
     // Gentle ambient pulse for liquid background depth
-    val infiniteTransition = rememberInfiniteTransition(label = "liquid_ambient")
-    val ambientPulse by infiniteTransition.animateFloat(
-        initialValue = 0.85f,
-        targetValue = 1.15f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(8000, easing = EaseInOutSine),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "ambient_pulse"
-    )
+    val ambientPulse = if (animationsDisabled) {
+        1.0f
+    } else {
+        val infiniteTransition = rememberInfiniteTransition(label = "liquid_ambient")
+        val animatedPulse by infiniteTransition.animateFloat(
+            initialValue = 0.95f,
+            targetValue = 1.05f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(12000, easing = EaseInOutSine),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "ambient_pulse"
+        )
+        animatedPulse
+    }
 
     Box(
         modifier = modifier
@@ -188,17 +198,17 @@ fun LiquidBackground(
                 brush = Brush.verticalGradient(
                     colors = if (isDark) {
                         listOf(
-                            Color(0xFF070B12), // Deepest twilight midnight
-                            Color(0xFF0C1524),
-                            Color(0xFF0E1A2C),
-                            Color(0xFF09111E)
+                            Color(0xFF0F141A), // Deep elegant navy-black
+                            Color(0xFF131A24),
+                            Color(0xFF161D26),
+                            Color(0xFF0F141A)
                         )
                     } else {
                         listOf(
-                            Color(0xFFEAF2F8), // Soft glacial sky
-                            Color(0xFFDDEAF5),
-                            Color(0xFFE4EDF7),
-                            Color(0xFFF1F6FA)
+                            Color(0xFFF4F7FA), // Soft blue-grey
+                            Color(0xFFEEF2F6),
+                            Color(0xFFEBF0F5),
+                            Color(0xFFF4F7FA)
                         )
                     }
                 )
@@ -207,65 +217,65 @@ fun LiquidBackground(
                 val canvasWidth = size.width
                 val canvasHeight = size.height
 
-                // Orb 1: Top-Right Cyan/Blue soft glow
+                // Orb 1: Top-Right premium blue soft glow
                 drawCircle(
                     brush = Brush.radialGradient(
                         colors = if (isDark) {
                             listOf(
-                                Color(0x3500E5FF),
-                                Color(0x182979FF),
+                                Color(0x254D9BFF), // SleekPrimaryDark soft
+                                Color(0x103366CC),
                                 Color.Transparent
                             )
                         } else {
                             listOf(
-                                Color(0x4040A5FF),
-                                Color(0x1564B5F6),
+                                Color(0x150D6EFD), // SleekPrimaryLight soft
+                                Color(0x0A004B99),
                                 Color.Transparent
                             )
                         },
                         center = Offset(canvasWidth * 0.85f, canvasHeight * 0.15f),
-                        radius = canvasWidth * 0.65f * ambientPulse
+                        radius = canvasWidth * 0.70f * ambientPulse
                     )
                 )
 
-                // Orb 2: Center-Left Deep Violet/Indigo ambient glow
+                // Orb 2: Center-Left teal/success ambient glow
                 drawCircle(
                     brush = Brush.radialGradient(
                         colors = if (isDark) {
                             listOf(
-                                Color(0x257C4DFF),
-                                Color(0x103D5AFE),
+                                Color(0x1547C28C), // SleekSecondaryDark soft
+                                Color(0x082F805C),
                                 Color.Transparent
                             )
                         } else {
                             listOf(
-                                Color(0x25B388FF),
-                                Color(0x087C4DFF),
+                                Color(0x10198754), // SleekSecondaryLight soft
+                                Color(0x05105C39),
                                 Color.Transparent
                             )
                         },
                         center = Offset(canvasWidth * 0.15f, canvasHeight * 0.45f),
-                        radius = canvasWidth * 0.7f
+                        radius = canvasWidth * 0.75f * (2f - ambientPulse) // Opposite pulse
                     )
                 )
 
-                // Orb 3: Bottom-Center Subtle Turquoise/Aqua depth glow
+                // Orb 3: Bottom-Center deep blue glow
                 drawCircle(
                     brush = Brush.radialGradient(
                         colors = if (isDark) {
                             listOf(
-                                Color(0x2000BFA5),
-                                Color(0x0A00E5FF),
+                                Color(0x203366CC),
+                                Color(0x0A1A3366),
                                 Color.Transparent
                             )
                         } else {
                             listOf(
-                                Color(0x2580CBC4),
+                                Color(0x10004B99),
                                 Color.Transparent
                             )
                         },
                         center = Offset(canvasWidth * 0.5f, canvasHeight * 0.9f),
-                        radius = canvasWidth * 0.8f
+                        radius = canvasWidth * 0.8f * ambientPulse
                     )
                 )
             }

@@ -15,6 +15,7 @@ sealed class Route {
     
     // Additional Screens
     @Serializable data object Settings : Route()
+    @Serializable data object DataBackup : Route()
     @Serializable data object Goals : Route()
     @Serializable data object EscapePrevention : Route()
     @Serializable data object Insights : Route()

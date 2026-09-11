@@ -41,7 +41,7 @@ import com.example.ui.theme.liquidGlass
 fun WelcomeScreen(onNavigateToPermissions: () -> Unit) {
     val context = LocalContext.current
     val isDark = isSystemInDarkTheme()
-    val primaryCyan = if (isDark) Color(0xFF00E5FF) else Color(0xFF0077D6)
+    val primaryColor = if (isDark) com.example.ui.theme.SleekPrimaryDark else com.example.ui.theme.SleekPrimaryLight
     
     // Step 0: Welcome Productivity Hook, Step 1: Terms & Privacy Agreement
     var currentStep by remember { mutableIntStateOf(0) }
@@ -67,13 +67,13 @@ fun WelcomeScreen(onNavigateToPermissions: () -> Unit) {
                 if (step == 0) {
                     WelcomeHookView(
                         isDark = isDark,
-                        primaryCyan = primaryCyan,
+                        primaryColor = primaryColor,
                         onGetStarted = { currentStep = 1 }
                     )
                 } else {
                     TermsPrivacyView(
                         isDark = isDark,
-                        primaryCyan = primaryCyan,
+                        primaryColor = primaryColor,
                         termsAgreed = termsAgreed,
                         onTermsAgreedChange = { termsAgreed = it },
                         onViewTerms = { showFullTermsDialog = true },
@@ -98,7 +98,7 @@ fun WelcomeScreen(onNavigateToPermissions: () -> Unit) {
 @Composable
 private fun WelcomeHookView(
     isDark: Boolean,
-    primaryCyan: Color,
+    primaryColor: Color,
     onGetStarted: () -> Unit
 ) {
     val scrollState = rememberScrollState()
@@ -117,34 +117,34 @@ private fun WelcomeHookView(
         // Hero Visual Card with Liquid Glass Border
         Box(
             modifier = Modifier
-                .fillMaxWidth(0.88f)
+                .fillMaxWidth(0.9f)
                 .aspectRatio(1.15f)
-                .shadow(20.dp, RoundedCornerShape(32.dp), spotColor = primaryCyan)
+                .shadow(16.dp, RoundedCornerShape(32.dp), spotColor = primaryColor.copy(alpha = 0.5f))
                 .clip(RoundedCornerShape(32.dp))
                 .border(
-                    1.5.dp,
+                    1.dp,
                     Brush.linearGradient(
                         listOf(
-                            Color.White.copy(alpha = 0.6f),
-                            Color.White.copy(alpha = 0.15f),
-                            primaryCyan.copy(alpha = 0.4f)
+                            Color.White.copy(alpha = 0.4f),
+                            Color.White.copy(alpha = 0.05f),
+                            primaryColor.copy(alpha = 0.2f)
                         )
                     ),
                     RoundedCornerShape(32.dp)
                 )
         ) {
             Image(
-                painter = painterResource(id = R.drawable.welcome_illustration_1788696289919),
+                painter = painterResource(id = R.drawable.welcome_illustration_1789049712801),
                 contentDescription = "FocusLock Flow Illustration",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
         }
 
-        Spacer(modifier = Modifier.height(28.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
         Text(
-            text = "Reclaim Your Flow.",
+            text = "Take Back Your Focus",
             style = MaterialTheme.typography.headlineLarge.copy(
                 fontWeight = FontWeight.ExtraBold,
                 letterSpacing = (-0.5).sp
@@ -153,58 +153,57 @@ private fun WelcomeHookView(
             textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            text = "Break free from mindless doomscrolling. FocusLock surrounds your device in calm protection, shielding your deepest focus time.",
-            style = MaterialTheme.typography.bodyMedium.copy(
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.78f),
-                lineHeight = 22.sp
+            text = "FocusLock creates a calm, secure space on your device to protect your deepest work and build healthy habits.",
+            style = MaterialTheme.typography.bodyLarge.copy(
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                lineHeight = 24.sp
             ),
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 8.dp)
+            modifier = Modifier.padding(horizontal = 12.dp)
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
         // 3 Key Productivity Value Pillars in Glass Cards
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             ProductivityFeatureRow(
                 icon = Icons.Default.Shield,
                 title = "Friction Overlays",
-                subtitle = "Instant interventions with mind challenges to prevent impulsive opens."
+                subtitle = "Mindful interventions to prevent impulsive app opens."
             )
             ProductivityFeatureRow(
                 icon = Icons.Default.Timer,
                 title = "Deep Focus Sessions",
-                subtitle = "Strict time blocks with emergency limits to build lasting digital discipline."
+                subtitle = "Strict time blocks with limits to build digital discipline."
             )
             ProductivityFeatureRow(
                 icon = Icons.Default.Lock,
-                title = "100% On-Device & Private",
-                subtitle = "Zero tracking. Your habits and usage stats stay completely on your device."
+                title = "Private & On-Device",
+                subtitle = "Zero tracking. Your usage stats stay completely on your device."
             )
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(40.dp))
 
         // Action Button
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
-                .shadow(12.dp, RoundedCornerShape(20.dp), spotColor = primaryCyan)
+                .shadow(16.dp, RoundedCornerShape(20.dp), spotColor = primaryColor.copy(alpha = 0.4f))
                 .clip(RoundedCornerShape(20.dp))
                 .background(
                     Brush.horizontalGradient(
-                        if (isDark) listOf(Color(0xFF00E5FF), Color(0xFF0091EA))
-                        else listOf(Color(0xFF0077D6), Color(0xFF0288D1))
+                        listOf(primaryColor, primaryColor.copy(alpha = 0.8f))
                     )
                 )
-                .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(20.dp)),
+                .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(20.dp)),
             contentAlignment = Alignment.Center
         ) {
             Button(
@@ -240,7 +239,7 @@ private fun WelcomeHookView(
 @Composable
 private fun TermsPrivacyView(
     isDark: Boolean,
-    primaryCyan: Color,
+    primaryColor: Color,
     termsAgreed: Boolean,
     onTermsAgreedChange: (Boolean) -> Unit,
     onViewTerms: () -> Unit,
@@ -293,7 +292,7 @@ private fun TermsPrivacyView(
         Box(
             modifier = Modifier
                 .size(72.dp)
-                .shadow(12.dp, CircleShape, spotColor = primaryCyan)
+                .shadow(12.dp, CircleShape, spotColor = primaryColor)
                 .clip(CircleShape)
                 .liquidGlass(shape = CircleShape, isHighlight = true),
             contentAlignment = Alignment.Center
@@ -301,7 +300,7 @@ private fun TermsPrivacyView(
             Icon(
                 Icons.Default.VerifiedUser,
                 contentDescription = null,
-                tint = primaryCyan,
+                tint = primaryColor,
                 modifier = Modifier.size(36.dp)
             )
         }
@@ -344,7 +343,7 @@ private fun TermsPrivacyView(
                         Icon(
                             Icons.Default.Description,
                             contentDescription = null,
-                            tint = primaryCyan,
+                            tint = primaryColor,
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(10.dp))
@@ -355,7 +354,7 @@ private fun TermsPrivacyView(
                         )
                     }
                     TextButton(onClick = onViewTerms) {
-                        Text("Read", color = primaryCyan, fontWeight = FontWeight.Bold)
+                        Text("Read", color = primaryColor, fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -370,7 +369,7 @@ private fun TermsPrivacyView(
                         Icon(
                             Icons.Default.Security,
                             contentDescription = null,
-                            tint = primaryCyan,
+                            tint = primaryColor,
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(10.dp))
@@ -381,7 +380,7 @@ private fun TermsPrivacyView(
                         )
                     }
                     TextButton(onClick = onViewPrivacy) {
-                        Text("Read", color = primaryCyan, fontWeight = FontWeight.Bold)
+                        Text("Read", color = primaryColor, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -414,12 +413,12 @@ private fun TermsPrivacyView(
                 .clip(RoundedCornerShape(16.dp))
                 .clickable { onTermsAgreedChange(!termsAgreed) }
                 .background(
-                    if (termsAgreed) primaryCyan.copy(alpha = if (isDark) 0.15f else 0.1f)
+                    if (termsAgreed) primaryColor.copy(alpha = if (isDark) 0.15f else 0.1f)
                     else Color.Transparent
                 )
                 .border(
                     1.dp,
-                    if (termsAgreed) primaryCyan.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.2f),
+                    if (termsAgreed) primaryColor.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.2f),
                     RoundedCornerShape(16.dp)
                 )
                 .padding(horizontal = 12.dp, vertical = 10.dp)
@@ -432,7 +431,7 @@ private fun TermsPrivacyView(
                     checked = termsAgreed,
                     onCheckedChange = onTermsAgreedChange,
                     colors = CheckboxDefaults.colors(
-                        checkedColor = primaryCyan,
+                        checkedColor = primaryColor,
                         checkmarkColor = Color.White
                     )
                 )
@@ -455,14 +454,13 @@ private fun TermsPrivacyView(
                 .shadow(
                     elevation = if (termsAgreed) 12.dp else 0.dp,
                     shape = RoundedCornerShape(20.dp),
-                    spotColor = primaryCyan
+                    spotColor = primaryColor.copy(alpha = 0.4f)
                 )
                 .clip(RoundedCornerShape(20.dp))
                 .background(
                     if (termsAgreed) {
                         Brush.horizontalGradient(
-                            if (isDark) listOf(Color(0xFF00E5FF), Color(0xFF0091EA))
-                            else listOf(Color(0xFF0077D6), Color(0xFF0288D1))
+                            listOf(primaryColor, primaryColor.copy(alpha = 0.8f))
                         )
                     } else {
                         Brush.horizontalGradient(
@@ -514,7 +512,7 @@ private fun ProductivityFeatureRow(
     subtitle: String
 ) {
     val isDark = isSystemInDarkTheme()
-    val primaryCyan = if (isDark) Color(0xFF00E5FF) else Color(0xFF0077D6)
+    val primaryColor = if (isDark) com.example.ui.theme.SleekPrimaryDark else com.example.ui.theme.SleekPrimaryLight
 
     Box(
         modifier = Modifier
@@ -530,14 +528,14 @@ private fun ProductivityFeatureRow(
                 modifier = Modifier
                     .size(42.dp)
                     .clip(CircleShape)
-                    .background(primaryCyan.copy(alpha = 0.15f))
-                    .border(1.dp, primaryCyan.copy(alpha = 0.35f), CircleShape),
+                    .background(primaryColor.copy(alpha = 0.15f))
+                    .border(1.dp, primaryColor.copy(alpha = 0.35f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = primaryCyan,
+                    tint = primaryColor,
                     modifier = Modifier.size(22.dp)
                 )
             }
@@ -566,7 +564,7 @@ private fun ProductivityFeatureRow(
 @Composable
 private fun BulletPoint(text: String) {
     val isDark = isSystemInDarkTheme()
-    val primaryCyan = if (isDark) Color(0xFF00E5FF) else Color(0xFF0077D6)
+    val primaryColor = if (isDark) com.example.ui.theme.SleekPrimaryDark else com.example.ui.theme.SleekPrimaryLight
 
     Row(
         verticalAlignment = Alignment.Top,
@@ -577,7 +575,7 @@ private fun BulletPoint(text: String) {
                 .padding(top = 6.dp)
                 .size(6.dp)
                 .clip(CircleShape)
-                .background(primaryCyan)
+                .background(primaryColor)
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(

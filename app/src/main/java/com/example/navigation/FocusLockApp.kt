@@ -178,7 +178,7 @@ fun MainTabScreen() {
                                 elevation = 16.dp,
                                 shape = RoundedCornerShape(32.dp),
                                 ambientColor = Color(0x60001025),
-                                spotColor = Color(0x3500E5FF)
+                                spotColor = Color(0x150D6EFD)
                             )
                             .clip(RoundedCornerShape(32.dp))
                             .background(
@@ -201,15 +201,15 @@ fun MainTabScreen() {
                                 brush = Brush.linearGradient(
                                     colors = if (isDark) {
                                         listOf(
-                                            Color(0x6080D8FF),
+                                            com.example.ui.theme.SleekPrimaryDark.copy(alpha = 0.6f),
                                             Color(0x25FFFFFF),
-                                            Color(0x1080D8FF),
-                                            Color(0x4000E5FF)
+                                            com.example.ui.theme.SleekPrimaryDark.copy(alpha = 0.1f),
+                                            com.example.ui.theme.SleekPrimaryDark.copy(alpha = 0.4f)
                                         )
                                     } else {
                                         listOf(
                                             Color(0xFFFFFFFF),
-                                            Color(0x7080D8FF),
+                                            com.example.ui.theme.SleekPrimaryLight.copy(alpha = 0.7f),
                                             Color(0x40FFFFFF),
                                             Color(0x80FFFFFF)
                                         )
@@ -233,7 +233,7 @@ fun MainTabScreen() {
 
                                 val iconTint by animateColorAsState(
                                     targetValue = if (isSelected) {
-                                        if (isDark) Color(0xFF00E5FF) else Color(0xFF0077D6)
+                                        if (isDark) com.example.ui.theme.SleekPrimaryDark else com.example.ui.theme.SleekPrimaryLight
                                     } else {
                                         if (isDark) Color(0xFF88A0BA) else Color(0xFF6A8199)
                                     },
@@ -243,7 +243,7 @@ fun MainTabScreen() {
 
                                 val pillBg by animateColorAsState(
                                     targetValue = if (isSelected) {
-                                        if (isDark) Color(0x3000E5FF) else Color(0x280077D6)
+                                        if (isDark) com.example.ui.theme.SleekPrimaryDark.copy(alpha = 0.3f) else com.example.ui.theme.SleekPrimaryLight.copy(alpha = 0.28f)
                                     } else {
                                         Color.Transparent
                                     },
@@ -328,8 +328,21 @@ fun MainTabScreen() {
                         },
                         onNavigateToPermissions = {
                             navController.navigate(Route.Permissions)
+                        },
+                        onNavigateToDataBackup = {
+                            navController.navigate(Route.DataBackup)
                         }
                     ) 
+                }
+                composable<Route.DataBackup> {
+                    val ctx = androidx.compose.ui.platform.LocalContext.current
+                    val viewModel: com.example.presentation.settings.SettingsViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
+                        factory = com.example.presentation.settings.SettingsViewModel.Factory(ctx.applicationContext as android.app.Application)
+                    )
+                    com.example.presentation.settings.DataBackupScreen(
+                        viewModel = viewModel,
+                        onBackClick = { navController.popBackStack() }
+                    )
                 }
                 composable<Route.EscapePrevention> {
                     EscapeScreen(

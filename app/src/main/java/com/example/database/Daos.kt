@@ -151,4 +151,77 @@ interface FocusDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertEscapeAttempt(attempt: EscapeAttempt)
+
+    // Data Backup & Restore queries
+    @Query("SELECT * FROM app_schedules")
+    fun getAllSchedules(): Flow<List<AppSchedule>>
+
+    @Query("SELECT * FROM usage_events")
+    fun getAllUsageEvents(): Flow<List<UsageEvent>>
+
+    @Query("SELECT * FROM focus_profile_apps")
+    fun getAllFocusProfileApps(): Flow<List<FocusProfileApp>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertLimits(limits: List<AppLimit>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSchedules(schedules: List<AppSchedule>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertDailyUsages(usages: List<DailyUsage>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertUsageEvents(events: List<UsageEvent>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertFocusSessions(sessions: List<FocusSession>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertFocusProfiles(profiles: List<FocusProfile>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertFocusProfileApps(profileApps: List<FocusProfileApp>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertGoals(goals: List<Goal>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAppGroups(groups: List<AppGroup>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAppGroupMembers(members: List<AppGroupMember>)
+
+    @Query("DELETE FROM app_limits")
+    suspend fun clearLimits()
+
+    @Query("DELETE FROM app_schedules")
+    suspend fun clearSchedules()
+
+    @Query("DELETE FROM daily_usage")
+    suspend fun clearDailyUsage()
+
+    @Query("DELETE FROM usage_events")
+    suspend fun clearUsageEvents()
+
+    @Query("DELETE FROM focus_sessions")
+    suspend fun clearFocusSessions()
+
+    @Query("DELETE FROM focus_profiles")
+    suspend fun clearFocusProfiles()
+
+    @Query("DELETE FROM focus_profile_apps")
+    suspend fun clearFocusProfileApps()
+
+    @Query("DELETE FROM goals")
+    suspend fun clearGoals()
+
+    @Query("DELETE FROM achievements")
+    suspend fun clearAchievements()
+
+    @Query("DELETE FROM app_groups")
+    suspend fun clearAppGroups()
+
+    @Query("DELETE FROM app_group_members")
+    suspend fun clearAppGroupMembers()
 }

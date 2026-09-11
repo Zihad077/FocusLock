@@ -143,4 +143,53 @@ class AppRepository(private val focusDao: FocusDao) {
     suspend fun insertEscapeAttempt(attempt: EscapeAttempt) {
         focusDao.insertEscapeAttempt(attempt)
     }
+
+    // Data Backup & Restore
+    val allSchedules: Flow<List<AppSchedule>> = focusDao.getAllSchedules()
+    val allUsageEvents: Flow<List<UsageEvent>> = focusDao.getAllUsageEvents()
+    val allFocusProfileApps: Flow<List<FocusProfileApp>> = focusDao.getAllFocusProfileApps()
+
+    suspend fun restoreAllData(
+        settings: UserSettings?,
+        limits: List<AppLimit>,
+        schedules: List<AppSchedule>,
+        dailyUsages: List<DailyUsage>,
+        usageEvents: List<UsageEvent>,
+        sessions: List<FocusSession>,
+        profiles: List<FocusProfile>,
+        profileApps: List<FocusProfileApp>,
+        goals: List<Goal>,
+        achievements: List<Achievement>,
+        groups: List<AppGroup>,
+        groupMembers: List<AppGroupMember>
+    ) {
+        // Clear old tables
+        focusDao.clearLimits()
+        focusDao.clearSchedules()
+        focusDao.clearDailyUsage()
+        focusDao.clearUsageEvents()
+        focusDao.clearFocusSessions()
+        focusDao.clearFocusProfiles()
+        focusDao.clearFocusProfileApps()
+        focusDao.clearGoals()
+        focusDao.clearAchievements()
+        focusDao.clearAppGroups()
+        focusDao.clearAppGroupMembers()
+
+        // Batch insert new records
+        if (settings != null) {
+            focusDao.updateSettings(settings)
+        }
+        if (limits.isNotEmpty()) focusDao.insertLimits(limits)
+        if (schedules.isNotEmpty()) focusDao.insertSchedules(schedules)
+        if (dailyUsages.isNotEmpty()) focusDao.insertDailyUsages(dailyUsages)
+        if (usageEvents.isNotEmpty()) focusDao.insertUsageEvents(usageEvents)
+        if (sessions.isNotEmpty()) focusDao.insertFocusSessions(sessions)
+        if (profiles.isNotEmpty()) focusDao.insertFocusProfiles(profiles)
+        if (profileApps.isNotEmpty()) focusDao.insertFocusProfileApps(profileApps)
+        if (goals.isNotEmpty()) focusDao.insertGoals(goals)
+        if (achievements.isNotEmpty()) focusDao.insertAchievements(achievements)
+        if (groups.isNotEmpty()) focusDao.insertAppGroups(groups)
+        if (groupMembers.isNotEmpty()) focusDao.insertAppGroupMembers(groupMembers)
+    }
 }
