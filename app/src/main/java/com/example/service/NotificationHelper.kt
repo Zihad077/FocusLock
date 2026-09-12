@@ -5,6 +5,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -72,8 +73,15 @@ class NotificationHelper(private val context: Context) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val largeIcon = try {
+            BitmapFactory.decodeResource(context.resources, R.drawable.ic_custom_logo)
+        } catch (e: Exception) {
+            null
+        }
+
         val builder = NotificationCompat.Builder(context, BLOCK_CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_lock_lock)
+            .setSmallIcon(R.drawable.ic_notification_logo)
+            .apply { largeIcon?.let { setLargeIcon(it) } }
             .setContentTitle("$appName is Blocked")
             .setContentText(
                 if (limitMinutes == 0) "$appName is restricted in FocusLock. Tap to open lock screen."
@@ -105,8 +113,15 @@ class NotificationHelper(private val context: Context) {
             PendingIntent.FLAG_IMMUTABLE
         )
 
+        val largeIcon = try {
+            BitmapFactory.decodeResource(context.resources, R.drawable.ic_custom_logo)
+        } catch (e: Exception) {
+            null
+        }
+
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setSmallIcon(R.drawable.ic_notification_logo)
+            .apply { largeIcon?.let { setLargeIcon(it) } }
             .setContentTitle(title)
             .setContentText(message)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
@@ -137,8 +152,15 @@ class NotificationHelper(private val context: Context) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val largeIcon = try {
+            BitmapFactory.decodeResource(context.resources, R.drawable.ic_custom_logo)
+        } catch (e: Exception) {
+            null
+        }
+
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_dialog_alert)
+            .setSmallIcon(R.drawable.ic_notification_logo)
+            .apply { largeIcon?.let { setLargeIcon(it) } }
             .setContentTitle(title)
             .setContentText(message)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -172,8 +194,15 @@ class NotificationHelper(private val context: Context) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val largeIcon = try {
+            BitmapFactory.decodeResource(context.resources, R.drawable.ic_custom_logo)
+        } catch (e: Exception) {
+            null
+        }
+
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(if (isActive) android.R.drawable.ic_lock_lock else android.R.drawable.ic_dialog_info)
+            .setSmallIcon(R.drawable.ic_notification_logo)
+            .apply { largeIcon?.let { setLargeIcon(it) } }
             .setContentTitle(title)
             .setContentText(message)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)

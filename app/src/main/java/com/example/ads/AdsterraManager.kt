@@ -26,14 +26,14 @@ object AdsterraManager {
 
     // Adsterra Native Banner script URL / container key
     const val NATIVE_BANNER_KEY = "cfa2281fa0e49be9d4a8ee92ae2499d3"
-    const val NATIVE_BANNER_SRC = "//pl28108157.effectivegatecontent.com/cfa2281fa0e49be9d4a8ee92ae2499d3/invoke.js"
+    const val NATIVE_BANNER_SRC = "https://pl28108157.effectivegatecontent.com/cfa2281fa0e49be9d4a8ee92ae2499d3/invoke.js"
 
     // Adsterra 320x50 Banner config
     const val BANNER_320_50_KEY = "64c8fcf61dbd7590886da12d1b54cce0"
-    const val BANNER_320_50_SRC = "//pl28108204.effectivegatecontent.com/64c8fcf61dbd7590886da12d1b54cce0/invoke.js"
+    const val BANNER_320_50_SRC = "https://pl28108204.effectivegatecontent.com/64c8fcf61dbd7590886da12d1b54cce0/invoke.js"
 
     // Adsterra Social Bar format
-    const val SOCIAL_BAR_SRC = "//pl28108215.effectivegatecontent.com/5f/aa/76/5faa764065eb0090875c74ea6fc95ae8.js"
+    const val SOCIAL_BAR_SRC = "https://pl28108215.effectivegatecontent.com/5f/aa/76/5faa764065eb0090875c74ea6fc95ae8.js"
 
     // Social Bar Cooldown Management: Minimum 90 seconds between social bar triggers
     private const val SOCIAL_BAR_COOLDOWN_MS = 90_000L

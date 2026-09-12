@@ -1,4 +1,5 @@
 package com.example.presentation.apps
+import com.example.database.isPremiumActive
 
 import android.app.Application
 import android.content.Intent
@@ -334,7 +335,7 @@ fun AppsScreen(
                 // Native ad between usage sections
                 item {
                     LiquidGlassNativeAdCard(
-                        isPremium = userSettings?.isPremium ?: false
+                        isPremium = userSettings?.isPremiumActive ?: false
                     )
                 }
 
@@ -365,14 +366,14 @@ fun AppsScreen(
             // 320x50 banner near the bottom (Zero ads for premium)
             item {
                 LiquidGlassAdaptiveBanner(
-                    isPremium = userSettings?.isPremium ?: false
+                    isPremium = userSettings?.isPremiumActive ?: false
                 )
             }
 
             // Social Bar format (cooldown protected, zero ads for premium)
             item {
                 AdsterraSocialBar(
-                    isPremium = userSettings?.isPremium ?: false,
+                    isPremium = userSettings?.isPremiumActive ?: false,
                     isFocusActive = userSettings?.isFocusModeActive ?: false
                 )
             }
@@ -484,30 +485,11 @@ fun AppListItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             // App Avatar / Initial with Glass gradient rim
-            Box(
-                modifier = Modifier
-                    .size(46.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(
-                        if (app.isHighImpact) {
-                            androidx.compose.ui.graphics.Brush.linearGradient(
-                                listOf(androidx.compose.ui.graphics.Color(0xFFFF5252), androidx.compose.ui.graphics.Color(0xFFD50000))
-                            )
-                        } else {
-                            androidx.compose.ui.graphics.Brush.linearGradient(
-                                listOf(androidx.compose.ui.graphics.Color(0xFF0077D6), androidx.compose.ui.graphics.Color(0xFF00B4D8))
-                            )
-                        }
-                    )
-                    .border(1.dp, androidx.compose.ui.graphics.Color.White.copy(alpha = 0.5f), RoundedCornerShape(14.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = app.appName.take(1).uppercase(),
-                    color = androidx.compose.ui.graphics.Color.White,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                )
-            }
+            com.example.presentation.common.RealAppIcon(
+                packageName = app.packageName,
+                appName = app.appName,
+                size = 46.dp
+            )
             
             Spacer(modifier = Modifier.width(14.dp))
             

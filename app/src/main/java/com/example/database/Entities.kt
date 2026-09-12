@@ -103,6 +103,8 @@ data class UserSettings(
     val level: Int = 1,
     val lastResetDateString: String = "",
     val activeFocusEndTime: Long = 0L,
+    val focusExitCooldownEndTime: Long = 0L,
+    val premiumExpiryTimestamp: Long = 0L,
     
     // Verification Settings
     val mindChallengeEnabled: Boolean = true,
@@ -187,3 +189,6 @@ data class AppGroupMember(
     val groupId: Int,
     val packageName: String
 )
+
+val UserSettings.isPremiumActive: Boolean
+    get() = isPremium || (premiumExpiryTimestamp > System.currentTimeMillis())

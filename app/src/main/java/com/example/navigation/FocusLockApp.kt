@@ -331,6 +331,9 @@ fun MainTabScreen() {
                         },
                         onNavigateToDataBackup = {
                             navController.navigate(Route.DataBackup)
+                        },
+                        onNavigateToPremium = {
+                            navController.navigate(Route.Premium)
                         }
                     ) 
                 }
@@ -342,6 +345,19 @@ fun MainTabScreen() {
                     com.example.presentation.settings.DataBackupScreen(
                         viewModel = viewModel,
                         onBackClick = { navController.popBackStack() }
+                    )
+                }
+                composable<Route.Premium> {
+                    val app = (androidx.compose.ui.platform.LocalContext.current.applicationContext as com.example.FocusLockApplication)
+                    val settings by app.repository.userSettings.collectAsState(initial = com.example.database.UserSettings())
+                    val isDark = when (settings.theme) {
+                        "DARK" -> true
+                        "LIGHT" -> false
+                        else -> isSystemInDarkTheme()
+                    }
+                    com.example.presentation.premium.PremiumScreen(
+                        onBack = { navController.popBackStack() },
+                        isDark = isDark
                     )
                 }
                 composable<Route.EscapePrevention> {

@@ -8,6 +8,8 @@ import android.app.Service
 import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
+import android.graphics.BitmapFactory
+import com.example.R
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
@@ -113,8 +115,15 @@ class AppMonitorService : Service() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
+        val largeIcon = try {
+            BitmapFactory.decodeResource(resources, R.drawable.ic_custom_logo)
+        } catch (e: Exception) {
+            null
+        }
+
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_lock_idle_lock)
+            .setSmallIcon(R.drawable.ic_notification_logo)
+            .apply { largeIcon?.let { setLargeIcon(it) } }
             .setContentTitle("FocusLock Protection Active")
             .setContentText("Actively monitoring and enforcing your blocklist limits")
             .setPriority(NotificationCompat.PRIORITY_LOW)
@@ -203,8 +212,15 @@ class AppMonitorService : Service() {
                 }
                 val pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_IMMUTABLE)
                 
+                val largeIcon = try {
+                    BitmapFactory.decodeResource(context.resources, R.drawable.ic_custom_logo)
+                } catch (e: Exception) {
+                    null
+                }
+
                 val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-                    .setSmallIcon(android.R.drawable.ic_dialog_alert)
+                    .setSmallIcon(R.drawable.ic_notification_logo)
+                    .apply { largeIcon?.let { setLargeIcon(it) } }
                     .setContentTitle("Protection Compromised")
                     .setContentText("Required permissions were removed: ${missingPermissions.joinToString()}. Tap to restore.")
                     .setPriority(NotificationCompat.PRIORITY_HIGH)

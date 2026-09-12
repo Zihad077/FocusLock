@@ -31,6 +31,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ui.theme.liquidGlass
 import com.example.database.UserSettings
+import com.example.database.isPremiumActive
 import com.example.util.PermissionHelper
 
 @OptIn(ExperimentalMaterial3Api::class)

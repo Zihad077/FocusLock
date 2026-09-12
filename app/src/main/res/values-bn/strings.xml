@@ -22,4 +22,42 @@
     <string name="this_week">এই সপ্তাহে</string>
     <string name="total_usage">মোট ব্যবহার: %1$dঘন্টা %2$dমিনিট।</string>
     <string name="unknown_app">অজানা অ্যাপ</string>
+    
+    <!-- Settings & Permissions -->
+    <string name="settings_title">সেটিংস</string>
+    <string name="permissions_manager">সিস্টেম পারমিশন ম্যানেজার</string>
+    <string name="permissions_manager_desc">ওভারলে, ব্যবহারের তথ্য ও অ্যাক্সেসিবিলিটি পারমিশন যাচাই করুন</string>
+    <string name="display_over_apps">অন্য অ্যাপের ওপর প্রদর্শন</string>
+    <string name="usage_access">ব্যবহারের ডেটা অ্যাক্সেস</string>
+    <string name="accessibility_service">অ্যাক্সেসিবিলিটি সার্ভিস</string>
+    <string name="granted">অনুমোদিত ও সক্রিয়</string>
+    <string name="grant">অনুমতি দিন</string>
+    <string name="done">সম্পন্ন</string>
+    <string name="close">বন্ধ করুন</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">হোম</string>
+    <string name="nav_apps">অ্যাপস</string>
+    <string name="nav_focus">ফোকাস</string>
+    <string name="nav_stats">পরিসংখ্যান</string>
+    <string name="nav_settings">সেটিংস</string>
+
+    <!-- Settings Sections & Items -->
+    <string name="appearance">চেহারা ও থিম</string>
+    <string name="appearance_desc">লিকুইড গ্লাস ডার্ক (স্থায়ী)</string>
+    <string name="language">ভাষা (Language)</string>
+    <string name="profile_level">প্রোফাইল ও লেভেল</string>
+    <string name="notifications">বিজ্ঞপ্তি</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_name">ফোকাসলক নোটিফিকেশন</string>
+    <string name="notification_channel_desc">ফোকাস সেশন এবং অ্যাপ লিমিটের জন্য বিজ্ঞপ্তি</string>
+    <string name="block_channel_name">ফোকাসলক ব্লক সতর্কতা</string>
+    <string name="block_channel_desc">সীমাবদ্ধ অ্যাপ খোলার সময় স্ক্রিন ব্লক প্রদর্শন করে</string>
+    <string name="approaching_limit_title">সীমার কাছাকাছি: %1$s</string>
+    <string name="approaching_limit_desc">আপনার দৈনিক %2$d মিনিটের সীমার আর মাত্র %1$d মিনিট বাকি।</string>
+    <string name="deep_focus_active_title">ডিপ ফোকাস চলছে</string>
+    <string name="deep_focus_active_desc">ফোকাসলক বিভ্রান্তিকর অ্যাপ ব্লক করছে। বাকি: %1$d মিনিট।</string>
+    <string name="deep_focus_complete_title">ডিপ ফোকাস সফল!</string>
+    <string name="deep_focus_complete_desc">চমৎকার! আপনার ফোকাস সেশন সম্পন্ন হয়েছে। +৫০ এক্সপি যুক্ত হয়েছে।</string>
 </resources>

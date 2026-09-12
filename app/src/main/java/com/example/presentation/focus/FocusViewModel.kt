@@ -32,19 +32,37 @@ class FocusViewModel(
     private val _showJournalDialog = MutableStateFlow(false)
     val showJournalDialog = _showJournalDialog.asStateFlow()
     
+    // Mandatory 2:30 cooling down state
+    private val _cooldownRemainingSeconds = MutableStateFlow<Int?>(null)
+    val cooldownRemainingSeconds = _cooldownRemainingSeconds.asStateFlow()
+
+    private val _showExitConfirmation = MutableStateFlow(false)
+    val showExitConfirmation = _showExitConfirmation.asStateFlow()
+
     val userSettings = repository.userSettings
 
     private var timerJob: Job? = null
+    private var cooldownJob: Job? = null
 
     init {
         // Recover state
         viewModelScope.launch {
             val settings = repository.userSettings.first()
-            if (settings.isFocusModeActive && settings.activeFocusEndTime > System.currentTimeMillis()) {
-                val remaining = ((settings.activeFocusEndTime - System.currentTimeMillis()) / 1000).toInt()
+            val now = System.currentTimeMillis()
+            if (settings.isFocusModeActive && settings.activeFocusEndTime > now) {
+                val remaining = ((settings.activeFocusEndTime - now) / 1000).toInt()
                 _remainingTimeSeconds.value = remaining
                 _isFocusActive.value = true
                 startTimer()
+
+                if (settings.focusExitCooldownEndTime > now) {
+                    val cooldownDiff = ((settings.focusExitCooldownEndTime - now) / 1000).toInt()
+                    _cooldownRemainingSeconds.value = cooldownDiff
+                    startCooldownTimer(settings.focusExitCooldownEndTime)
+                } else if (settings.focusExitCooldownEndTime > 0L) {
+                    // Cooldown already finished while user was away
+                    _cooldownRemainingSeconds.value = 0
+                }
             } else if (settings.isFocusModeActive) {
                 // Was active but expired while app was dead
                 endFocusSession(completed = true)
@@ -102,8 +120,70 @@ class FocusViewModel(
         }
     }
     
+    fun requestExitFocusSession() {
+        if (!_isFocusActive.value) return
+        viewModelScope.launch {
+            val settings = repository.userSettings.first()
+            val now = System.currentTimeMillis()
+            val existingEnd = settings.focusExitCooldownEndTime
+            val endTime = if (existingEnd > now) existingEnd else now + (150 * 1000L) // 2 minutes 30 seconds
+            
+            repository.updateSettings(settings.copy(focusExitCooldownEndTime = endTime))
+            val initialRemaining = ((endTime - now) / 1000).toInt()
+            _cooldownRemainingSeconds.value = initialRemaining
+            startCooldownTimer(endTime)
+        }
+    }
+
+    private fun startCooldownTimer(endTime: Long) {
+        cooldownJob?.cancel()
+        cooldownJob = viewModelScope.launch {
+            while (true) {
+                val now = System.currentTimeMillis()
+                val diffSec = ((endTime - now) / 1000).toInt()
+                if (diffSec <= 0) {
+                    _cooldownRemainingSeconds.value = 0
+                    break
+                }
+                _cooldownRemainingSeconds.value = diffSec
+                delay(1000)
+            }
+        }
+    }
+
+    fun resumeFocusSession() {
+        cooldownJob?.cancel()
+        _cooldownRemainingSeconds.value = null
+        _showExitConfirmation.value = false
+        viewModelScope.launch {
+            val settings = repository.userSettings.first()
+            repository.updateSettings(settings.copy(focusExitCooldownEndTime = 0L))
+        }
+    }
+
+    fun promptExitConfirmation() {
+        if (_cooldownRemainingSeconds.value == 0) {
+            _showExitConfirmation.value = true
+        }
+    }
+
+    fun dismissExitConfirmation() {
+        _showExitConfirmation.value = false
+    }
+
+    fun confirmEarlyExit() {
+        if (_cooldownRemainingSeconds.value != 0) return
+        cooldownJob?.cancel()
+        _cooldownRemainingSeconds.value = null
+        _showExitConfirmation.value = false
+        endFocusSession(completed = false)
+    }
+
     fun endFocusSession(completed: Boolean = false) {
         timerJob?.cancel()
+        cooldownJob?.cancel()
+        _cooldownRemainingSeconds.value = null
+        _showExitConfirmation.value = false
         _isFocusActive.value = false
         _remainingTimeSeconds.value = 0
         
@@ -147,6 +227,7 @@ class FocusViewModel(
             repository.updateSettings(settings.copy(
                 isFocusModeActive = false, 
                 activeFocusEndTime = 0L,
+                focusExitCooldownEndTime = 0L,
                 xp = newXp,
                 level = newLevel
             ))

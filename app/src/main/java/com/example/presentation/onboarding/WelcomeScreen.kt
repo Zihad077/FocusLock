@@ -117,25 +117,25 @@ private fun WelcomeHookView(
         // Hero Visual Card with Liquid Glass Border
         Box(
             modifier = Modifier
-                .fillMaxWidth(0.9f)
-                .aspectRatio(1.15f)
-                .shadow(16.dp, RoundedCornerShape(32.dp), spotColor = primaryColor.copy(alpha = 0.5f))
-                .clip(RoundedCornerShape(32.dp))
+                .fillMaxWidth(0.6f)
+                .aspectRatio(1f)
+                .shadow(24.dp, RoundedCornerShape(36.dp), spotColor = primaryColor.copy(alpha = 0.6f))
+                .clip(RoundedCornerShape(36.dp))
                 .border(
-                    1.dp,
+                    2.dp,
                     Brush.linearGradient(
                         listOf(
-                            Color.White.copy(alpha = 0.4f),
-                            Color.White.copy(alpha = 0.05f),
-                            primaryColor.copy(alpha = 0.2f)
+                            Color.White.copy(alpha = 0.5f),
+                            Color.White.copy(alpha = 0.1f),
+                            primaryColor.copy(alpha = 0.3f)
                         )
                     ),
-                    RoundedCornerShape(32.dp)
+                    RoundedCornerShape(36.dp)
                 )
         ) {
             Image(
-                painter = painterResource(id = R.drawable.welcome_illustration_1789049712801),
-                contentDescription = "FocusLock Flow Illustration",
+                painter = painterResource(id = R.drawable.ic_custom_logo),
+                contentDescription = "FocusLock App Logo",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )

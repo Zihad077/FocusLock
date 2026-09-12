@@ -1,4 +1,5 @@
 package com.example.presentation.stats
+import com.example.database.isPremiumActive
 
 import android.app.Application
 import androidx.compose.animation.core.animateFloatAsState
@@ -278,14 +279,14 @@ fun StatsScreen(
             // Sponsored Native Glass Card (Zero ads for premium)
             item {
                 LiquidGlassNativeAdCard(
-                    isPremium = userSettings?.isPremium ?: false
+                    isPremium = userSettings?.isPremiumActive ?: false
                 )
             }
 
             // Bottom Adaptive Banner (Zero ads for premium)
             item {
                 LiquidGlassAdaptiveBanner(
-                    isPremium = userSettings?.isPremium ?: false
+                    isPremium = userSettings?.isPremiumActive ?: false
                 )
             }
         }

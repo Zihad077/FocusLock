@@ -1,10 +1,10 @@
 package com.example
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -14,8 +14,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.database.UserSettings
 import com.example.ui.theme.FocusLockTheme
 import com.example.navigation.FocusLockApp
+import com.example.util.LocaleHelper
 
 class MainActivity : ComponentActivity() {
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(LocaleHelper.wrapContext(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -24,16 +29,7 @@ class MainActivity : ComponentActivity() {
         com.example.service.AppMonitorService.startService(this)
 
         setContent {
-            val app = application as FocusLockApplication
-            val settings by app.repository.userSettings.collectAsStateWithLifecycle(initialValue = UserSettings())
-            
-            val isDark = when (settings.theme) {
-                "DARK" -> true
-                "LIGHT" -> false
-                else -> isSystemInDarkTheme()
-            }
-
-            FocusLockTheme(darkTheme = isDark) {
+            FocusLockTheme(darkTheme = true) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background

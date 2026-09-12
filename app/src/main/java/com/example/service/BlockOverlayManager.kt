@@ -253,33 +253,14 @@ class BlockOverlayManager private constructor(private val context: Context) : Li
                         ChallengeScreen(
                             settings = settings,
                             onChallengeComplete = { challengeType ->
-                                CoroutineScope(Dispatchers.IO).launch {
-                                    try {
-                                        val app = context.applicationContext as FocusLockApplication
-                                        val repo = app.repository
-                                        val currentSettings = repo.userSettings.first()
-
-                                        var newXp = currentSettings.xp + 20
-                                        var newLevel = currentSettings.level
-                                        if (newXp >= newLevel * 100) {
-                                            newXp -= (newLevel * 100)
-                                            newLevel += 1
-                                        }
-
-                                        repo.updateSettings(currentSettings.copy(xp = newXp, level = newLevel))
-                                        repo.insertTemporaryUnlock(
-                                            TemporaryUnlock(
-                                                packageName = currentPackage,
-                                                type = challengeType.name,
-                                                startTime = System.currentTimeMillis(),
-                                                durationMinutes = currentSettings.tempUnlockDurationMinutes
-                                            )
-                                        )
-                                    } catch (e: Exception) {
-                                        Log.e(TAG, "Error saving challenge unlock: ${e.message}")
+                                UnlockStateManager.onChallengeCompletedSuccessfully(
+                                    context = context,
+                                    packageName = currentPackage,
+                                    challengeTypeName = challengeType.name,
+                                    onUiDismiss = {
+                                        hideOverlay()
                                     }
-                                }
-                                hideOverlay()
+                                )
                             },
                             onCancel = {
                                 // Returning from challenge goes back to lock screen, NEVER to the blocked app
@@ -302,14 +283,15 @@ class BlockOverlayManager private constructor(private val context: Context) : Li
                             },
                             onEmergencyUnlockClick = {
                                 if (currentEmergencyRemaining > 0) {
+                                    UnlockStateManager.registerUnlock(currentPackage, 5)
                                     CoroutineScope(Dispatchers.IO).launch {
                                         try {
                                             val app = context.applicationContext as FocusLockApplication
                                             val repo = app.repository
-                                            val settings = repo.userSettings.first()
-                                            if (settings.emergencyUnlocksRemaining > 0) {
+                                            val currentSettings = repo.userSettings.first()
+                                            if (currentSettings.emergencyUnlocksRemaining > 0) {
                                                 repo.updateSettings(
-                                                    settings.copy(emergencyUnlocksRemaining = settings.emergencyUnlocksRemaining - 1)
+                                                    currentSettings.copy(emergencyUnlocksRemaining = currentSettings.emergencyUnlocksRemaining - 1)
                                                 )
                                                 repo.insertTemporaryUnlock(
                                                     TemporaryUnlock(
@@ -325,6 +307,7 @@ class BlockOverlayManager private constructor(private val context: Context) : Li
                                         }
                                     }
                                     hideOverlay()
+                                    UnlockStateManager.launchTargetApp(context, currentPackage)
                                 }
                             }
                         )

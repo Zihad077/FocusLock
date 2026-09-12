@@ -1,0 +1,27 @@
+--- app/src/main/java/com/example/presentation/premium/PremiumScreen.kt
++++ app/src/main/java/com/example/presentation/premium/PremiumScreen.kt
+@@ -19,6 +19,10 @@
+ import androidx.compose.ui.unit.sp
+ import androidx.lifecycle.ViewModel
++import androidx.lifecycle.ViewModelProvider
+ import androidx.lifecycle.viewModelScope
+ import androidx.lifecycle.viewmodel.compose.viewModel
++import android.app.Application
++import androidx.compose.ui.platform.LocalContext
++import com.example.FocusLockApplication
+@@ -40,6 +44,17 @@
+ 
+ class PremiumViewModel(private val repository: AppRepository) : ViewModel() {
++    
++    class Factory(private val application: Application) : ViewModelProvider.Factory {
++        override fun <T : ViewModel> create(modelClass: Class<T>): T {
++            if (modelClass.isAssignableFrom(PremiumViewModel::class.java)) {
++                val repository = (application as FocusLockApplication).repository
++                @Suppress("UNCHECKED_CAST")
++                return PremiumViewModel(repository) as T
++            }
++            throw IllegalArgumentException("Unknown ViewModel class")
++        }
++    }
++
+     private val api = PremiumApi.create()

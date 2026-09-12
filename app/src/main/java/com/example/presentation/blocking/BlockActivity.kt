@@ -20,12 +20,17 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
 import com.example.FocusLockApplication
 import com.example.database.UserSettings
+import com.example.database.isPremiumActive
 import com.example.presentation.challenge.ChallengeScreen
 import com.example.ui.theme.FocusLockTheme
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class BlockActivity : ComponentActivity() {
+
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(com.example.util.LocaleHelper.wrapContext(newBase))
+    }
 
     private var appNameState = mutableStateOf("Distracting App")
     private var packageNameState = mutableStateOf<String?>(null)
@@ -97,35 +102,14 @@ class BlockActivity : ComponentActivity() {
                         ChallengeScreen(
                             settings = settings,
                             onChallengeComplete = { challengeType ->
-                                packageName?.let { pkg ->
-                                    lifecycleScope.launch {
-                                        val repo = (application as FocusLockApplication).repository
-                                        val currentSettings = repo.userSettings.first()
-                                        
-                                        var newXp = currentSettings.xp + 20
-                                        var newLevel = currentSettings.level
-                                        if (newXp >= newLevel * 100) {
-                                            newXp -= (newLevel * 100)
-                                            newLevel += 1
-                                        }
-                                        
-                                        repo.updateSettings(currentSettings.copy(xp = newXp, level = newLevel))
-                                        
-                                        repo.insertTemporaryUnlock(
-                                            com.example.database.TemporaryUnlock(
-                                                packageName = pkg,
-                                                type = challengeType.name,
-                                                startTime = System.currentTimeMillis(),
-                                                durationMinutes = currentSettings.tempUnlockDurationMinutes
-                                            )
-                                        )
-                                        com.example.service.BlockOverlayManager.getInstance(applicationContext).hideOverlay()
+                                com.example.service.UnlockStateManager.onChallengeCompletedSuccessfully(
+                                    context = this@BlockActivity,
+                                    packageName = packageName,
+                                    challengeTypeName = challengeType.name,
+                                    onUiDismiss = {
                                         finish()
                                     }
-                                } ?: run {
-                                    com.example.service.BlockOverlayManager.getInstance(applicationContext).hideOverlay()
-                                    finish()
-                                }
+                                )
                             },
                             onCancel = { showChallenge = false }
                         )
@@ -143,23 +127,25 @@ class BlockActivity : ComponentActivity() {
                             },
                             onEmergencyUnlockClick = {
                                 packageName?.let { pkg ->
+                                    com.example.service.UnlockStateManager.registerUnlock(pkg, 5)
                                     lifecycleScope.launch {
                                         val repo = (application as FocusLockApplication).repository
-                                        val settings = repo.userSettings.first()
-                                        if (settings.emergencyUnlocksRemaining > 0) {
-                                            repo.updateSettings(settings.copy(emergencyUnlocksRemaining = settings.emergencyUnlocksRemaining - 1))
+                                        val curSettings = repo.userSettings.first()
+                                        if (curSettings.emergencyUnlocksRemaining > 0) {
+                                            repo.updateSettings(curSettings.copy(emergencyUnlocksRemaining = curSettings.emergencyUnlocksRemaining - 1))
                                             repo.insertTemporaryUnlock(
                                                 com.example.database.TemporaryUnlock(
                                                     packageName = pkg,
                                                     type = "EMERGENCY",
                                                     startTime = System.currentTimeMillis(),
-                                                    durationMinutes = 5 // 5 minutes emergency unlock
+                                                    durationMinutes = 5
                                                 )
                                             )
                                         }
-                                        com.example.service.BlockOverlayManager.getInstance(applicationContext).hideOverlay()
-                                        finish()
                                     }
+                                    com.example.service.BlockOverlayManager.getInstance(applicationContext).hideOverlay()
+                                    finish()
+                                    com.example.service.UnlockStateManager.launchTargetApp(this@BlockActivity, pkg)
                                 } ?: run {
                                     com.example.service.BlockOverlayManager.getInstance(applicationContext).hideOverlay()
                                     finish()

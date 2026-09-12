@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.FocusLockApplication
 import com.example.data.AppRepository
 import com.example.database.UserSettings
+import com.example.database.isPremiumActive
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch

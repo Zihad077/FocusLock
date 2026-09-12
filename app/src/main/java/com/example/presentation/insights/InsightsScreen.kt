@@ -1,4 +1,5 @@
 package com.example.presentation.insights
+import com.example.database.isPremiumActive
 
 import android.app.Application
 import androidx.compose.foundation.background
@@ -44,7 +45,7 @@ fun InsightsScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val userSettings by viewModel.userSettings.collectAsStateWithLifecycle(initialValue = null)
     val isDark = isSystemInDarkTheme()
-    val primaryCyan = if (isDark) Color(0xFF00E5FF) else Color(0xFF0077D6)
+    val primaryColor = if (isDark) com.example.ui.theme.SleekPrimaryDark else com.example.ui.theme.SleekPrimaryLight
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -86,14 +87,14 @@ fun InsightsScreen(
                         Box(
                             modifier = Modifier
                                 .clip(CircleShape)
-                                .background(primaryCyan.copy(alpha = 0.2f))
-                                .border(1.dp, primaryCyan.copy(alpha = 0.4f), CircleShape)
+                                .background(primaryColor.copy(alpha = 0.2f))
+                                .border(1.dp, primaryColor.copy(alpha = 0.4f), CircleShape)
                                 .padding(12.dp)
                         ) {
                             Icon(
                                 Icons.AutoMirrored.Filled.TrendingUp,
                                 contentDescription = null,
-                                tint = primaryCyan,
+                                tint = primaryColor,
                                 modifier = Modifier.size(32.dp)
                             )
                         }
@@ -110,7 +111,7 @@ fun InsightsScreen(
                         Text(
                             "${state.todayScore}",
                             style = MaterialTheme.typography.displayLarge.copy(fontWeight = FontWeight.ExtraBold),
-                            color = primaryCyan
+                            color = primaryColor
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
@@ -141,13 +142,13 @@ fun InsightsScreen(
                         Box(
                             modifier = Modifier
                                 .clip(CircleShape)
-                                .background(primaryCyan.copy(alpha = 0.18f))
+                                .background(primaryColor.copy(alpha = 0.18f))
                                 .padding(8.dp)
                         ) {
                             Icon(
                                 Icons.Default.Lightbulb,
                                 contentDescription = null,
-                                tint = primaryCyan,
+                                tint = primaryColor,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -164,7 +165,7 @@ fun InsightsScreen(
             // Native ad after main insight cards (Zero ads for premium)
             item {
                 LiquidGlassNativeAdCard(
-                    isPremium = userSettings?.isPremium ?: false
+                    isPremium = userSettings?.isPremiumActive ?: false
                 )
             }
 
@@ -211,13 +212,13 @@ fun InsightsScreen(
                             Text(
                                 startStr,
                                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                color = primaryCyan
+                                color = primaryColor
                             )
                             Box(
                                 modifier = Modifier
                                     .width(2.dp)
                                     .height(26.dp)
-                                    .background(primaryCyan.copy(alpha = 0.4f))
+                                    .background(primaryColor.copy(alpha = 0.4f))
                             )
                             Text(
                                 endStr,
@@ -253,14 +254,14 @@ fun InsightsScreen(
             // 320x50 Banner near the bottom (Zero ads for premium)
             item {
                 LiquidGlassAdaptiveBanner(
-                    isPremium = userSettings?.isPremium ?: false
+                    isPremium = userSettings?.isPremiumActive ?: false
                 )
             }
 
             // Social Bar format (cooldown protected, zero ads for premium)
             item {
                 AdsterraSocialBar(
-                    isPremium = userSettings?.isPremium ?: false,
+                    isPremium = userSettings?.isPremiumActive ?: false,
                     isFocusActive = userSettings?.isFocusModeActive ?: false
                 )
             }

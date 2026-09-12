@@ -1,4 +1,5 @@
 package com.example.presentation.home
+import com.example.database.isPremiumActive
 
 import android.app.Application
 import android.content.Intent
@@ -116,7 +117,7 @@ fun HomeScreen(
         // Sponsored Native Glass Card (Zero ads for premium)
         item {
             LiquidGlassNativeAdCard(
-                isPremium = settings?.isPremium ?: false
+                isPremium = settings?.isPremiumActive ?: false
             )
         }
 
@@ -152,14 +153,14 @@ fun HomeScreen(
         // 320x50 Banner in lower content area (Zero ads for premium)
         item {
             LiquidGlassAdaptiveBanner(
-                isPremium = settings?.isPremium ?: false
+                isPremium = settings?.isPremiumActive ?: false
             )
         }
 
         // Social Bar format (cooldown protected, zero ads for premium)
         item {
             AdsterraSocialBar(
-                isPremium = settings?.isPremium ?: false,
+                isPremium = settings?.isPremiumActive ?: false,
                 isFocusActive = settings?.isFocusModeActive ?: false
             )
         }
@@ -495,27 +496,11 @@ private fun AppLimitCard(limit: AppLimitUIModel) {
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // Glass App Icon
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(
-                            brush = Brush.linearGradient(
-                                colors = listOf(
-                                    Color(0xFF0077D6),
-                                    Color(0xFF00B4D8)
-                                )
-                            )
-                        )
-                        .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(14.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = limit.appName.take(1).uppercase(),
-                        color = Color.White,
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                    )
-                }
+                com.example.presentation.common.RealAppIcon(
+                    packageName = limit.packageName,
+                    appName = limit.appName,
+                    size = 44.dp
+                )
 
                 Spacer(modifier = Modifier.width(14.dp))
 

@@ -54,4 +54,18 @@
 
     <!-- General -->
     <string name="unknown_app">Unknown App</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_apps">Apps</string>
+    <string name="nav_focus">Focus</string>
+    <string name="nav_stats">Stats</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Settings Sections & Items -->
+    <string name="appearance">Appearance</string>
+    <string name="appearance_desc">Liquid Glass Dark (Permanent)</string>
+    <string name="language">Language</string>
+    <string name="profile_level">Profile &amp; Level</string>
+    <string name="notifications">Notifications</string>
 </resources>

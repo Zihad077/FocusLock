@@ -10,60 +10,36 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 
-private val DarkColorScheme = darkColorScheme(
-    primary = SleekPrimaryDark,
-    onPrimary = SleekOnPrimaryDark,
-    primaryContainer = SleekPrimaryContainerDark,
-    onPrimaryContainer = SleekOnPrimaryContainerDark,
-    secondary = SleekSecondaryDark,
-    onSecondary = SleekOnSecondaryDark,
-    secondaryContainer = SleekSecondaryContainerDark,
-    onSecondaryContainer = SleekOnSecondaryContainerDark,
-    background = SleekBackgroundDark,
-    onBackground = SleekOnBackgroundDark,
-    surface = SleekSurfaceDark,
-    onSurface = SleekOnSurfaceDark,
-    surfaceVariant = SleekSurfaceVariantDark,
-    onSurfaceVariant = SleekOnSurfaceVariantDark,
-    outline = SleekOutlineDark,
-    error = SleekError,
-    onError = SleekOnError
-)
+import androidx.compose.ui.graphics.Color
 
-private val LightColorScheme = lightColorScheme(
-    primary = SleekPrimaryLight,
-    onPrimary = SleekOnPrimaryLight,
-    primaryContainer = SleekPrimaryContainerLight,
-    onPrimaryContainer = SleekOnPrimaryContainerLight,
-    secondary = SleekSecondaryLight,
-    onSecondary = SleekOnSecondaryLight,
-    secondaryContainer = SleekSecondaryContainerLight,
-    onSecondaryContainer = SleekOnSecondaryContainerLight,
-    background = SleekBackgroundLight,
-    onBackground = SleekOnBackgroundLight,
-    surface = SleekSurfaceLight,
-    onSurface = SleekOnSurfaceLight,
-    surfaceVariant = SleekSurfaceVariantLight,
-    onSurfaceVariant = SleekOnSurfaceVariantLight,
-    outline = SleekOutlineLight,
+private val DarkColorScheme = darkColorScheme(
+    primary = Color(0xFF00E5FF),
+    onPrimary = Color(0xFF001F2B),
+    primaryContainer = Color(0xFF004D6B),
+    onPrimaryContainer = Color(0xFFB8EAFF),
+    secondary = Color(0xFF47C28C),
+    onSecondary = Color(0xFF00301B),
+    secondaryContainer = Color(0xFF005230),
+    onSecondaryContainer = Color(0xFFC7F0DE),
+    background = Color(0xFF080D16),
+    onBackground = Color(0xFFE2E8F0),
+    surface = Color(0x22132238), // Translucent liquid glass surface, prevents black square boxes
+    onSurface = Color(0xFFE2E8F0),
+    surfaceVariant = Color(0x281B2E48), // Translucent glass variant
+    onSurfaceVariant = Color(0xFF94A3B8),
+    outline = Color(0x3580D8FF),
     error = SleekError,
     onError = SleekOnError
 )
 
 @Composable
 fun FocusLockTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = false, // Set false for consistent brand colors by default
+    darkTheme: Boolean = true, // Permanently Dark / Liquid Glass UI
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
+    // Light mode is completely removed per design system specifications
+    val colorScheme = DarkColorScheme
 
     MaterialTheme(
         colorScheme = colorScheme,

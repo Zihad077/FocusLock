@@ -1,4 +1,5 @@
 package com.example.presentation.goals
+import com.example.database.isPremiumActive
 
 import android.app.Application
 import androidx.compose.animation.core.animateFloatAsState
@@ -115,7 +116,7 @@ fun GoalsScreen(
             // Sponsored Glass Card (Zero ads for premium)
             item {
                 LiquidGlassNativeAdCard(
-                    isPremium = userSettings?.isPremium ?: false
+                    isPremium = userSettings?.isPremiumActive ?: false
                 )
             }
 
@@ -152,14 +153,14 @@ fun GoalsScreen(
             // 320x50 Banner near the bottom (Zero ads for premium)
             item {
                 LiquidGlassAdaptiveBanner(
-                    isPremium = userSettings?.isPremium ?: false
+                    isPremium = userSettings?.isPremiumActive ?: false
                 )
             }
 
             // Social Bar format (cooldown protected, zero ads for premium)
             item {
                 AdsterraSocialBar(
-                    isPremium = userSettings?.isPremium ?: false,
+                    isPremium = userSettings?.isPremiumActive ?: false,
                     isFocusActive = userSettings?.isFocusModeActive ?: false
                 )
             }
@@ -259,7 +260,7 @@ fun StreakGlassSection(settings: UserSettings) {
 @Composable
 fun GoalGlassCard(goal: Goal) {
     val isDark = isSystemInDarkTheme()
-    val primaryCyan = if (isDark) Color(0xFF00E5FF) else Color(0xFF0077D6)
+    val primaryColor = if (isDark) com.example.ui.theme.SleekPrimaryDark else com.example.ui.theme.SleekPrimaryLight
 
     val progress = if (goal.targetValue > 0) {
         (goal.currentValue.toFloat() / goal.targetValue.toFloat()).coerceIn(0f, 1f)
@@ -282,13 +283,13 @@ fun GoalGlassCard(goal: Goal) {
                 Box(
                     modifier = Modifier
                         .clip(CircleShape)
-                        .background(primaryCyan.copy(alpha = 0.2f))
+                        .background(primaryColor.copy(alpha = 0.2f))
                         .padding(8.dp)
                 ) {
                     Icon(
                         Icons.Default.Flag,
                         contentDescription = null,
-                        tint = primaryCyan,
+                        tint = primaryColor,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -302,7 +303,7 @@ fun GoalGlassCard(goal: Goal) {
                 Text(
                     text = "${goal.currentValue} / ${goal.targetValue}",
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                    color = primaryCyan
+                    color = primaryColor
                 )
             }
 
@@ -320,7 +321,7 @@ fun GoalGlassCard(goal: Goal) {
                         .clip(CircleShape)
                         .background(
                             brush = Brush.horizontalGradient(
-                                listOf(primaryCyan.copy(alpha = 0.7f), primaryCyan)
+                                listOf(primaryColor.copy(alpha = 0.7f), primaryColor)
                             )
                         )
                 )

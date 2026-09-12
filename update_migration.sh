@@ -1,0 +1,1 @@
+sed -i 's/db.execSQL("ALTER TABLE user_settings ADD COLUMN premiumExpiryTimestamp INTEGER NOT NULL DEFAULT 0")/db.execSQL("ALTER TABLE user_settings ADD COLUMN premiumExpiryTimestamp INTEGER NOT NULL DEFAULT 0")\n                db.execSQL("ALTER TABLE user_settings ADD COLUMN isPremium INTEGER NOT NULL DEFAULT 0")/' app/src/main/java/com/example/database/AppDatabase.kt

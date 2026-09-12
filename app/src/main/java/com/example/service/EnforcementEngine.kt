@@ -22,16 +22,46 @@ class EnforcementEngine(
         sessionElapsedMillis: Long = 0L,
         currentTimestamp: Long = System.currentTimeMillis()
     ): EnforcementDecision {
+        // 0. Instant Atomic Memory Unlock Check
+        if (UnlockStateManager.isUnlocked(packageName, currentTimestamp)) {
+            Log.d(TAG, "Instant memory unlock active for $packageName. Allowing access.")
+            return EnforcementDecision.Allow
+        }
+
+        val settings = repository.userSettings.first()
+
+        // 1. Strict Focus Session Check (Survives process death via activeFocusEndTime)
+        if (settings.isFocusModeActive) {
+            if (settings.activeFocusEndTime == 0L || settings.activeFocusEndTime > currentTimestamp) {
+                // Allow our own app, launcher, systemui, and essential phone dialer
+                if (packageName != context.packageName && !isEssentialSystemApp(packageName)) {
+                    val appName = repository.getLimit(packageName)?.appName ?: getAppNameFromPackage(packageName)
+                    Log.d(TAG, "Strict focus mode active. Blocking $packageName ($appName).")
+                    return EnforcementDecision.Block(
+                        reason = BlockReason.FOCUS_MODE_ACTIVE,
+                        appName = appName,
+                        packageName = packageName,
+                        usedMinutes = 0,
+                        limitMinutes = 0
+                    )
+                }
+            } else {
+                // Focus session expired while app was running/dead
+                repository.updateSettings(settings.copy(isFocusModeActive = false, activeFocusEndTime = 0L))
+            }
+        }
+
         val limit = repository.getLimit(packageName) ?: return EnforcementDecision.Allow
         if (!limit.isEnabled) return EnforcementDecision.Allow
 
-        // 1. Temporary Unlocks Check
+        // 2. Temporary Unlocks Check from Database
         val tempUnlocks = repository.getTemporaryUnlocks(packageName)
         val activeUnlock = tempUnlocks.find {
             it.startTime + (it.durationMinutes * 60 * 1000L) > currentTimestamp
         }
         if (activeUnlock != null) {
-            Log.d(TAG, "Active temporary unlock for $packageName. Allowing access.")
+            UnlockStateManager.registerUnlock(packageName, activeUnlock.durationMinutes)
+            Log.d(TAG, "Active database temporary unlock for $packageName. Allowing access.")
             return EnforcementDecision.Allow
         }
 
@@ -41,25 +71,6 @@ class EnforcementEngine(
         }
         for (item in expired) {
             repository.deleteTemporaryUnlock(item.id)
-        }
-
-        val settings = repository.userSettings.first()
-
-        // 2. Focus Mode Check (Survives process death via activeFocusEndTime)
-        if (settings.isFocusModeActive) {
-            if (settings.activeFocusEndTime == 0L || settings.activeFocusEndTime > currentTimestamp) {
-                Log.d(TAG, "Focus mode active. Blocking $packageName.")
-                return EnforcementDecision.Block(
-                    reason = BlockReason.FOCUS_MODE_ACTIVE,
-                    appName = limit.appName,
-                    packageName = packageName,
-                    usedMinutes = 0,
-                    limitMinutes = limit.dailyLimitMinutes
-                )
-            } else {
-                // Focus session expired while app was running/dead
-                repository.updateSettings(settings.copy(isFocusModeActive = false, activeFocusEndTime = 0L))
-            }
         }
 
         val calendar = Calendar.getInstance().apply { timeInMillis = currentTimestamp }
@@ -209,6 +220,25 @@ class EnforcementEngine(
                     currentMinuteOfDay <= schedule.endTimeMinuteOfDay
 
             startsToday || startedYesterday
+        }
+    }
+
+    private fun isEssentialSystemApp(pkg: String): Boolean {
+        if (pkg == context.packageName) return true
+        if (pkg == "com.android.systemui" || pkg.contains("inputmethod")) return true
+        if (pkg.contains("launcher", ignoreCase = true) || pkg.contains("home", ignoreCase = true)) return true
+        // Essential phone dialer & emergency
+        if (pkg == "com.google.android.dialer" || pkg == "com.android.dialer" || pkg == "com.samsung.android.dialer" || pkg.contains("telecom") || pkg.contains("incallui")) return true
+        return false
+    }
+
+    private fun getAppNameFromPackage(pkg: String): String {
+        return try {
+            val pm = context.packageManager
+            val info = pm.getApplicationInfo(pkg, 0)
+            pm.getApplicationLabel(info).toString()
+        } catch (e: Exception) {
+            pkg.substringAfterLast('.').replaceFirstChar { it.uppercase() }
         }
     }
 }

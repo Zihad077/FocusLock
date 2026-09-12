@@ -11,6 +11,10 @@ class FocusLockApplication : Application() {
     val database by lazy { AppDatabase.getDatabase(this) }
     val repository by lazy { AppRepository(database.focusDao()) }
 
+    override fun attachBaseContext(base: android.content.Context) {
+        super.attachBaseContext(com.example.util.LocaleHelper.wrapContext(base))
+    }
+
     override fun onCreate() {
         super.onCreate()
         

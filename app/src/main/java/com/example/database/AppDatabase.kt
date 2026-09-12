@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -26,7 +27,7 @@ import kotlinx.coroutines.launch
         FocusProfile::class,
         FocusProfileApp::class
     ], 
-    version = 9, 
+    version = 11, 
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -37,6 +38,14 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: AppDatabase? = null
         
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try { db.execSQL("ALTER TABLE user_settings ADD COLUMN premiumExpiryTimestamp INTEGER NOT NULL DEFAULT 0") } catch(e: Exception) {}
+                try { db.execSQL("ALTER TABLE user_settings ADD COLUMN isPremium INTEGER NOT NULL DEFAULT 0") } catch(e: Exception) {}
+                try { db.execSQL("ALTER TABLE user_settings ADD COLUMN distractionFreeFocusEnabled INTEGER NOT NULL DEFAULT 1") } catch(e: Exception) {}
+            }
+        }
+        
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -44,6 +53,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "focuslock_database"
                 )
+                .addMigrations(MIGRATION_9_10)
                 .fallbackToDestructiveMigration(true)
                 .addCallback(DatabaseCallback())
                 .build()

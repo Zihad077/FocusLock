@@ -26,6 +26,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.database.UserSettings
+import com.example.database.isPremiumActive
 import com.example.ui.theme.LiquidBackground
 import com.example.ui.theme.liquidGlass
 import kotlinx.coroutines.delay
@@ -82,7 +83,7 @@ fun ChallengeSelectionScreen(
     onCancel: () -> Unit
 ) {
     val isDark = isSystemInDarkTheme()
-    val primaryCyan = if (isDark) Color(0xFF00E5FF) else Color(0xFF0077D6)
+    val primaryColor = if (isDark) com.example.ui.theme.SleekPrimaryDark else com.example.ui.theme.SleekPrimaryLight
 
     Column(
         modifier = Modifier
@@ -98,7 +99,7 @@ fun ChallengeSelectionScreen(
                 fontWeight = FontWeight.ExtraBold,
                 letterSpacing = 1.2.sp
             ),
-            color = primaryCyan
+            color = primaryColor
         )
         
         Spacer(modifier = Modifier.height(12.dp))
@@ -185,7 +186,7 @@ fun ChallengeGlassOptionCard(
     onClick: () -> Unit
 ) {
     val isDark = isSystemInDarkTheme()
-    val primaryCyan = if (isDark) Color(0xFF00E5FF) else Color(0xFF0077D6)
+    val primaryColor = if (isDark) com.example.ui.theme.SleekPrimaryDark else com.example.ui.theme.SleekPrimaryLight
 
     Box(
         modifier = Modifier
@@ -202,11 +203,11 @@ fun ChallengeGlassOptionCard(
                 modifier = Modifier
                     .size(46.dp)
                     .clip(RoundedCornerShape(14.dp))
-                    .background(primaryCyan.copy(alpha = 0.18f))
-                    .border(1.dp, primaryCyan.copy(alpha = 0.35f), RoundedCornerShape(14.dp)),
+                    .background(primaryColor.copy(alpha = 0.18f))
+                    .border(1.dp, primaryColor.copy(alpha = 0.35f), RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(icon, contentDescription = null, tint = primaryCyan, modifier = Modifier.size(24.dp))
+                Icon(icon, contentDescription = null, tint = primaryColor, modifier = Modifier.size(24.dp))
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -238,7 +239,7 @@ fun MindChallenge(difficulty: String, onComplete: () -> Unit, onCancel: () -> Un
     var expected by remember { mutableIntStateOf(0) }
     var error by remember { mutableStateOf(false) }
     val isDark = isSystemInDarkTheme()
-    val primaryCyan = if (isDark) Color(0xFF00E5FF) else Color(0xFF0077D6)
+    val primaryColor = if (isDark) com.example.ui.theme.SleekPrimaryDark else com.example.ui.theme.SleekPrimaryLight
 
     LaunchedEffect(Unit) {
         val a = (12..48).random()
@@ -270,7 +271,7 @@ fun MindChallenge(difficulty: String, onComplete: () -> Unit, onCancel: () -> Un
                 Text(
                     question,
                     style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.ExtraBold),
-                    color = primaryCyan
+                    color = primaryColor
                 )
                 Spacer(modifier = Modifier.height(28.dp))
                 
@@ -316,7 +317,7 @@ fun MindChallenge(difficulty: String, onComplete: () -> Unit, onCancel: () -> Un
 fun FocusChallenge(durationSecs: Int, onComplete: () -> Unit, onCancel: () -> Unit) {
     var countdown by remember { mutableIntStateOf(durationSecs) }
     val isDark = isSystemInDarkTheme()
-    val primaryCyan = if (isDark) Color(0xFF00E5FF) else Color(0xFF0077D6)
+    val primaryColor = if (isDark) com.example.ui.theme.SleekPrimaryDark else com.example.ui.theme.SleekPrimaryLight
     
     LaunchedEffect(countdown) {
         if (countdown > 0) {
@@ -360,14 +361,14 @@ fun FocusChallenge(durationSecs: Int, onComplete: () -> Unit, onCancel: () -> Un
                     modifier = Modifier
                         .size(160.dp)
                         .clip(CircleShape)
-                        .background(primaryCyan.copy(alpha = 0.15f))
-                        .border(2.dp, primaryCyan, CircleShape),
+                        .background(primaryColor.copy(alpha = 0.15f))
+                        .border(2.dp, primaryColor, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = "$countdown",
                         style = MaterialTheme.typography.displayLarge.copy(fontWeight = FontWeight.ExtraBold),
-                        color = primaryCyan
+                        color = primaryColor
                     )
                 }
             }

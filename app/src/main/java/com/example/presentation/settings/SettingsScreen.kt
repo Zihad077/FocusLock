@@ -1,4 +1,5 @@
 package com.example.presentation.settings
+import com.example.database.isPremiumActive
 
 import android.app.Activity
 import android.app.Application
@@ -20,6 +21,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -41,6 +43,7 @@ fun SettingsScreen(
     onNavigateToEscapePrevention: () -> Unit = {},
     onNavigateToPermissions: () -> Unit = {},
     onNavigateToDataBackup: () -> Unit = {},
+    onNavigateToPremium: () -> Unit = {},
     viewModel: SettingsViewModel = viewModel(
         factory = SettingsViewModel.Factory(LocalContext.current.applicationContext as Application)
     )
@@ -59,11 +62,7 @@ fun SettingsScreen(
     var showAboutDialog by remember { mutableStateOf(false) }
     var showPermissionsDialog by remember { mutableStateOf(false) }
 
-    val themeLabel = when (settings.theme) {
-        "DARK" -> "Dark mode"
-        "LIGHT" -> "Light mode"
-        else -> "System default"
-    }
+    val themeLabel = "Liquid Glass Dark (Permanent)"
 
     val languageLabel = when (settings.language) {
         "es" -> "Español"
@@ -177,6 +176,17 @@ fun SettingsScreen(
             }
 
             item {
+                SettingsSection("PREMIUM") {
+                    SettingsRow(
+                        icon = Icons.Default.Star,
+                        title = "FocusLock Premium",
+                        subtitle = if (settings.isPremiumActive) "Premium Active" else "Remove ads forever and support development",
+                        onClick = onNavigateToPremium
+                    )
+                }
+            }
+
+            item {
                 SettingsSection("DATA MANAGEMENT") {
                     SettingsRow(
                         icon = Icons.Default.Storage,
@@ -206,7 +216,7 @@ fun SettingsScreen(
 
             // 320x50 Banner near bottom (Zero ads for premium)
             item {
-                LiquidGlassAdaptiveBanner(isPremium = settings.isPremium)
+                LiquidGlassAdaptiveBanner(isPremium = settings.isPremiumActive)
             }
 
             item { Spacer(modifier = Modifier.height(32.dp)) }
@@ -215,46 +225,21 @@ fun SettingsScreen(
 
     // --- DIALOGS ---
 
-    // 1. Theme Dialog
+    // 1. Theme Dialog - Permanent Liquid Glass Dark
     if (showThemeDialog) {
         AlertDialog(
             onDismissRequest = { showThemeDialog = false },
-            title = { Text("Choose Theme", fontWeight = FontWeight.Bold) },
+            title = { Text("Liquid Glass Appearance", fontWeight = FontWeight.Bold) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    val themes = listOf(
-                        "SYSTEM" to "System Default",
-                        "LIGHT" to "Light Mode",
-                        "DARK" to "Dark Mode"
-                    )
-                    themes.forEach { (code, label) ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .clickable {
-                                    viewModel.updateTheme(code)
-                                    showThemeDialog = false
-                                }
-                                .padding(vertical = 12.dp, horizontal = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = (settings.theme == code),
-                                onClick = {
-                                    viewModel.updateTheme(code)
-                                    showThemeDialog = false
-                                }
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(label, style = MaterialTheme.typography.bodyLarge)
-                        }
-                    }
-                }
+                Text(
+                    "FocusLock is exclusively designed and permanently locked to Liquid Glass Dark aesthetic for eye protection, OLED battery conservation, and distraction-free visual flow.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f)
+                )
             },
             confirmButton = {
                 TextButton(onClick = { showThemeDialog = false }) {
-                    Text("Close")
+                    Text("OK", color = Color(0xFF00E5FF))
                 }
             }
         )
@@ -269,12 +254,12 @@ fun SettingsScreen(
                 LazyColumn(modifier = Modifier.heightIn(max = 360.dp)) {
                     val languages = listOf(
                         "en" to "English",
+                        "bn" to "বাংলা (Bengali)",
                         "es" to "Español (Spanish)",
                         "fr" to "Français (French)",
                         "de" to "Deutsch (German)",
                         "pt" to "Português (Portuguese)",
                         "hi" to "हिन्दी (Hindi)",
-                        "bn" to "বাংলা (Bengali)",
                         "ar" to "العربية (Arabic)"
                     )
                     items(languages.size) { index ->
@@ -285,7 +270,7 @@ fun SettingsScreen(
                                 .clip(RoundedCornerShape(12.dp))
                                 .clickable {
                                     viewModel.updateLanguage(code)
-                                    applyLocale(context, code)
+                                    com.example.util.LocaleHelper.applyLocale(context, code, recreateActivity = true)
                                     showLanguageDialog = false
                                 }
                                 .padding(vertical = 12.dp, horizontal = 8.dp),
@@ -295,7 +280,7 @@ fun SettingsScreen(
                                 selected = (settings.language == code),
                                 onClick = {
                                     viewModel.updateLanguage(code)
-                                    applyLocale(context, code)
+                                    com.example.util.LocaleHelper.applyLocale(context, code, recreateActivity = true)
                                     showLanguageDialog = false
                                 }
                             )
@@ -911,22 +896,7 @@ fun SettingsScreen(
 }
 
 private fun applyLocale(context: Context, languageCode: String) {
-    try {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            val localeManager = context.getSystemService(Context.LOCALE_SERVICE) as? android.app.LocaleManager
-            localeManager?.applicationLocales = android.os.LocaleList.forLanguageTags(languageCode)
-        } else {
-            val locale = Locale.forLanguageTag(languageCode)
-            Locale.setDefault(locale)
-            val res = context.resources
-            val config = res.configuration
-            config.setLocale(locale)
-            @Suppress("DEPRECATION")
-            res.updateConfiguration(config, res.displayMetrics)
-        }
-    } catch (e: Exception) {
-        // Fallback
-    }
+    com.example.util.LocaleHelper.applyLocale(context, languageCode, recreateActivity = true)
 }
 
 @Composable
