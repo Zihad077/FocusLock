@@ -22,15 +22,10 @@ class EnforcementEngine(
         sessionElapsedMillis: Long = 0L,
         currentTimestamp: Long = System.currentTimeMillis()
     ): EnforcementDecision {
-        // 0. Instant Atomic Memory Unlock Check
-        if (UnlockStateManager.isUnlocked(packageName, currentTimestamp)) {
-            Log.d(TAG, "Instant memory unlock active for $packageName. Allowing access.")
-            return EnforcementDecision.Allow
-        }
-
         val settings = repository.userSettings.first()
 
         // 1. Strict Focus Session Check (Survives process death via activeFocusEndTime)
+        // Must take precedence over temporary unlocks to enforce focus mode exclusivity
         if (settings.isFocusModeActive) {
             if (settings.activeFocusEndTime == 0L || settings.activeFocusEndTime > currentTimestamp) {
                 // Allow our own app, launcher, systemui, and essential phone dialer
@@ -49,6 +44,12 @@ class EnforcementEngine(
                 // Focus session expired while app was running/dead
                 repository.updateSettings(settings.copy(isFocusModeActive = false, activeFocusEndTime = 0L))
             }
+        }
+
+        // 2. Instant Atomic Memory Unlock Check (for app-specific limits when not in Focus Mode)
+        if (UnlockStateManager.isUnlocked(packageName, currentTimestamp)) {
+            Log.d(TAG, "Instant memory unlock active for $packageName. Allowing access.")
+            return EnforcementDecision.Allow
         }
 
         val limit = repository.getLimit(packageName) ?: return EnforcementDecision.Allow

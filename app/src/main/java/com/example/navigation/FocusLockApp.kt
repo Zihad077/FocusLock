@@ -1,6 +1,10 @@
 package com.example.navigation
 
 import android.content.Context
+import androidx.activity.compose.BackHandler
+import com.example.FocusLockApplication
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
@@ -123,8 +127,45 @@ fun FocusLockApp() {
 
 @Composable
 fun MainTabScreen() {
+    val context = LocalContext.current
+    val app = context.applicationContext as FocusLockApplication
+    val userSettings by app.repository.userSettings.collectAsState(initial = com.example.database.UserSettings())
+    val now = System.currentTimeMillis()
+    val isFocusActive = userSettings.isFocusModeActive && (userSettings.activeFocusEndTime == 0L || userSettings.activeFocusEndTime > now)
+
     val navController = rememberNavController()
     val isDark = isSystemInDarkTheme()
+
+    // Back navigation disabled during active Focus Mode
+    BackHandler(enabled = isFocusActive) {
+        // Intentionally consumed: Focus Mode screen must remain the only accessible screen
+    }
+
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
+
+    // Strictly redirect and lock to Route.Focus when focus session is running
+    LaunchedEffect(isFocusActive) {
+        if (isFocusActive) {
+            navController.navigate(Route.Focus) {
+                popUpTo(navController.graph.findStartDestination().id) {
+                    saveState = false
+                }
+                launchSingleTop = true
+            }
+        }
+    }
+
+    LaunchedEffect(currentDestination, isFocusActive) {
+        if (isFocusActive && currentDestination?.hasRoute(Route.Focus::class) != true) {
+            navController.navigate(Route.Focus) {
+                popUpTo(navController.graph.findStartDestination().id) {
+                    saveState = false
+                }
+                launchSingleTop = true
+            }
+        }
+    }
 
     // 5 primary tabs + Goals access via top/insights/more as shown in Liquid Glass UI mockup
     val items = listOf(
@@ -140,115 +181,115 @@ fun MainTabScreen() {
         Scaffold(
             containerColor = Color.Transparent,
             bottomBar = {
-                // Floating Liquid Glass Navigation Bar
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    val navBackStackEntry by navController.currentBackStackEntryAsState()
-                    val currentDestination = navBackStackEntry?.destination
-
+                // Completely hide navigation bar when Focus Mode is active to prevent leaving
+                if (!isFocusActive) {
+                    // Floating Liquid Glass Navigation Bar
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .shadow(
-                                elevation = 20.dp,
-                                shape = RoundedCornerShape(32.dp),
-                                ambientColor = Color(0x70001025),
-                                spotColor = Color(0x3500E5FF)
-                            )
-                            .clip(RoundedCornerShape(32.dp))
-                            .background(
-                                brush = Brush.verticalGradient(
-                                    colors = listOf(
-                                        Color(0xE8142338),
-                                        Color(0xF00A1320)
-                                    )
-                                )
-                            )
-                            .border(
-                                width = 1.dp,
-                                brush = Brush.linearGradient(
-                                    colors = listOf(
-                                        Color.White.copy(alpha = 0.50f),
-                                        Color(0xFF00E5FF).copy(alpha = 0.45f),
-                                        Color.White.copy(alpha = 0.08f),
-                                        Color(0xFF0077D6).copy(alpha = 0.35f)
-                                    ),
-                                    start = Offset(0f, 0f),
-                                    end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
-                                ),
-                                shape = RoundedCornerShape(32.dp)
-                            )
-                            .padding(horizontal = 6.dp, vertical = 6.dp)
+                            .navigationBarsPadding()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceAround,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            items.forEach { item ->
-                                val isSelected = currentDestination?.hierarchy?.any { 
-                                    it.hasRoute(item.route::class) 
-                                } == true
-
-                                val iconTint by animateColorAsState(
-                                    targetValue = if (isSelected) Color(0xFF00E5FF) else Color(0xFF88A0BA),
-                                    animationSpec = spring(),
-                                    label = "nav_icon_tint"
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .shadow(
+                                    elevation = 20.dp,
+                                    shape = RoundedCornerShape(32.dp),
+                                    ambientColor = Color(0x70001025),
+                                    spotColor = Color(0x3500E5FF)
                                 )
-
-                                val pillBg by animateColorAsState(
-                                    targetValue = if (isSelected) Color(0x3300E5FF) else Color.Transparent,
-                                    animationSpec = spring(),
-                                    label = "nav_pill_bg"
-                                )
-
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    modifier = Modifier
-                                        .testTag("nav_tab_${item.name.lowercase()}")
-                                        .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
-                                        .clip(RoundedCornerShape(18.dp))
-                                        .background(pillBg)
-                                        .then(
-                                            if (isSelected) {
-                                                Modifier.border(
-                                                    1.dp,
-                                                    Color(0x5500E5FF),
-                                                    RoundedCornerShape(18.dp)
-                                                )
-                                            } else Modifier
+                                .clip(RoundedCornerShape(32.dp))
+                                .background(
+                                    brush = Brush.verticalGradient(
+                                        colors = listOf(
+                                            Color(0xE8142338),
+                                            Color(0xF00A1320)
                                         )
-                                        .clickable {
-                                            navController.navigate(item.route) {
-                                                popUpTo(navController.graph.findStartDestination().id) {
-                                                    saveState = true
-                                                }
-                                                launchSingleTop = true
-                                                restoreState = true
-                                            }
-                                        }
-                                        .padding(horizontal = 8.dp, vertical = 6.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = item.icon,
-                                        contentDescription = item.name,
-                                        tint = iconTint,
-                                        modifier = Modifier.size(22.dp)
                                     )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = item.name,
-                                        style = MaterialTheme.typography.labelSmall.copy(
-                                            fontSize = 10.sp,
-                                            fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Normal
+                                )
+                                .border(
+                                    width = 1.dp,
+                                    brush = Brush.linearGradient(
+                                        colors = listOf(
+                                            Color.White.copy(alpha = 0.50f),
+                                            Color(0xFF00E5FF).copy(alpha = 0.45f),
+                                            Color.White.copy(alpha = 0.08f),
+                                            Color(0xFF0077D6).copy(alpha = 0.35f)
                                         ),
-                                        color = iconTint
+                                        start = Offset(0f, 0f),
+                                        end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
+                                    ),
+                                    shape = RoundedCornerShape(32.dp)
+                                )
+                                .padding(horizontal = 6.dp, vertical = 6.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceAround,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                items.forEach { item ->
+                                    val isSelected = currentDestination?.hierarchy?.any { 
+                                        it.hasRoute(item.route::class) 
+                                    } == true
+
+                                    val iconTint by animateColorAsState(
+                                        targetValue = if (isSelected) Color(0xFF00E5FF) else Color(0xFF88A0BA),
+                                        animationSpec = spring(),
+                                        label = "nav_icon_tint"
                                     )
+
+                                    val pillBg by animateColorAsState(
+                                        targetValue = if (isSelected) Color(0x3300E5FF) else Color.Transparent,
+                                        animationSpec = spring(),
+                                        label = "nav_pill_bg"
+                                    )
+
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        modifier = Modifier
+                                            .testTag("nav_tab_${item.name.lowercase()}")
+                                            .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
+                                            .clip(RoundedCornerShape(18.dp))
+                                            .background(pillBg)
+                                            .then(
+                                                if (isSelected) {
+                                                    Modifier.border(
+                                                        1.dp,
+                                                        Color(0x5500E5FF),
+                                                        RoundedCornerShape(18.dp)
+                                                    )
+                                                } else Modifier
+                                            )
+                                            .clickable {
+                                                navController.navigate(item.route) {
+                                                    popUpTo(navController.graph.findStartDestination().id) {
+                                                        saveState = true
+                                                    }
+                                                    launchSingleTop = true
+                                                    restoreState = true
+                                                }
+                                            }
+                                            .padding(horizontal = 8.dp, vertical = 6.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = item.icon,
+                                            contentDescription = item.name,
+                                            tint = iconTint,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = item.name,
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                fontSize = 10.sp,
+                                                fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Normal
+                                            ),
+                                            color = iconTint
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -256,9 +297,17 @@ fun MainTabScreen() {
                 }
             }
         ) { innerPadding ->
+            val initialTabDestination: Route = remember {
+                val settings = runBlocking { app.repository.userSettings.first() }
+                if (settings.isFocusModeActive && settings.activeFocusEndTime > System.currentTimeMillis()) {
+                    Route.Focus
+                } else {
+                    Route.Home
+                }
+            }
             NavHost(
                 navController = navController,
-                startDestination = Route.Home,
+                startDestination = initialTabDestination,
                 modifier = Modifier.padding(innerPadding)
             ) {
                 composable<Route.Home> { HomeScreen() }

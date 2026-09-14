@@ -1,6 +1,7 @@
 package com.example.presentation.focus
 
 import android.app.Application
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -48,6 +49,12 @@ fun FocusScreen(
     val cooldownRemaining by viewModel.cooldownRemainingSeconds.collectAsStateWithLifecycle()
     val showExitConfirmation by viewModel.showExitConfirmation.collectAsStateWithLifecycle()
     val isDark = isSystemInDarkTheme()
+
+    // Back navigation disabled during active Focus Mode:
+    // Prevents bypasses via hardware/gesture back button.
+    BackHandler(enabled = isFocusActive) {
+        // Intentionally consumed: Focus Mode screen must remain the only accessible screen
+    }
 
     val primaryCyan = Color(0xFF00E5FF)
     val accentError = Color(0xFFFF5252)
