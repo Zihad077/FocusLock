@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.material.icons.filled.List
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -155,7 +156,7 @@ fun AppsScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(bottom = 96.dp),
+            contentPadding = PaddingValues(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             if (!hasAccessibility || !hasOverlay) {
@@ -238,6 +239,7 @@ fun AppsScreen(
                     },
                     shape = RoundedCornerShape(20.dp),
                     modifier = Modifier
+                        .testTag("app_search_input")
                         .fillMaxWidth()
                         .liquidGlass(
                             shape = RoundedCornerShape(20.dp),

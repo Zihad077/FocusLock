@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.LocalFireDepartment
@@ -27,6 +28,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -74,7 +76,7 @@ fun GoalsScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(bottom = 96.dp),
+            contentPadding = PaddingValues(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
             userSettings?.let { settings ->
@@ -109,7 +111,10 @@ fun GoalsScreen(
                 }
             } else {
                 items(goals) { goal ->
-                    GoalGlassCard(goal = goal)
+                    GoalGlassCard(
+                        goal = goal,
+                        onDelete = { viewModel.deleteGoal(goal.id) }
+                    )
                 }
             }
 
@@ -258,7 +263,10 @@ fun StreakGlassSection(settings: UserSettings) {
 }
 
 @Composable
-fun GoalGlassCard(goal: Goal) {
+fun GoalGlassCard(
+    goal: Goal,
+    onDelete: (() -> Unit)? = null
+) {
     val isDark = isSystemInDarkTheme()
     val primaryColor = if (isDark) com.example.ui.theme.SleekPrimaryDark else com.example.ui.theme.SleekPrimaryLight
 
@@ -294,17 +302,34 @@ fun GoalGlassCard(goal: Goal) {
                     )
                 }
                 Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = goal.title,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Spacer(modifier = Modifier.weight(1f))
-                Text(
-                    text = "${goal.currentValue} / ${goal.targetValue}",
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                    color = primaryColor
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = goal.title,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Text(
+                        text = "${goal.currentValue} / ${goal.targetValue}",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = primaryColor
+                    )
+                }
+
+                if (onDelete != null) {
+                    IconButton(
+                        onClick = onDelete,
+                        modifier = Modifier
+                            .testTag("delete_goal_${goal.id}")
+                            .size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.DeleteOutline,
+                            contentDescription = "Delete Goal",
+                            tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
             }
 
             Box(

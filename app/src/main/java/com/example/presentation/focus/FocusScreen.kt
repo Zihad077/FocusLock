@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.*
@@ -50,50 +51,6 @@ fun FocusScreen(
 
     val primaryCyan = Color(0xFF00E5FF)
     val accentError = Color(0xFFFF5252)
-
-    if (cooldownRemaining != null) {
-        // Mandatory 2:30 Cooling Down / Reflection Screen
-        MandatoryCooldownScreen(
-            remainingSeconds = cooldownRemaining ?: 0,
-            onResume = { viewModel.resumeFocusSession() },
-            onEndRequest = { viewModel.promptExitConfirmation() }
-        )
-
-        if (showExitConfirmation) {
-            AlertDialog(
-                onDismissRequest = { viewModel.dismissExitConfirmation() },
-                modifier = Modifier.liquidGlass(shape = RoundedCornerShape(24.dp), isElevated = true),
-                title = {
-                    Text(
-                        "End Focus Session Early?",
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                },
-                text = {
-                    Text(
-                        "You have completed the mandatory reflection period. Are you sure you want to cancel the focus session? You will not receive full session XP.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
-                    )
-                },
-                confirmButton = {
-                    Button(
-                        onClick = { viewModel.confirmEarlyExit() },
-                        colors = ButtonDefaults.buttonColors(containerColor = accentError)
-                    ) {
-                        Text("Confirm & End", color = Color.White)
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { viewModel.dismissExitConfirmation() }) {
-                        Text("Keep Focusing", color = primaryCyan)
-                    }
-                }
-            )
-        }
-        return
-    }
 
     Column(
         modifier = Modifier
@@ -221,34 +178,46 @@ fun FocusScreen(
 
         Spacer(modifier = Modifier.height(28.dp))
 
+        val isCooldownLocked = isFocusActive && ((cooldownRemaining ?: 0) > 0)
+        val cooldownMinutes = (cooldownRemaining ?: 0) / 60
+        val cooldownSeconds = (cooldownRemaining ?: 0) % 60
+        val cooldownFormatted = String.format("%d:%02d", cooldownMinutes, cooldownSeconds)
+
         // Main Action Liquid Button
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(60.dp)
                 .shadow(
-                    elevation = 12.dp,
+                    elevation = if (isCooldownLocked) 4.dp else 12.dp,
                     shape = RoundedCornerShape(20.dp),
-                    spotColor = if (isFocusActive) accentError else primaryCyan
+                    spotColor = if (isFocusActive) (if (isCooldownLocked) Color(0x60FF5252) else accentError) else primaryCyan
                 )
                 .clip(RoundedCornerShape(20.dp))
                 .background(
                     brush = Brush.horizontalGradient(
                         colors = if (isFocusActive) {
-                            listOf(Color(0xFFFF5252), Color(0xFFD50000))
+                            if (isCooldownLocked) {
+                                listOf(Color(0xFF3E1E24), Color(0xFF2C1418))
+                            } else {
+                                listOf(Color(0xFFFF5252), Color(0xFFD50000))
+                            }
                         } else {
-                            if (isDark) listOf(Color(0xFF00E5FF), Color(0xFF0091EA))
-                            else listOf(Color(0xFF0077D6), Color(0xFF0288D1))
+                            listOf(Color(0xFF00E5FF), Color(0xFF0091EA))
                         }
                     )
                 )
                 .border(
                     width = 1.dp,
-                    color = Color.White.copy(alpha = 0.4f),
+                    color = if (isCooldownLocked) Color(0x40FF5252) else Color.White.copy(alpha = 0.4f),
                     shape = RoundedCornerShape(20.dp)
                 )
-                .clickable {
-                    if (isFocusActive) viewModel.requestExitFocusSession() else viewModel.startFocusSession()
+                .clickable(enabled = !isCooldownLocked) {
+                    if (isFocusActive) {
+                        viewModel.endFocusSession(completed = false)
+                    } else {
+                        viewModel.startFocusSession()
+                    }
                 },
             contentAlignment = Alignment.Center
         ) {
@@ -257,14 +226,22 @@ fun FocusScreen(
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Icon(
-                    imageVector = if (isFocusActive) Icons.Default.Stop else Icons.Default.PlayArrow,
+                    imageVector = when {
+                        !isFocusActive -> Icons.Default.PlayArrow
+                        isCooldownLocked -> Icons.Default.Lock
+                        else -> Icons.Default.Stop
+                    },
                     contentDescription = null,
-                    tint = Color.White
+                    tint = if (isCooldownLocked) Color(0xFFFF8A80) else Color.White
                 )
                 Text(
-                    text = if (isFocusActive) "End Focus Session" else "Start Focus Session",
+                    text = when {
+                        !isFocusActive -> "Start Focus Session"
+                        isCooldownLocked -> "End Focus Locked ($cooldownFormatted)"
+                        else -> "End Focus Session"
+                    },
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = Color.White
+                    color = if (isCooldownLocked) Color(0xFFFF8A80) else Color.White
                 )
             }
         }

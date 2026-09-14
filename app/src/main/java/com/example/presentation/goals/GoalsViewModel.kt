@@ -50,6 +50,12 @@ class GoalsViewModel(
         }
     }
 
+    fun deleteGoal(id: Int) {
+        viewModelScope.launch {
+            repository.deleteGoal(id)
+        }
+    }
+
     fun awardBonusXP(amount: Int = 100) {
         viewModelScope.launch {
             val settings = userSettings.value ?: return@launch

@@ -26,9 +26,9 @@ object LocaleHelper {
 
     fun applyLocale(context: Context, languageCode: String, recreateActivity: Boolean = true) {
         try {
-            // 1. Save to SharedPreferences for synchronous cold-start loading
+            // 1. Save to SharedPreferences synchronously for immediate cold-start and recreate loading
             val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            prefs.edit().putString(KEY_LANGUAGE, languageCode).apply()
+            prefs.edit().putString(KEY_LANGUAGE, languageCode).commit()
 
             val locale = if (languageCode.contains("-")) {
                 val parts = languageCode.split("-")

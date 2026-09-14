@@ -27,7 +27,7 @@ import kotlinx.coroutines.launch
         FocusProfile::class,
         FocusProfileApp::class
     ], 
-    version = 11, 
+    version = 12, 
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -45,6 +45,15 @@ abstract class AppDatabase : RoomDatabase() {
                 try { db.execSQL("ALTER TABLE user_settings ADD COLUMN distractionFreeFocusEnabled INTEGER NOT NULL DEFAULT 1") } catch(e: Exception) {}
             }
         }
+
+        val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try { db.execSQL("ALTER TABLE user_settings ADD COLUMN premiumPlanId TEXT NOT NULL DEFAULT ''") } catch(e: Exception) {}
+                try { db.execSQL("ALTER TABLE user_settings ADD COLUMN premiumTxId TEXT NOT NULL DEFAULT ''") } catch(e: Exception) {}
+                try { db.execSQL("ALTER TABLE user_settings ADD COLUMN premiumActivationTime INTEGER NOT NULL DEFAULT 0") } catch(e: Exception) {}
+                try { db.execSQL("ALTER TABLE user_settings ADD COLUMN focusSessionStartTime INTEGER NOT NULL DEFAULT 0") } catch(e: Exception) {}
+            }
+        }
         
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
@@ -53,7 +62,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "focuslock_database"
                 )
-                .addMigrations(MIGRATION_9_10)
+                .addMigrations(MIGRATION_9_10, MIGRATION_11_12)
                 .fallbackToDestructiveMigration(true)
                 .addCallback(DatabaseCallback())
                 .build()

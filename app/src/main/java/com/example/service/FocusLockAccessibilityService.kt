@@ -104,8 +104,10 @@ class FocusLockAccessibilityService : AccessibilityService() {
         activeAppTimerJob?.cancel()
         
         activeAppTimerJob = serviceScope.launch {
+            val settings = appRepository.userSettings.first()
             val limit = appRepository.getLimit(packageName)
-            if (limit != null && limit.isEnabled) {
+            val shouldEvaluate = settings.isFocusModeActive || settings.bedtimeEnabled || (limit != null && limit.isEnabled)
+            if (shouldEvaluate) {
                 // Initial check (sessionElapsed = 0)
                 val blockedImmediately = checkAndBlock(packageName, sessionElapsedMillis = 0L)
                 if (blockedImmediately) return@launch

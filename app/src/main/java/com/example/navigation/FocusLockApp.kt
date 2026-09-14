@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -71,39 +72,18 @@ fun FocusLockApp() {
     }
 
     // Determine initial route:
-    // 1. If first launch (onboarding not completed) -> Welcome
-    // 2. If onboarding completed but required permissions missing -> Permissions
-    // 3. If onboarding completed and all required permissions granted -> MainTab
+    // First launch -> Welcome. Completed -> MainTab.
     val initialDestination: Route = remember {
-        when {
-            !isOnboardingCompleted -> Route.Welcome
-            !allRequiredPermissionsGranted -> Route.Permissions
-            else -> Route.MainTab
-        }
+        if (!isOnboardingCompleted) Route.Welcome else Route.MainTab
     }
 
     val navController = rememberNavController()
 
-    // Re-check permissions whenever app returns to the foreground
+    // Keep permissions state synced on resume without forcing navigation away from current screen
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                val currentGranted = PermissionHelper.areAllRequiredPermissionsGranted(context)
-                allRequiredPermissionsGranted = currentGranted
-                
-                // If user has finished onboarding previously, but a required permission is revoked:
-                val isCompleted = sharedPrefs.getBoolean(KEY_ONBOARDING_COMPLETED, false)
-                if (isCompleted && !currentGranted) {
-                    // Check current route; if not already on Permissions, navigate to Permissions
-                    val currentRoute = navController.currentBackStackEntry?.destination?.route
-                    val isAlreadyOnPermissions = currentRoute?.contains("Permissions") == true
-                    if (!isAlreadyOnPermissions) {
-                        navController.navigate(Route.Permissions) {
-                            popUpTo(0) { inclusive = false }
-                            launchSingleTop = true
-                        }
-                    }
-                }
+                allRequiredPermissionsGranted = PermissionHelper.areAllRequiredPermissionsGranted(context)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -124,8 +104,8 @@ fun FocusLockApp() {
             PermissionsScreen(
                 isFromSettings = false,
                 onPermissionsGranted = {
-                    // Mark onboarding complete in persistent storage
-                    sharedPrefs.edit().putBoolean(KEY_ONBOARDING_COMPLETED, true).apply()
+                    // Mark onboarding complete in persistent storage synchronously
+                    sharedPrefs.edit().putBoolean(KEY_ONBOARDING_COMPLETED, true).commit()
                     isOnboardingCompleted = true
                     allRequiredPermissionsGranted = true
                     
@@ -175,51 +155,35 @@ fun MainTabScreen() {
                         modifier = Modifier
                             .fillMaxWidth()
                             .shadow(
-                                elevation = 16.dp,
+                                elevation = 20.dp,
                                 shape = RoundedCornerShape(32.dp),
-                                ambientColor = Color(0x60001025),
-                                spotColor = Color(0x150D6EFD)
+                                ambientColor = Color(0x70001025),
+                                spotColor = Color(0x3500E5FF)
                             )
                             .clip(RoundedCornerShape(32.dp))
                             .background(
                                 brush = Brush.verticalGradient(
-                                    colors = if (isDark) {
-                                        listOf(
-                                            Color(0x7516243A),
-                                            Color(0x600C1625)
-                                        )
-                                    } else {
-                                        listOf(
-                                            Color(0xD9FFFFFF),
-                                            Color(0xBFEDF5FA)
-                                        )
-                                    }
+                                    colors = listOf(
+                                        Color(0xE8142338),
+                                        Color(0xF00A1320)
+                                    )
                                 )
                             )
                             .border(
                                 width = 1.dp,
                                 brush = Brush.linearGradient(
-                                    colors = if (isDark) {
-                                        listOf(
-                                            com.example.ui.theme.SleekPrimaryDark.copy(alpha = 0.6f),
-                                            Color(0x25FFFFFF),
-                                            com.example.ui.theme.SleekPrimaryDark.copy(alpha = 0.1f),
-                                            com.example.ui.theme.SleekPrimaryDark.copy(alpha = 0.4f)
-                                        )
-                                    } else {
-                                        listOf(
-                                            Color(0xFFFFFFFF),
-                                            com.example.ui.theme.SleekPrimaryLight.copy(alpha = 0.7f),
-                                            Color(0x40FFFFFF),
-                                            Color(0x80FFFFFF)
-                                        )
-                                    },
+                                    colors = listOf(
+                                        Color.White.copy(alpha = 0.50f),
+                                        Color(0xFF00E5FF).copy(alpha = 0.45f),
+                                        Color.White.copy(alpha = 0.08f),
+                                        Color(0xFF0077D6).copy(alpha = 0.35f)
+                                    ),
                                     start = Offset(0f, 0f),
                                     end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
                                 ),
                                 shape = RoundedCornerShape(32.dp)
                             )
-                            .padding(horizontal = 8.dp, vertical = 6.dp)
+                            .padding(horizontal = 6.dp, vertical = 6.dp)
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -232,21 +196,13 @@ fun MainTabScreen() {
                                 } == true
 
                                 val iconTint by animateColorAsState(
-                                    targetValue = if (isSelected) {
-                                        if (isDark) com.example.ui.theme.SleekPrimaryDark else com.example.ui.theme.SleekPrimaryLight
-                                    } else {
-                                        if (isDark) Color(0xFF88A0BA) else Color(0xFF6A8199)
-                                    },
+                                    targetValue = if (isSelected) Color(0xFF00E5FF) else Color(0xFF88A0BA),
                                     animationSpec = spring(),
                                     label = "nav_icon_tint"
                                 )
 
                                 val pillBg by animateColorAsState(
-                                    targetValue = if (isSelected) {
-                                        if (isDark) com.example.ui.theme.SleekPrimaryDark.copy(alpha = 0.3f) else com.example.ui.theme.SleekPrimaryLight.copy(alpha = 0.28f)
-                                    } else {
-                                        Color.Transparent
-                                    },
+                                    targetValue = if (isSelected) Color(0x3300E5FF) else Color.Transparent,
                                     animationSpec = spring(),
                                     label = "nav_pill_bg"
                                 )
@@ -254,11 +210,20 @@ fun MainTabScreen() {
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     modifier = Modifier
+                                        .testTag("nav_tab_${item.name.lowercase()}")
+                                        .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
                                         .clip(RoundedCornerShape(18.dp))
-                                        .clickable(
-                                            interactionSource = remember { MutableInteractionSource() },
-                                            indication = null
-                                        ) {
+                                        .background(pillBg)
+                                        .then(
+                                            if (isSelected) {
+                                                Modifier.border(
+                                                    1.dp,
+                                                    Color(0x5500E5FF),
+                                                    RoundedCornerShape(18.dp)
+                                                )
+                                            } else Modifier
+                                        )
+                                        .clickable {
                                             navController.navigate(item.route) {
                                                 popUpTo(navController.graph.findStartDestination().id) {
                                                     saveState = true
@@ -267,8 +232,7 @@ fun MainTabScreen() {
                                                 restoreState = true
                                             }
                                         }
-                                        .background(pillBg)
-                                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                                        .padding(horizontal = 8.dp, vertical = 6.dp)
                                 ) {
                                     Icon(
                                         imageVector = item.icon,
@@ -281,7 +245,7 @@ fun MainTabScreen() {
                                         text = item.name,
                                         style = MaterialTheme.typography.labelSmall.copy(
                                             fontSize = 10.sp,
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                            fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Normal
                                         ),
                                         color = iconTint
                                     )

@@ -135,7 +135,11 @@ data class UserSettings(
     val distractionFreeFocusEnabled: Boolean = true,
 
     // Premium status (Zero ads & unlimited unlocks when true)
-    val isPremium: Boolean = false
+    val isPremium: Boolean = false,
+    val premiumPlanId: String = "",
+    val premiumTxId: String = "",
+    val premiumActivationTime: Long = 0L,
+    val focusSessionStartTime: Long = 0L
 )
 
 @Entity(tableName = "escape_attempts")
@@ -191,4 +195,11 @@ data class AppGroupMember(
 )
 
 val UserSettings.isPremiumActive: Boolean
-    get() = isPremium || (premiumExpiryTimestamp > System.currentTimeMillis())
+    get() {
+        val now = System.currentTimeMillis()
+        return if (premiumExpiryTimestamp > 0L) {
+            premiumExpiryTimestamp > now
+        } else {
+            isPremium
+        }
+    }

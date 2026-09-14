@@ -30,7 +30,11 @@ import kotlinx.coroutines.launch
 import com.example.ads.LiquidGlassAdaptiveBanner
 import com.example.ui.theme.liquidGlass
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import com.example.util.DataBackupManager
+import android.widget.Toast
+import android.net.Uri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import java.util.Locale
@@ -436,6 +440,28 @@ fun SettingsScreen(
         )
     }
 
+    val profileImportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        if (uri != null) {
+            scope.launch {
+                try {
+                    val validation = DataBackupManager.validateBackupFromUri(context, uri)
+                    if (validation.isValid && validation.parsedBackup != null) {
+                        val success = DataBackupManager.restoreBackup(viewModel.repository, validation.parsedBackup)
+                        if (success) {
+                            Toast.makeText(context, "Data imported successfully!", Toast.LENGTH_LONG).show()
+                        } else {
+                            Toast.makeText(context, "Failed to restore backup data", Toast.LENGTH_SHORT).show()
+                        }
+                    } else {
+                        Toast.makeText(context, validation.errorMessage ?: "Invalid backup file", Toast.LENGTH_SHORT).show()
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Import failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
     // 5. Profile & Gamification Dialog
     if (showProfileDialog) {
         var showResetConfirm by remember { mutableStateOf(false) }
@@ -491,6 +517,51 @@ fun SettingsScreen(
                                 .height(8.dp)
                                 .clip(RoundedCornerShape(4.dp))
                         )
+                    }
+
+                    HorizontalDivider()
+
+                    Text(
+                        "Data Backup & Transfer",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Exactly one Export button
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    try {
+                                        val file = DataBackupManager.exportBackupFile(context, viewModel.repository)
+                                        DataBackupManager.shareBackupFile(context, file)
+                                    } catch (e: Exception) {
+                                        Toast.makeText(context, "Export error: ${e.message}", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.FileDownload, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Export")
+                        }
+
+                        // Exactly one Import button
+                        OutlinedButton(
+                            onClick = {
+                                profileImportLauncher.launch("application/json")
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.FileUpload, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Import")
+                        }
                     }
 
                     HorizontalDivider()

@@ -55,13 +55,12 @@ class FocusViewModel(
                 _isFocusActive.value = true
                 startTimer()
 
-                if (settings.focusExitCooldownEndTime > now) {
-                    val cooldownDiff = ((settings.focusExitCooldownEndTime - now) / 1000).toInt()
-                    _cooldownRemainingSeconds.value = cooldownDiff
-                    startCooldownTimer(settings.focusExitCooldownEndTime)
-                } else if (settings.focusExitCooldownEndTime > 0L) {
-                    // Cooldown already finished while user was away
-                    _cooldownRemainingSeconds.value = 0
+                val sessionStart = if (settings.focusSessionStartTime > 0L) settings.focusSessionStartTime else (now - 150_000L)
+                val elapsedSec = ((now - sessionStart) / 1000L).toInt()
+                val lockRemaining = maxOf(0, 150 - elapsedSec)
+                _cooldownRemainingSeconds.value = lockRemaining
+                if (lockRemaining > 0) {
+                    startCooldownTimer(sessionStart + 150_000L)
                 }
             } else if (settings.isFocusModeActive) {
                 // Was active but expired while app was dead
@@ -79,13 +78,25 @@ class FocusViewModel(
     fun startFocusSession() {
         if (_isFocusActive.value) return
         
+        val now = System.currentTimeMillis()
+        val durationMillis = _selectedDurationMinutes.value * 60 * 1000L
+        val endTime = now + durationMillis
+        val cooldownEnd = now + 150_000L // Strict 2 min 30 sec cooldown
+        
         _isFocusActive.value = true
         _remainingTimeSeconds.value = _selectedDurationMinutes.value * 60
+        _cooldownRemainingSeconds.value = 150
         
         viewModelScope.launch {
             val settings = repository.userSettings.first()
-            val endTime = System.currentTimeMillis() + (_selectedDurationMinutes.value * 60 * 1000L)
-            repository.updateSettings(settings.copy(isFocusModeActive = true, activeFocusEndTime = endTime))
+            repository.updateSettings(
+                settings.copy(
+                    isFocusModeActive = true,
+                    activeFocusEndTime = endTime,
+                    focusSessionStartTime = now,
+                    focusExitCooldownEndTime = cooldownEnd
+                )
+            )
             
             try {
                 com.example.service.NotificationHelper(getApplication())
@@ -107,6 +118,7 @@ class FocusViewModel(
         }
         
         startTimer()
+        startCooldownTimer(cooldownEnd)
     }
     
     private fun startTimer() {
@@ -228,6 +240,7 @@ class FocusViewModel(
                 isFocusModeActive = false, 
                 activeFocusEndTime = 0L,
                 focusExitCooldownEndTime = 0L,
+                focusSessionStartTime = 0L,
                 xp = newXp,
                 level = newLevel
             ))

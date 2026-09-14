@@ -82,11 +82,11 @@ fun HomeScreen(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp),
+        contentPadding = PaddingValues(top = 16.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         item {
-            HeaderSection()
+            HeaderSection(settings = settings)
         }
 
         item {
@@ -135,7 +135,7 @@ fun HomeScreen(
                 Text(
                     text = "${limits.size} monitored",
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = if (isSystemInDarkTheme()) Color(0xFF00E5FF) else Color(0xFF0077D6)
+                    color = Color(0xFF00E5FF)
                 )
             }
         }
@@ -168,8 +168,7 @@ fun HomeScreen(
 }
 
 @Composable
-private fun HeaderSection() {
-    val isDark = isSystemInDarkTheme()
+private fun HeaderSection(settings: UserSettings?) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -189,31 +188,60 @@ private fun HeaderSection() {
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.8.sp
                 ),
-                color = if (isDark) Color(0xFF00E5FF) else Color(0xFF0077D6)
+                color = Color(0xFF00E5FF)
             )
         }
-        Box(
-            modifier = Modifier
-                .size(44.dp)
-                .shadow(8.dp, CircleShape)
-                .clip(CircleShape)
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = if (isDark) {
-                            listOf(Color(0xFF00E5FF), Color(0xFF2979FF))
-                        } else {
-                            listOf(Color(0xFF0077D6), Color(0xFF00B0FF))
-                        }
-                    )
-                )
-                .border(1.5.dp, Color.White.copy(alpha = 0.6f), CircleShape),
-            contentAlignment = Alignment.Center
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text(
-                text = "FL",
-                color = Color.White,
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.ExtraBold)
-            )
+            // Streak Flame Glass Chip
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color(0x28FFAB00))
+                    .border(1.dp, Color(0x55FFAB00), RoundedCornerShape(16.dp))
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.LocalFireDepartment,
+                        contentDescription = "Streak",
+                        tint = Color(0xFFFFAB00),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = "${settings?.currentStreak ?: 0}d",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                        color = Color(0xFFFFAB00)
+                    )
+                }
+            }
+
+            // User Level Glass Avatar
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .shadow(8.dp, CircleShape)
+                    .clip(CircleShape)
+                    .background(
+                        brush = Brush.linearGradient(
+                            colors = listOf(Color(0xFF00E5FF), Color(0xFF2979FF))
+                        )
+                    )
+                    .border(1.5.dp, Color.White.copy(alpha = 0.6f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "L${settings?.level ?: 1}",
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.ExtraBold)
+                )
+            }
         }
     }
 }
@@ -238,19 +266,11 @@ private fun StatsGridSection(settings: UserSettings?, stats: StatsSummary, limit
                     .fillMaxWidth()
                     .background(
                         brush = Brush.radialGradient(
-                            colors = if (isDark) {
-                                listOf(
-                                    Color(0x3500E5FF),
-                                    Color(0x152979FF),
-                                    Color.Transparent
-                                )
-                            } else {
-                                listOf(
-                                    Color(0x3064B5F6),
-                                    Color(0x100077D6),
-                                    Color.Transparent
-                                )
-                            },
+                            colors = listOf(
+                                Color(0x3500E5FF),
+                                Color(0x152979FF),
+                                Color.Transparent
+                            ),
                             center = Offset(Float.POSITIVE_INFINITY, 0f),
                             radius = 600f
                         )
@@ -276,7 +296,7 @@ private fun StatsGridSection(settings: UserSettings?, stats: StatsSummary, limit
                             Text(
                                 text = "${settings?.focusScore ?: 0}",
                                 style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.ExtraBold),
-                                color = if (isDark) Color(0xFF00E5FF) else Color(0xFF005DB2)
+                                color = Color(0xFF00E5FF)
                             )
                         }
 
@@ -284,12 +304,10 @@ private fun StatsGridSection(settings: UserSettings?, stats: StatsSummary, limit
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(16.dp))
-                                .background(
-                                    if (isDark) Color(0x3000E5FF) else Color(0x200077D6)
-                                )
+                                .background(Color(0x3000E5FF))
                                 .border(
                                     width = 1.dp,
-                                    color = if (isDark) Color(0x6000E5FF) else Color(0x500077D6),
+                                    color = Color(0x6000E5FF),
                                     shape = RoundedCornerShape(16.dp)
                                 )
                                 .padding(10.dp)
@@ -297,7 +315,7 @@ private fun StatsGridSection(settings: UserSettings?, stats: StatsSummary, limit
                             Icon(
                                 imageVector = Icons.Default.Star,
                                 contentDescription = null,
-                                tint = if (isDark) Color(0xFF00E5FF) else Color(0xFF0077D6),
+                                tint = Color(0xFF00E5FF),
                                 modifier = Modifier.size(24.dp)
                             )
                         }
@@ -359,7 +377,7 @@ private fun StatsGridSection(settings: UserSettings?, stats: StatsSummary, limit
                                 Text(
                                     text = "+${stats.totalSavedMinutes}m",
                                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = if (isDark) Color(0xFF00E5FF) else Color(0xFF0077D6)
+                                    color = Color(0xFF00E5FF)
                                 )
                             }
                         }
@@ -394,12 +412,7 @@ private fun StatCardSecondary(
     isBlocked: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val isDark = isSystemInDarkTheme()
-    val accentColor = if (isBlocked) {
-        if (isDark) Color(0xFFFF5252) else Color(0xFFD32F2F)
-    } else {
-        if (isDark) Color(0xFFFFAB00) else Color(0xFFF57C00)
-    }
+    val accentColor = if (isBlocked) Color(0xFFFF5252) else Color(0xFFFFAB00)
 
     Box(
         modifier = modifier
@@ -413,9 +426,9 @@ private fun StatCardSecondary(
             Box(
                 modifier = Modifier
                     .clip(CircleShape)
-                    .background(accentColor.copy(alpha = if (isDark) 0.25f else 0.15f))
+                    .background(accentColor.copy(alpha = 0.25f))
                     .border(1.dp, accentColor.copy(alpha = 0.4f), CircleShape)
-                .padding(10.dp)
+                    .padding(10.dp)
             ) {
                 Icon(
                     imageVector = if (isBlocked) Icons.Default.Block else Icons.Default.LocalFireDepartment,
@@ -468,7 +481,6 @@ private fun EmptyLimitsCard() {
 
 @Composable
 private fun AppLimitCard(limit: AppLimitUIModel) {
-    val isDark = isSystemInDarkTheme()
     val isExceeded = limit.remainingMinutes <= 0
     val progress = limit.progress.coerceIn(0f, 1f)
     val animatedProgress by animateFloatAsState(
@@ -477,11 +489,7 @@ private fun AppLimitCard(limit: AppLimitUIModel) {
         label = "progress"
     )
 
-    val progressColor = if (isExceeded) {
-        if (isDark) Color(0xFFFF5252) else Color(0xFFD32F2F)
-    } else {
-        if (isDark) Color(0xFF00E5FF) else Color(0xFF0077D6)
-    }
+    val progressColor = if (isExceeded) Color(0xFFFF5252) else Color(0xFF00E5FF)
 
     Box(
         modifier = Modifier
@@ -522,7 +530,7 @@ private fun AppLimitCard(limit: AppLimitUIModel) {
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
-                        .background(progressColor.copy(alpha = if (isDark) 0.25f else 0.15f))
+                        .background(progressColor.copy(alpha = 0.25f))
                         .border(1.dp, progressColor.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
                         .padding(horizontal = 10.dp, vertical = 6.dp)
                 ) {
@@ -540,9 +548,7 @@ private fun AppLimitCard(limit: AppLimitUIModel) {
                     .fillMaxWidth()
                     .height(8.dp)
                     .clip(CircleShape)
-                    .background(
-                        if (isDark) Color(0x30FFFFFF) else Color(0x20000000)
-                    )
+                    .background(Color(0x30FFFFFF))
             ) {
                 Box(
                     modifier = Modifier
@@ -570,14 +576,8 @@ fun ProtectionStatusBanner(
     onEnableAccessibility: () -> Unit,
     onEnableOverlay: () -> Unit
 ) {
-    val isDark = isSystemInDarkTheme()
     val isFullyActive = isAccessibilityActive && isOverlayActive
-
-    val bannerColor = if (isFullyActive) {
-        if (isDark) Color(0xFF00E5FF) else Color(0xFF0077D6)
-    } else {
-        if (isDark) Color(0xFFFF5252) else Color(0xFFD32F2F)
-    }
+    val bannerColor = if (isFullyActive) Color(0xFF00E5FF) else Color(0xFFFF5252)
 
     Box(
         modifier = Modifier
@@ -595,7 +595,7 @@ fun ProtectionStatusBanner(
             Box(
                 modifier = Modifier
                     .clip(CircleShape)
-                    .background(bannerColor.copy(alpha = if (isDark) 0.25f else 0.15f))
+                    .background(bannerColor.copy(alpha = 0.25f))
                     .border(1.dp, bannerColor.copy(alpha = 0.4f), CircleShape)
                     .padding(10.dp)
             ) {
