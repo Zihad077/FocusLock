@@ -22,6 +22,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.lifecycle.Lifecycle
@@ -200,7 +202,8 @@ class BlockOverlayManager private constructor(private val context: Context) : Li
                     setViewTreeSavedStateRegistryOwner(this@BlockOverlayManager)
                 }
 
-                val composeView = ComposeView(context).apply {
+                val localizedContext = com.example.util.LocaleHelper.wrapContext(context)
+                val composeView = ComposeView(localizedContext).apply {
                     layoutParams = ViewGroup.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT
@@ -209,7 +212,7 @@ class BlockOverlayManager private constructor(private val context: Context) : Li
                     setViewTreeSavedStateRegistryOwner(this@BlockOverlayManager)
                 }
 
-                setupOverlayContent(composeView)
+                setupOverlayContent(composeView, localizedContext)
                 rootLayout.addView(composeView)
 
                 rootOverlayLayout = rootLayout
@@ -223,14 +226,15 @@ class BlockOverlayManager private constructor(private val context: Context) : Li
         }
     }
 
-    private fun setupOverlayContent(view: ComposeView) {
+    private fun setupOverlayContent(view: ComposeView, localizedContext: Context) {
         view.setContent {
-            FocusLockTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    var showChallenge by remember { mutableStateOf(false) }
+            CompositionLocalProvider(LocalContext provides localizedContext) {
+                FocusLockTheme {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background
+                    ) {
+                        var showChallenge by remember { mutableStateOf(false) }
 
                     val currentAppName by appNameState
                     val currentPackage by packageNameState
@@ -315,6 +319,7 @@ class BlockOverlayManager private constructor(private val context: Context) : Li
                 }
             }
         }
+    }
     }
 
     private fun exitToHome() {

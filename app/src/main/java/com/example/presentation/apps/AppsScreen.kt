@@ -22,6 +22,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.material.icons.filled.List
@@ -93,6 +94,7 @@ fun AppsScreen(
     Scaffold(
         containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = {
+            var showTemplatesDialog by remember { mutableStateOf(false) }
             TopAppBar(
                 title = { 
                     Text(
@@ -101,26 +103,18 @@ fun AppsScreen(
                     )
                 },
                 actions = {
-                    TextButton(
-                        onClick = {
-                            if (hasOverlay) {
-                                BlockOverlayManager.getInstance(context.applicationContext)
-                                    .showOverlay("Sample Distracting App", "com.example.sample", 45, 30)
-                            } else {
-                                val testIntent = Intent(context, BlockActivity::class.java).apply {
-                                    putExtra("APP_NAME", "Sample Distracting App")
-                                    putExtra("PACKAGE_NAME", "com.example.sample")
-                                    putExtra("USED_MINUTES", 45)
-                                    putExtra("LIMIT_MINUTES", 30)
-                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                                }
-                                context.startActivity(testIntent)
-                            }
-                        }
+                    FilledTonalButton(
+                        onClick = { showTemplatesDialog = true },
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = Color(0x3300E5FF),
+                            contentColor = Color(0xFF00E5FF)
+                        ),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                     ) {
-                        Icon(Icons.Default.Visibility, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Test Screen", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold))
+                        Icon(Icons.Default.Tune, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Templates", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -128,35 +122,94 @@ fun AppsScreen(
                     titleContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
+
+            if (showTemplatesDialog) {
+                AlertDialog(
+                    onDismissRequest = { showTemplatesDialog = false },
+                    modifier = Modifier.liquidGlass(shape = RoundedCornerShape(28.dp), isElevated = true),
+                    containerColor = Color.Transparent,
+                    title = { 
+                        Text("App Limit Templates", fontWeight = FontWeight.Bold) 
+                    },
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                "Quickly apply proven daily limit presets to curb usage:",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Surface(
+                                onClick = { viewModel.applyTemplate("Social Media"); showTemplatesDialog = false },
+                                shape = RoundedCornerShape(14.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(14.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.Lock, contentDescription = null, tint = Color(0xFF00E5FF))
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column {
+                                        Text("Social Media", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
+                                        Text("30 min/day limit on social apps", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            }
+                            Surface(
+                                onClick = { viewModel.applyTemplate("Gaming"); showTemplatesDialog = false },
+                                shape = RoundedCornerShape(14.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(14.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.SportsEsports, contentDescription = null, tint = Color(0xFF00E5FF))
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column {
+                                        Text("Gaming", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
+                                        Text("45 min/day limit on game titles", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            }
+                            Surface(
+                                onClick = { viewModel.applyTemplate("Entertainment"); showTemplatesDialog = false },
+                                shape = RoundedCornerShape(14.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(14.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.Movie, contentDescription = null, tint = Color(0xFF00E5FF))
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column {
+                                        Text("Entertainment", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
+                                        Text("60 min/day limit on video & streaming", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { showTemplatesDialog = false }) { 
+                            Text("Cancel") 
+                        }
+                    }
+                )
+            }
         }
     ) { innerPadding ->
-        var showTemplatesDialog by remember { mutableStateOf(false) }
-        if (showTemplatesDialog) {
-            AlertDialog(
-                onDismissRequest = { showTemplatesDialog = false },
-                title = { Text("App Limit Templates") },
-                text = {
-                    Column {
-                        Text("Select a template to auto-apply limits:")
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Button(onClick = { viewModel.applyTemplate("Social Media"); showTemplatesDialog = false }, modifier = Modifier.fillMaxWidth()) { Text("Social Media (30 min)") }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Button(onClick = { viewModel.applyTemplate("Gaming"); showTemplatesDialog = false }, modifier = Modifier.fillMaxWidth()) { Text("Gaming (45 min)") }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Button(onClick = { viewModel.applyTemplate("Entertainment"); showTemplatesDialog = false }, modifier = Modifier.fillMaxWidth()) { Text("Entertainment (60 min)") }
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = { showTemplatesDialog = false }) { Text("Close") }
-                }
-            )
-        }
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(bottom = 24.dp),
+            contentPadding = PaddingValues(top = 8.dp, bottom = 100.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             if (!hasAccessibility || !hasOverlay) {
@@ -411,6 +464,8 @@ fun AppsScreen(
         val (app, minutes, sessionMinutes) = highImpactAppPending!!
         AlertDialog(
             onDismissRequest = { highImpactAppPending = null },
+            modifier = Modifier.liquidGlass(shape = RoundedCornerShape(28.dp), isElevated = true),
+            containerColor = Color.Transparent,
             icon = {
                 Icon(
                     imageVector = Icons.Default.Warning,
@@ -538,7 +593,8 @@ fun AppListItem(
                         "Always Blocked (0 min/day)"
                     } else {
                         val sessionInfo = if (app.sessionLimitMinutes != null) " • Session: ${app.sessionLimitMinutes}m" else ""
-                        "Limit: ${app.dailyLimitMinutes} min/day$sessionInfo"
+                        val usageInfo = if (app.usedTodayMinutes > 0) " (Today: ${app.usedTodayMinutes}m)" else ""
+                        "Limit: ${app.dailyLimitMinutes} min/day$sessionInfo$usageInfo"
                     }
                     Text(
                         text = limitText,
@@ -547,10 +603,19 @@ fun AppListItem(
                         fontWeight = FontWeight.SemiBold
                     )
                 } else {
+                    val usageInfo = if (app.usedTodayMinutes > 0) {
+                        if (app.usedTodayMinutes >= 60) {
+                            "Used today: ${app.usedTodayMinutes / 60}h ${app.usedTodayMinutes % 60}m"
+                        } else {
+                            "Used today: ${app.usedTodayMinutes}m"
+                        }
+                    } else {
+                        "Tap to set custom time limit"
+                    }
                     Text(
-                        text = "Tap to set custom time limit",
+                        text = usageInfo,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f)
+                        color = if (app.usedTodayMinutes > 0) Color(0xFF00E5FF).copy(alpha = 0.8f) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f)
                     )
                 }
             }
@@ -595,6 +660,8 @@ fun CustomTimeLimitDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        modifier = Modifier.liquidGlass(shape = RoundedCornerShape(28.dp), isElevated = true),
+        containerColor = Color.Transparent,
         title = {
             Column {
                 Text(

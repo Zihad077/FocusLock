@@ -166,12 +166,21 @@ class BlockActivity : ComponentActivity() {
 
     private fun extractIntentData(intent: Intent?) {
         if (intent == null) return
-        val name = intent.getStringExtra("APP_NAME") ?: "Distracting App"
+        val rawName = intent.getStringExtra("APP_NAME") ?: "App"
         val pkg = intent.getStringExtra("PACKAGE_NAME")
         val used = intent.getIntExtra("USED_MINUTES", 0)
         val limit = intent.getIntExtra("LIMIT_MINUTES", 0)
 
-        appNameState.value = name
+        val realName = try {
+            if (pkg != null) {
+                val appInfo = packageManager.getApplicationInfo(pkg, 0)
+                packageManager.getApplicationLabel(appInfo).toString()
+            } else rawName
+        } catch (e: Exception) {
+            rawName
+        }
+
+        appNameState.value = realName
         packageNameState.value = pkg
         usedMinutesState.intValue = used
         limitMinutesState.intValue = limit

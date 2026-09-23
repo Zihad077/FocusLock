@@ -22,4 +22,74 @@
     <string name="this_week">ESTA SEMANA</string>
     <string name="total_usage">Uso total: %1$dh %2$dm.</string>
     <string name="unknown_app">App Desconocida</string>
+
+    <!-- Settings & Permissions -->
+    <string name="settings_title">Ajustes</string>
+    <string name="permissions_manager">Administrador de Permisos</string>
+    <string name="permissions_manager_desc">Verificar permisos de superposición, uso y accesibilidad</string>
+    <string name="display_over_apps">Mostrar sobre otras apps</string>
+    <string name="usage_access">Acceso de uso</string>
+    <string name="accessibility_service">Servicio de accesibilidad</string>
+    <string name="granted">Activo y Concedido</string>
+    <string name="grant">Conceder</string>
+    <string name="done">Listo</string>
+    <string name="close">Cerrar</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Inicio</string>
+    <string name="nav_apps">Apps</string>
+    <string name="nav_focus">Enfoque</string>
+    <string name="nav_goals">Metas</string>
+    <string name="nav_stats">Estadísticas</string>
+    <string name="nav_settings">Ajustes</string>
+
+    <!-- Settings Sections & Items -->
+    <string name="account_section">Cuenta</string>
+    <string name="preferences_section">Preferencias</string>
+    <string name="features_section">Funciones</string>
+    <string name="premium_section">Premium</string>
+    <string name="data_management_section">Gestión de Datos</string>
+    <string name="about_section">Acerca de</string>
+
+    <string name="appearance">Tema de Fondo</string>
+    <string name="appearance_desc">Elige escenas animadas en vivo</string>
+    <string name="language">Idioma (Language)</string>
+    <string name="language_desc">Seleccionar idioma de la app</string>
+    <string name="choose_language">Elegir Idioma</string>
+    <string name="profile_level">Perfil y Nivel</string>
+    <string name="notifications">Notificaciones</string>
+    <string name="notifications_subtitle">Alertas y recordatorios</string>
+    <string name="anti_distraction_challenges">Desafíos Anti-Distracción</string>
+    <string name="anti_distraction_challenges_subtitle">Practica el desbloqueo consciente</string>
+    <string name="focus_mode_setting">Modo Enfoque</string>
+    <string name="focus_mode_subtitle_active">Sesión activa en curso</string>
+    <string name="focus_mode_subtitle_idle">Configurar sesiones de trabajo profundo</string>
+    <string name="app_limits_schedules">Límites y Horarios</string>
+    <string name="app_limits_schedules_subtitle">Gestionar aplicaciones restringidas</string>
+    <string name="emergency_unlock_setting">Desbloqueo de Emergencia</string>
+    <string name="permission_center">Centro de Permisos</string>
+    <string name="permission_center_subtitle">Gestionar guardas del sistema</string>
+    <string name="escape_prevention">Prevención de Escape</string>
+    <string name="escape_prevention_subtitle">Configurar modo anti-desinstalación</string>
+    <string name="focuslock_premium">FocusLock Premium</string>
+    <string name="premium_active">Premium Activo</string>
+    <string name="premium_inactive">Elimina anuncios para siempre</string>
+    <string name="data_backup">Copia de Seguridad</string>
+    <string name="data_backup_subtitle">Exportar e importar datos</string>
+    <string name="privacy_policy">Privacidad y Seguridad</string>
+    <string name="privacy_policy_subtitle">100% en el dispositivo</string>
+    <string name="about_app">Acerca de FocusLock</string>
+    <string name="about_app_subtitle">Versión 1.0.0 (Build 1)</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_name">Notificaciones FocusLock</string>
+    <string name="notification_channel_desc">Notificaciones para sesiones y límites</string>
+    <string name="block_channel_name">Alertas de Bloqueo FocusLock</string>
+    <string name="block_channel_desc">Muestra pantalla de bloqueo consciente</string>
+    <string name="approaching_limit_title">Cerca del límite: %1$s</string>
+    <string name="approaching_limit_desc">Te quedan %1$d min de tu límite diario de %2$d min.</string>
+    <string name="deep_focus_active_title">Enfoque Profundo Activo</string>
+    <string name="deep_focus_active_desc">FocusLock está bloqueando distracciones. %1$d min restantes.</string>
+    <string name="deep_focus_complete_title">¡Enfoque Profundo Completado!</string>
+    <string name="deep_focus_complete_desc">¡Gran trabajo! Sesión terminada. +50 XP ganados.</string>
 </resources>

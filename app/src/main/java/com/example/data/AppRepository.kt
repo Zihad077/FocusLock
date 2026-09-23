@@ -38,6 +38,14 @@ class AppRepository(private val focusDao: FocusDao) {
         focusDao.insertUsage(usage)
     }
 
+    suspend fun insertUsages(usages: List<DailyUsage>) {
+        focusDao.insertUsages(usages)
+    }
+
+    suspend fun deleteUsageForDate(dateString: String) {
+        focusDao.deleteUsageForDate(dateString)
+    }
+
     // Usage Events
     fun getUsageEventsForDate(dateString: String): Flow<List<UsageEvent>> = focusDao.getUsageEventsForDate(dateString)
 

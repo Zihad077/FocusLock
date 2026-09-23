@@ -2,7 +2,7 @@ package com.example.presentation.onboarding
 
 import android.content.Context
 import androidx.compose.animation.*
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -22,6 +22,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -29,6 +30,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -40,8 +42,7 @@ import com.example.ui.theme.liquidGlass
 @Composable
 fun WelcomeScreen(onNavigateToPermissions: () -> Unit) {
     val context = LocalContext.current
-    val isDark = isSystemInDarkTheme()
-    val primaryColor = if (isDark) com.example.ui.theme.SleekPrimaryDark else com.example.ui.theme.SleekPrimaryLight
+    val primaryColor = com.example.ui.theme.SleekPrimaryDark
     
     // Step 0: Welcome Productivity Hook, Step 1: Terms & Privacy Agreement
     var currentStep by remember { mutableIntStateOf(0) }
@@ -66,13 +67,13 @@ fun WelcomeScreen(onNavigateToPermissions: () -> Unit) {
             ) { step ->
                 if (step == 0) {
                     WelcomeHookView(
-                        isDark = isDark,
+                        isDark = true,
                         primaryColor = primaryColor,
                         onGetStarted = { currentStep = 1 }
                     )
                 } else {
                     TermsPrivacyView(
-                        isDark = isDark,
+                        isDark = true,
                         primaryColor = primaryColor,
                         termsAgreed = termsAgreed,
                         onTermsAgreedChange = { termsAgreed = it },
@@ -97,142 +98,270 @@ fun WelcomeScreen(onNavigateToPermissions: () -> Unit) {
 
 @Composable
 private fun WelcomeHookView(
-    isDark: Boolean,
+    isDark: Boolean = true,
     primaryColor: Color,
     onGetStarted: () -> Unit
 ) {
     val scrollState = rememberScrollState()
+
+    // Breathing ambient glow animation for logo
+    val infiniteTransition = rememberInfiniteTransition(label = "logo_ambient")
+    val glowScale by infiniteTransition.animateFloat(
+        initialValue = 0.96f,
+        targetValue = 1.04f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2400, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "glow_scale"
+    )
+    val glowAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 0.7f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2400, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "glow_alpha"
+    )
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
             .navigationBarsPadding()
-            .padding(horizontal = 24.dp)
+            .padding(horizontal = 22.dp)
             .verticalScroll(scrollState),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        // Hero Visual Card with Liquid Glass Border
+        // Ambient Mindfulness Tag Badge
         Box(
             modifier = Modifier
-                .fillMaxWidth(0.6f)
-                .aspectRatio(1f)
-                .shadow(24.dp, RoundedCornerShape(36.dp), spotColor = primaryColor.copy(alpha = 0.6f))
-                .clip(RoundedCornerShape(36.dp))
-                .border(
-                    2.dp,
-                    Brush.linearGradient(
-                        listOf(
-                            Color.White.copy(alpha = 0.5f),
-                            Color.White.copy(alpha = 0.1f),
-                            primaryColor.copy(alpha = 0.3f)
-                        )
-                    ),
-                    RoundedCornerShape(36.dp)
-                )
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color(0x2200E5FF))
+                .border(1.dp, Color(0x6600E5FF), RoundedCornerShape(20.dp))
+                .padding(horizontal = 14.dp, vertical = 6.dp)
         ) {
-            Image(
-                painter = painterResource(id = R.drawable.ic_custom_logo),
-                contentDescription = "FocusLock App Logo",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
+            Text(
+                text = stringResource(R.string.welcome_badge),
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 1.2.sp
+                ),
+                color = Color(0xFF00E5FF)
             )
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
+        // Background-Removed Clean Floating 3D Logo with Multi-Layer Glow Aura
+        Box(
+            modifier = Modifier
+                .size(150.dp)
+                .scale(glowScale),
+            contentAlignment = Alignment.Center
+        ) {
+            // Outermost soft glowing cyan pulse halo
+            Box(
+                modifier = Modifier
+                    .size(145.dp)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(
+                                Color(0xFF00E5FF).copy(alpha = glowAlpha * 0.45f),
+                                Color(0xFF2979FF).copy(alpha = glowAlpha * 0.2f),
+                                Color.Transparent
+                            )
+                        )
+                    )
+            )
+
+            // Inner glass rim and logo container
+            Box(
+                modifier = Modifier
+                    .size(118.dp)
+                    .shadow(
+                        elevation = 20.dp,
+                        shape = CircleShape,
+                        spotColor = Color(0xFF00E5FF),
+                        ambientColor = Color(0xFF2979FF)
+                    )
+                    .clip(CircleShape)
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(
+                                Color(0x2800E5FF),
+                                Color(0x600B101D)
+                            )
+                        )
+                    )
+                    .border(
+                        width = 1.8.dp,
+                        brush = Brush.sweepGradient(
+                            listOf(
+                                Color(0xFF00E5FF),
+                                Color(0x40FFFFFF),
+                                Color(0xFF2979FF),
+                                Color(0xFF00E5FF)
+                            )
+                        ),
+                        shape = CircleShape
+                    )
+                    .padding(8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.ic_focuslock_clean_logo),
+                    contentDescription = "FocusLock Logo",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Hooking Title
         Text(
-            text = "Take Back Your Focus",
-            style = MaterialTheme.typography.headlineLarge.copy(
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = (-0.5).sp
+            text = stringResource(R.string.welcome_hero_title),
+            style = MaterialTheme.typography.headlineMedium.copy(
+                fontWeight = FontWeight.Black,
+                letterSpacing = (-0.5).sp,
+                lineHeight = 34.sp
             ),
             color = MaterialTheme.colorScheme.onBackground,
             textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
+        // Hooking Subtitle Description
         Text(
-            text = "FocusLock creates a calm, secure space on your device to protect your deepest work and build healthy habits.",
-            style = MaterialTheme.typography.bodyLarge.copy(
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                lineHeight = 24.sp
+            text = stringResource(R.string.welcome_hero_desc),
+            style = MaterialTheme.typography.bodyMedium.copy(
+                lineHeight = 22.sp,
+                fontWeight = FontWeight.Normal
             ),
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f),
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 12.dp)
+            modifier = Modifier.padding(horizontal = 6.dp)
         )
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(22.dp))
 
-        // 3 Key Productivity Value Pillars in Glass Cards
+        // High-Impact 3-Column Glass Metric Pillars
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            MetricPillarCard(
+                headline = stringResource(R.string.stat_hours_saved),
+                subtitle = stringResource(R.string.stat_hours_saved_desc),
+                accentColor = Color(0xFF00E5FF),
+                modifier = Modifier.weight(1f)
+            )
+            MetricPillarCard(
+                headline = stringResource(R.string.stat_reduction),
+                subtitle = stringResource(R.string.stat_reduction_desc),
+                accentColor = Color(0xFFFFAB00),
+                modifier = Modifier.weight(1f)
+            )
+            MetricPillarCard(
+                headline = stringResource(R.string.stat_privacy),
+                subtitle = stringResource(R.string.stat_privacy_desc),
+                accentColor = Color(0xFF00E676),
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(22.dp))
+
+        // 4 Key Value Pillars in Liquid Glass
         Column(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             ProductivityFeatureRow(
                 icon = Icons.Default.Shield,
-                title = "Friction Overlays",
-                subtitle = "Mindful interventions to prevent impulsive app opens."
+                title = stringResource(R.string.feature_friction_title),
+                subtitle = stringResource(R.string.feature_friction_desc),
+                accentColor = Color(0xFF00E5FF)
+            )
+            ProductivityFeatureRow(
+                icon = Icons.Default.Psychology,
+                title = stringResource(R.string.feature_challenges_title),
+                subtitle = stringResource(R.string.feature_challenges_desc),
+                accentColor = Color(0xFF2979FF)
             )
             ProductivityFeatureRow(
                 icon = Icons.Default.Timer,
-                title = "Deep Focus Sessions",
-                subtitle = "Strict time blocks with limits to build digital discipline."
+                title = stringResource(R.string.feature_deepwork_title),
+                subtitle = stringResource(R.string.feature_deepwork_desc),
+                accentColor = Color(0xFFFFAB00)
             )
             ProductivityFeatureRow(
                 icon = Icons.Default.Lock,
-                title = "Private & On-Device",
-                subtitle = "Zero tracking. Your usage stats stay completely on your device."
+                title = stringResource(R.string.feature_privacy_title),
+                subtitle = stringResource(R.string.feature_privacy_desc),
+                accentColor = Color(0xFF00E676)
             )
         }
 
-        Spacer(modifier = Modifier.height(40.dp))
+        Spacer(modifier = Modifier.height(30.dp))
 
-        // Action Button
+        // High-Energy Primary Action Button
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp)
-                .shadow(16.dp, RoundedCornerShape(20.dp), spotColor = primaryColor.copy(alpha = 0.4f))
-                .clip(RoundedCornerShape(20.dp))
+                .height(58.dp)
+                .shadow(16.dp, RoundedCornerShape(22.dp), spotColor = Color(0xFF00E5FF))
+                .clip(RoundedCornerShape(22.dp))
                 .background(
                     Brush.horizontalGradient(
-                        listOf(primaryColor, primaryColor.copy(alpha = 0.8f))
+                        listOf(
+                            Color(0xFF00E5FF),
+                            Color(0xFF2979FF)
+                        )
                     )
                 )
-                .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(20.dp)),
+                .border(1.2.dp, Color.White.copy(alpha = 0.5f), RoundedCornerShape(22.dp)),
             contentAlignment = Alignment.Center
         ) {
             Button(
                 onClick = onGetStarted,
                 modifier = Modifier.fillMaxSize(),
                 colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                shape = RoundedCornerShape(20.dp)
+                shape = RoundedCornerShape(22.dp)
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        text = "Get Started",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = Color.White
+                        text = stringResource(R.string.get_started_btn),
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 0.4.sp
+                        ),
+                        color = Color.Black
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(10.dp))
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowForward,
                         contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(18.dp)
+                        tint = Color.Black,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(28.dp))
     }
 }
 
@@ -506,18 +635,47 @@ private fun TermsPrivacyView(
 }
 
 @Composable
+private fun MetricPillarCard(
+    headline: String,
+    subtitle: String,
+    accentColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .liquidGlass(shape = RoundedCornerShape(18.dp), isElevated = false)
+            .padding(vertical = 12.dp, horizontal = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = headline,
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.ExtraBold),
+                color = accentColor,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f),
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
 private fun ProductivityFeatureRow(
     icon: ImageVector,
     title: String,
-    subtitle: String
+    subtitle: String,
+    accentColor: Color
 ) {
-    val isDark = isSystemInDarkTheme()
-    val primaryColor = if (isDark) com.example.ui.theme.SleekPrimaryDark else com.example.ui.theme.SleekPrimaryLight
-
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .liquidGlass(shape = RoundedCornerShape(18.dp), isHighlight = false)
+            .liquidGlass(shape = RoundedCornerShape(20.dp), isElevated = false)
             .padding(14.dp)
     ) {
         Row(
@@ -526,17 +684,17 @@ private fun ProductivityFeatureRow(
         ) {
             Box(
                 modifier = Modifier
-                    .size(42.dp)
-                    .clip(CircleShape)
-                    .background(primaryColor.copy(alpha = 0.15f))
-                    .border(1.dp, primaryColor.copy(alpha = 0.35f), CircleShape),
+                    .size(46.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(accentColor.copy(alpha = 0.16f))
+                    .border(1.dp, accentColor.copy(alpha = 0.45f), RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = primaryColor,
-                    modifier = Modifier.size(22.dp)
+                    tint = accentColor,
+                    modifier = Modifier.size(24.dp)
                 )
             }
 
@@ -553,7 +711,7 @@ private fun ProductivityFeatureRow(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall.copy(
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.72f),
-                        lineHeight = 16.sp
+                        lineHeight = 17.sp
                     )
                 )
             }

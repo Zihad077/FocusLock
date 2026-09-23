@@ -44,8 +44,7 @@ fun InsightsScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val userSettings by viewModel.userSettings.collectAsStateWithLifecycle(initialValue = null)
-    val isDark = isSystemInDarkTheme()
-    val primaryColor = if (isDark) com.example.ui.theme.SleekPrimaryDark else com.example.ui.theme.SleekPrimaryLight
+    val primaryColor = com.example.ui.theme.SleekPrimaryDark
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -69,7 +68,7 @@ fun InsightsScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(bottom = 96.dp),
+            contentPadding = PaddingValues(top = 8.dp, bottom = 100.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             // Productivity Score Liquid Glass Card

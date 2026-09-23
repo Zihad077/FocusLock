@@ -1,5 +1,4 @@
 package com.example.presentation.home
-import com.example.database.isPremiumActive
 
 import android.app.Application
 import android.content.Intent
@@ -9,6 +8,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -17,6 +17,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Star
@@ -31,6 +33,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -39,10 +42,12 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.R
 import com.example.ads.AdsterraSocialBar
 import com.example.ads.LiquidGlassAdaptiveBanner
 import com.example.ads.LiquidGlassNativeAdCard
 import com.example.database.UserSettings
+import com.example.database.isPremiumActive
 import com.example.ui.theme.liquidGlass
 import com.example.util.PermissionHelper
 
@@ -50,13 +55,16 @@ import com.example.util.PermissionHelper
 fun HomeScreen(
     viewModel: HomeViewModel = viewModel(
         factory = HomeViewModel.Factory(LocalContext.current.applicationContext as Application)
-    )
+    ),
+    onNavigateToApps: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val settings by viewModel.userSettings.collectAsStateWithLifecycle()
     val limits by viewModel.limitsWithUsage.collectAsStateWithLifecycle()
     val stats by viewModel.statsSummary.collectAsStateWithLifecycle()
+
+    var editingLimit by remember { mutableStateOf<AppLimitUIModel?>(null) }
 
     var isAccessibilityActive by remember {
         mutableStateOf(PermissionHelper.hasAccessibilityPermission(context))
@@ -70,6 +78,7 @@ fun HomeScreen(
             if (event == Lifecycle.Event.ON_RESUME) {
                 isAccessibilityActive = PermissionHelper.hasAccessibilityPermission(context)
                 isOverlayActive = PermissionHelper.hasOverlayPermission(context)
+                viewModel.syncUsageData()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -81,8 +90,9 @@ fun HomeScreen(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(top = 16.dp, bottom = 24.dp),
+        contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         item {
@@ -128,12 +138,12 @@ fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Active Limits",
+                    text = stringResource(R.string.active_limits),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
-                    text = "${limits.size} monitored",
+                    text = "${limits.size} ${stringResource(R.string.monitored_suffix)}",
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
                     color = Color(0xFF00E5FF)
                 )
@@ -142,11 +152,15 @@ fun HomeScreen(
 
         if (limits.isEmpty()) {
             item {
-                EmptyLimitsCard()
+                EmptyLimitsCard(onNavigateToApps = onNavigateToApps)
             }
         } else {
             items(limits) { limit ->
-                AppLimitCard(limit = limit)
+                AppLimitCard(
+                    limit = limit,
+                    onEditClick = { editingLimit = limit },
+                    onDeleteClick = { viewModel.removeLimit(limit.packageName) }
+                )
             }
         }
 
@@ -164,6 +178,17 @@ fun HomeScreen(
                 isFocusActive = settings?.isFocusModeActive ?: false
             )
         }
+    }
+
+    editingLimit?.let { limit ->
+        EditLimitDialog(
+            limit = limit,
+            onDismiss = { editingLimit = null },
+            onConfirm = { minutes ->
+                viewModel.updateLimit(limit.packageName, limit.appName, minutes)
+                editingLimit = null
+            }
+        )
     }
 }
 
@@ -183,7 +208,7 @@ private fun HeaderSection(settings: UserSettings?) {
                 color = MaterialTheme.colorScheme.onBackground
             )
             Text(
-                text = "DIGITAL EQUILIBRIUM",
+                text = stringResource(R.string.digital_equilibrium),
                 style = MaterialTheme.typography.labelSmall.copy(
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.8.sp
@@ -248,7 +273,6 @@ private fun HeaderSection(settings: UserSettings?) {
 
 @Composable
 private fun StatsGridSection(settings: UserSettings?, stats: StatsSummary, limits: List<AppLimitUIModel>) {
-    val isDark = isSystemInDarkTheme()
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         // Hero Liquid Glass Card
         Box(
@@ -285,7 +309,7 @@ private fun StatsGridSection(settings: UserSettings?, stats: StatsSummary, limit
                     ) {
                         Column {
                             Text(
-                                text = "Focus Score",
+                                text = stringResource(R.string.focus_score),
                                 style = MaterialTheme.typography.labelMedium.copy(
                                     fontWeight = FontWeight.SemiBold,
                                     letterSpacing = 0.5.sp
@@ -336,7 +360,7 @@ private fun StatsGridSection(settings: UserSettings?, stats: StatsSummary, limit
                         ) {
                             Column {
                                 Text(
-                                    text = "TODAY'S USAGE",
+                                    text = stringResource(R.string.todays_usage),
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Bold,
@@ -365,7 +389,7 @@ private fun StatsGridSection(settings: UserSettings?, stats: StatsSummary, limit
                         ) {
                             Column {
                                 Text(
-                                    text = "TIME RECLAIMED",
+                                    text = stringResource(R.string.time_reclaimed),
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Bold,
@@ -390,14 +414,14 @@ private fun StatsGridSection(settings: UserSettings?, stats: StatsSummary, limit
         val blockedCount = limits.count { it.remainingMinutes <= 0 }
         Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             StatCardSecondary(
-                title = "Blocked Apps",
-                value = "$blockedCount restricted",
+                title = stringResource(R.string.blocked_apps),
+                value = "$blockedCount ${stringResource(R.string.monitored_suffix)}",
                 isBlocked = true,
                 modifier = Modifier.weight(1f)
             )
             StatCardSecondary(
-                title = "Current Streak",
-                value = "${settings?.currentStreak ?: 0} Days",
+                title = stringResource(R.string.current_streak),
+                value = "${settings?.currentStreak ?: 0} ${stringResource(R.string.days_suffix)}",
                 isBlocked = false,
                 modifier = Modifier.weight(1f)
             )
@@ -455,7 +479,7 @@ private fun StatCardSecondary(
 }
 
 @Composable
-private fun EmptyLimitsCard() {
+private fun EmptyLimitsCard(onNavigateToApps: (() -> Unit)? = null) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -465,22 +489,42 @@ private fun EmptyLimitsCard() {
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = "No limits set yet",
+                text = stringResource(R.string.no_limits_set),
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.onBackground
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Configure app restrictions in the Apps tab to start building mindful habits.",
+                text = stringResource(R.string.no_limits_desc),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
             )
+            if (onNavigateToApps != null) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = onNavigateToApps,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF00E5FF),
+                        contentColor = Color.Black
+                    ),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.set_app_limits),
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun AppLimitCard(limit: AppLimitUIModel) {
+private fun AppLimitCard(
+    limit: AppLimitUIModel,
+    onEditClick: () -> Unit,
+    onDeleteClick: () -> Unit
+) {
     val isExceeded = limit.remainingMinutes <= 0
     val progress = limit.progress.coerceIn(0f, 1f)
     val animatedProgress by animateFloatAsState(
@@ -519,14 +563,45 @@ private fun AppLimitCard(limit: AppLimitUIModel) {
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
-                        text = "${limit.usedMinutes} / ${limit.dailyLimitMinutes} min used",
+                        text = stringResource(R.string.used_format, limit.usedMinutes, limit.dailyLimitMinutes),
                         style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f)
                     )
                 }
 
+                // Action buttons (Edit & Delete)
+                IconButton(
+                    onClick = onEditClick,
+                    modifier = Modifier.size(34.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Edit Limit",
+                        tint = Color(0xFF00E5FF),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
+                IconButton(
+                    onClick = onDeleteClick,
+                    modifier = Modifier.size(34.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Remove Limit",
+                        tint = Color(0xFFFF5252).copy(alpha = 0.85f),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(4.dp))
+
                 // Status chip
-                val statusText = if (isExceeded) "Blocked" else "${limit.remainingMinutes}m left"
+                val statusText = if (isExceeded) {
+                    stringResource(R.string.blocked_status)
+                } else {
+                    stringResource(R.string.min_left, limit.remainingMinutes)
+                }
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
@@ -567,6 +642,83 @@ private fun AppLimitCard(limit: AppLimitUIModel) {
             }
         }
     }
+}
+
+@Composable
+private fun EditLimitDialog(
+    limit: AppLimitUIModel,
+    onDismiss: () -> Unit,
+    onConfirm: (Int) -> Unit
+) {
+    var sliderValue by remember { mutableStateOf(limit.dailyLimitMinutes.toFloat()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        modifier = Modifier.liquidGlass(shape = RoundedCornerShape(28.dp), isElevated = true),
+        containerColor = Color.Transparent,
+        title = {
+            Text(
+                text = stringResource(R.string.adjust_limit_title, limit.appName),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                color = MaterialTheme.colorScheme.onBackground
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text(
+                    text = stringResource(R.string.daily_allowance, sliderValue.toInt()),
+                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                    color = Color(0xFF00E5FF)
+                )
+                Slider(
+                    value = sliderValue,
+                    onValueChange = { sliderValue = it },
+                    valueRange = 5f..240f,
+                    steps = 46,
+                    colors = SliderDefaults.colors(
+                        thumbColor = Color(0xFF00E5FF),
+                        activeTrackColor = Color(0xFF00E5FF),
+                        inactiveTrackColor = Color.White.copy(alpha = 0.2f)
+                    )
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = stringResource(R.string.min_5),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                    )
+                    Text(
+                        text = stringResource(R.string.hours_4),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(sliderValue.toInt()) },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF00E5FF),
+                    contentColor = Color.Black
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(stringResource(R.string.save), fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(
+                    stringResource(R.string.cancel),
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                )
+            }
+        }
+    )
 }
 
 @Composable
@@ -611,18 +763,22 @@ fun ProtectionStatusBanner(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = if (isFullyActive) "Active Protection" else "Protection Limited",
+                    text = if (isFullyActive) {
+                        stringResource(R.string.active_protection)
+                    } else {
+                        stringResource(R.string.protection_limited)
+                    },
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = if (isFullyActive) {
-                        "Accessibility monitor and screen interception running smoothly."
+                        stringResource(R.string.protection_active_desc)
                     } else if (!isAccessibilityActive) {
-                        "Accessibility permission needed for instant app interception."
+                        stringResource(R.string.accessibility_needed_desc)
                     } else {
-                        "Overlay permission needed to display mindful lock screen."
+                        stringResource(R.string.overlay_needed_desc)
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
@@ -644,7 +800,7 @@ fun ProtectionStatusBanner(
                     contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
                 ) {
                     Text(
-                        "Enable",
+                        text = stringResource(R.string.enable_btn),
                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
                     )
                 }

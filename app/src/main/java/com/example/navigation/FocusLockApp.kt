@@ -5,12 +5,13 @@ import androidx.activity.compose.BackHandler
 import com.example.FocusLockApplication
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -25,10 +26,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -131,7 +135,7 @@ fun MainTabScreen() {
     val app = context.applicationContext as FocusLockApplication
     val userSettings by app.repository.userSettings.collectAsState(initial = com.example.database.UserSettings())
     val now = System.currentTimeMillis()
-    val isFocusActive = userSettings.isFocusModeActive && (userSettings.activeFocusEndTime == 0L || userSettings.activeFocusEndTime > now)
+    val isFocusActive = userSettings.isFocusModeActive && userSettings.activeFocusEndTime > now
 
     val navController = rememberNavController()
     val isDark = isSystemInDarkTheme()
@@ -146,7 +150,7 @@ fun MainTabScreen() {
 
     // Strictly redirect and lock to Route.Focus when focus session is running
     LaunchedEffect(isFocusActive) {
-        if (isFocusActive) {
+        if (isFocusActive && currentDestination?.hasRoute(Route.Focus::class) != true) {
             navController.navigate(Route.Focus) {
                 popUpTo(navController.graph.findStartDestination().id) {
                     saveState = false
@@ -167,152 +171,80 @@ fun MainTabScreen() {
         }
     }
 
-    // 5 primary tabs + Goals access via top/insights/more as shown in Liquid Glass UI mockup
+    // 6 primary tabs with localized labels
     val items = listOf(
-        BottomNavItem("Home", Route.Home, Icons.Default.Home),
-        BottomNavItem("Apps", Route.Apps, Icons.Default.Lock),
-        BottomNavItem("Focus", Route.Focus, Icons.Default.Timer),
-        BottomNavItem("Goals", Route.Goals, Icons.Default.EmojiEvents),
-        BottomNavItem("Stats", Route.Stats, Icons.Default.BarChart),
-        BottomNavItem("Settings", Route.Settings, Icons.Default.Settings)
+        BottomNavItem(androidx.compose.ui.res.stringResource(com.example.R.string.nav_home), Route.Home, Icons.Default.Home),
+        BottomNavItem(androidx.compose.ui.res.stringResource(com.example.R.string.nav_apps), Route.Apps, Icons.Default.Lock),
+        BottomNavItem(androidx.compose.ui.res.stringResource(com.example.R.string.nav_focus), Route.Focus, Icons.Default.Timer),
+        BottomNavItem(androidx.compose.ui.res.stringResource(com.example.R.string.nav_goals), Route.Goals, Icons.Default.EmojiEvents),
+        BottomNavItem(androidx.compose.ui.res.stringResource(com.example.R.string.nav_stats), Route.Stats, Icons.Default.BarChart),
+        BottomNavItem(androidx.compose.ui.res.stringResource(com.example.R.string.nav_settings), Route.Settings, Icons.Default.Settings)
     )
 
-    LiquidBackground {
-        Scaffold(
-            containerColor = Color.Transparent,
-            bottomBar = {
-                // Completely hide navigation bar when Focus Mode is active to prevent leaving
-                if (!isFocusActive) {
-                    // Floating Liquid Glass Navigation Bar
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .navigationBarsPadding()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .shadow(
-                                    elevation = 20.dp,
-                                    shape = RoundedCornerShape(32.dp),
-                                    ambientColor = Color(0x70001025),
-                                    spotColor = Color(0x3500E5FF)
-                                )
-                                .clip(RoundedCornerShape(32.dp))
-                                .background(
-                                    brush = Brush.verticalGradient(
-                                        colors = listOf(
-                                            Color(0xE8142338),
-                                            Color(0xF00A1320)
-                                        )
-                                    )
-                                )
-                                .border(
-                                    width = 1.dp,
-                                    brush = Brush.linearGradient(
-                                        colors = listOf(
-                                            Color.White.copy(alpha = 0.50f),
-                                            Color(0xFF00E5FF).copy(alpha = 0.45f),
-                                            Color.White.copy(alpha = 0.08f),
-                                            Color(0xFF0077D6).copy(alpha = 0.35f)
-                                        ),
-                                        start = Offset(0f, 0f),
-                                        end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
-                                    ),
-                                    shape = RoundedCornerShape(32.dp)
-                                )
-                                .padding(horizontal = 6.dp, vertical = 6.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceAround,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                items.forEach { item ->
-                                    val isSelected = currentDestination?.hierarchy?.any { 
-                                        it.hasRoute(item.route::class) 
-                                    } == true
+    val isTopLevelDestination = items.any { currentDestination?.hasRoute(it.route::class) == true }
+    val showBottomBar = !isFocusActive && isTopLevelDestination
 
-                                    val iconTint by animateColorAsState(
-                                        targetValue = if (isSelected) Color(0xFF00E5FF) else Color(0xFF88A0BA),
-                                        animationSpec = spring(),
-                                        label = "nav_icon_tint"
-                                    )
-
-                                    val pillBg by animateColorAsState(
-                                        targetValue = if (isSelected) Color(0x3300E5FF) else Color.Transparent,
-                                        animationSpec = spring(),
-                                        label = "nav_pill_bg"
-                                    )
-
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        modifier = Modifier
-                                            .testTag("nav_tab_${item.name.lowercase()}")
-                                            .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
-                                            .clip(RoundedCornerShape(18.dp))
-                                            .background(pillBg)
-                                            .then(
-                                                if (isSelected) {
-                                                    Modifier.border(
-                                                        1.dp,
-                                                        Color(0x5500E5FF),
-                                                        RoundedCornerShape(18.dp)
-                                                    )
-                                                } else Modifier
-                                            )
-                                            .clickable {
-                                                navController.navigate(item.route) {
-                                                    popUpTo(navController.graph.findStartDestination().id) {
-                                                        saveState = true
-                                                    }
-                                                    launchSingleTop = true
-                                                    restoreState = true
-                                                }
-                                            }
-                                            .padding(horizontal = 8.dp, vertical = 6.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = item.icon,
-                                            contentDescription = item.name,
-                                            tint = iconTint,
-                                            modifier = Modifier.size(22.dp)
-                                        )
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Text(
-                                            text = item.name,
-                                            style = MaterialTheme.typography.labelSmall.copy(
-                                                fontSize = 10.sp,
-                                                fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Normal
-                                            ),
-                                            color = iconTint
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        ) { innerPadding ->
-            val initialTabDestination: Route = remember {
-                val settings = runBlocking { app.repository.userSettings.first() }
-                if (settings.isFocusModeActive && settings.activeFocusEndTime > System.currentTimeMillis()) {
-                    Route.Focus
-                } else {
-                    Route.Home
-                }
-            }
+    LiquidBackground(theme = userSettings.theme) {
+        Box(modifier = Modifier.fillMaxSize()) {
             NavHost(
                 navController = navController,
-                startDestination = initialTabDestination,
-                modifier = Modifier.padding(innerPadding)
+                startDestination = Route.Home,
+                modifier = Modifier.fillMaxSize(),
+                enterTransition = {
+                    fadeIn(animationSpec = tween(320, easing = EaseOutCubic)) +
+                            scaleIn(
+                                initialScale = 0.96f,
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioLowBouncy,
+                                    stiffness = Spring.StiffnessMediumLow
+                                )
+                            )
+                },
+                exitTransition = {
+                    fadeOut(animationSpec = tween(220, easing = EaseInCubic)) +
+                            scaleOut(targetScale = 0.98f, animationSpec = tween(220))
+                },
+                popEnterTransition = {
+                    fadeIn(animationSpec = tween(320, easing = EaseOutCubic)) +
+                            scaleIn(
+                                initialScale = 0.98f,
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioLowBouncy,
+                                    stiffness = Spring.StiffnessMediumLow
+                                )
+                            )
+                },
+                popExitTransition = {
+                    fadeOut(animationSpec = tween(220, easing = EaseInCubic)) +
+                            scaleOut(targetScale = 0.96f, animationSpec = tween(220))
+                }
             ) {
-                composable<Route.Home> { HomeScreen() }
+                composable<Route.Home> {
+                    HomeScreen(
+                        onNavigateToApps = {
+                            navController.navigate(Route.Apps) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                    )
+                }
                 composable<Route.Apps> { AppsScreen() }
-                composable<Route.Focus> { FocusScreen() }
+                composable<Route.Focus> { 
+                    FocusScreen(
+                        onNavigateToHome = {
+                            navController.navigate(Route.Home) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    inclusive = false
+                                }
+                                launchSingleTop = true
+                            }
+                        }
+                    ) 
+                }
                 composable<Route.Goals> { GoalsScreen() }
                 composable<Route.Insights> { InsightsScreen() }
                 composable<Route.Stats> { StatsScreen() }
@@ -384,6 +316,193 @@ fun MainTabScreen() {
                         onNavigateBack = { navController.popBackStack() },
                         onPermissionsGranted = { navController.popBackStack() }
                     )
+                }
+            }
+
+            // Floating High-Contrast Frosted Liquid Glass Bottom Navigation Bar
+            if (showBottomBar) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 10.dp)
+                        .navigationBarsPadding()
+                        .shadow(
+                            elevation = 20.dp,
+                            shape = RoundedCornerShape(26.dp),
+                            ambientColor = Color(0x99000000),
+                            spotColor = Color(0x5500E5FF)
+                        )
+                        .clip(RoundedCornerShape(26.dp))
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color(0xF40E1B2C), // Deep rich frosted glass (High opacity for perfect readability)
+                                    Color(0xFD070D18)
+                                )
+                            )
+                        )
+                        .drawBehind {
+                            val w = size.width
+                            val h = size.height
+
+                            // Upper specular gloss reflection
+                            drawRect(
+                                brush = Brush.linearGradient(
+                                    colors = listOf(
+                                        Color.White.copy(alpha = 0.16f),
+                                        Color(0xFF00E5FF).copy(alpha = 0.08f),
+                                        Color.Transparent
+                                    ),
+                                    start = Offset(0f, 0f),
+                                    end = Offset(w * 0.55f, h * 0.55f)
+                                ),
+                                size = Size(w, h)
+                            )
+
+                            // Top bevel highlight line
+                            drawLine(
+                                brush = Brush.horizontalGradient(
+                                    colors = listOf(
+                                        Color.Transparent,
+                                        Color.White.copy(alpha = 0.65f),
+                                        Color(0xFF00E5FF).copy(alpha = 0.50f),
+                                        Color.Transparent
+                                    )
+                                ),
+                                start = Offset(w * 0.06f, 1.dp.toPx()),
+                                end = Offset(w * 0.94f, 1.dp.toPx()),
+                                strokeWidth = 1.2.dp.toPx()
+                            )
+                        }
+                        .border(
+                            width = 1.2.dp,
+                            brush = Brush.linearGradient(
+                                colors = listOf(
+                                    Color.White.copy(alpha = 0.65f),
+                                    Color(0xFF00E5FF).copy(alpha = 0.45f),
+                                    Color.White.copy(alpha = 0.12f),
+                                    Color(0xFF0077D6).copy(alpha = 0.30f)
+                                ),
+                                start = Offset(0f, 0f),
+                                end = Offset(1000f, 1000f)
+                            ),
+                            shape = RoundedCornerShape(26.dp)
+                        )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceAround,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        items.forEach { item ->
+                            val isSelected = currentDestination?.hierarchy?.any { 
+                                it.hasRoute(item.route::class) 
+                            } == true
+
+                            val itemInteractionSource = remember { MutableInteractionSource() }
+                            val isItemPressed by itemInteractionSource.collectIsPressedAsState()
+
+                            val itemScale by animateFloatAsState(
+                                targetValue = if (isItemPressed) 0.92f else 1.0f,
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessLow
+                                ),
+                                label = "nav_item_scale"
+                            )
+
+                            val iconTint by animateColorAsState(
+                                targetValue = if (isSelected) Color(0xFF00E5FF) else Color(0xFFB8CDE6),
+                                animationSpec = spring(),
+                                label = "nav_icon_tint"
+                            )
+
+                            val pillBg by animateColorAsState(
+                                targetValue = if (isSelected) Color(0x3D00E5FF) else Color.Transparent,
+                                animationSpec = spring(),
+                                label = "nav_pill_bg"
+                            )
+
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier
+                                    .testTag("nav_tab_${item.name.lowercase()}")
+                                    .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
+                                    .graphicsLayer {
+                                        scaleX = itemScale
+                                        scaleY = itemScale
+                                    }
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .clickable(
+                                        interactionSource = itemInteractionSource,
+                                        indication = null
+                                    ) {
+                                        if (item.route == Route.Home) {
+                                            navController.navigate(Route.Home) {
+                                                popUpTo(navController.graph.findStartDestination().id) {
+                                                    inclusive = false
+                                                    saveState = false
+                                                }
+                                                launchSingleTop = true
+                                            }
+                                        } else if (!isSelected) {
+                                            navController.navigate(item.route) {
+                                                popUpTo(navController.graph.findStartDestination().id) {
+                                                    saveState = true
+                                                }
+                                                launchSingleTop = true
+                                                restoreState = true
+                                            }
+                                        }
+                                    }
+                                    .padding(horizontal = 3.dp, vertical = 2.dp)
+                            ) {
+                                // Pill indicator around active icon
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(14.dp))
+                                        .background(pillBg)
+                                        .then(
+                                            if (isSelected) {
+                                                Modifier.border(
+                                                    1.5.dp,
+                                                    Brush.linearGradient(
+                                                        listOf(
+                                                            Color.White.copy(alpha = 0.85f),
+                                                            Color(0xFF00E5FF).copy(alpha = 0.75f)
+                                                        )
+                                                    ),
+                                                    RoundedCornerShape(14.dp)
+                                                )
+                                            } else Modifier
+                                        )
+                                        .padding(horizontal = 14.dp, vertical = 5.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = item.icon,
+                                        contentDescription = item.name,
+                                        tint = iconTint,
+                                        modifier = Modifier.size(23.dp)
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(3.dp))
+
+                                Text(
+                                    text = item.name,
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontSize = 11.sp,
+                                        fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold
+                                    ),
+                                    color = iconTint
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }

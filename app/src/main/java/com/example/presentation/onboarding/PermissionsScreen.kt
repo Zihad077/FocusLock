@@ -68,8 +68,7 @@ fun PermissionsScreen(
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val isDark = isSystemInDarkTheme()
-    val primaryCyan = if (isDark) Color(0xFF00E5FF) else Color(0xFF0077D6)
+    val primaryCyan = Color(0xFF00E5FF)
 
     // Permission states
     var hasAccessibility by remember { mutableStateOf(PermissionHelper.hasAccessibilityPermission(context)) }
@@ -140,7 +139,7 @@ fun PermissionsScreen(
                         modifier = Modifier
                             .size(38.dp)
                             .clip(CircleShape)
-                            .background(Color.White.copy(alpha = if (isDark) 0.1f else 0.4f))
+                            .background(Color.White.copy(alpha = 0.1f))
                     ) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
@@ -437,8 +436,7 @@ fun PermissionsScreen(
                     .background(
                         if (allRequiredGranted) {
                             Brush.horizontalGradient(
-                                if (isDark) listOf(Color(0xFF00E5FF), Color(0xFF0091EA))
-                                else listOf(Color(0xFF0077D6), Color(0xFF0288D1))
+                                listOf(Color(0xFF00E5FF), Color(0xFF0091EA))
                             )
                         } else {
                             Brush.horizontalGradient(
@@ -540,8 +538,7 @@ private fun PermissionGlassCard(
     onEnable: () -> Unit,
     onHelpClick: (PermissionItemData) -> Unit
 ) {
-    val isDark = isSystemInDarkTheme()
-    val primaryCyan = if (isDark) Color(0xFF00E5FF) else Color(0xFF0077D6)
+    val primaryCyan = Color(0xFF00E5FF)
 
     Box(
         modifier = Modifier
@@ -561,7 +558,7 @@ private fun PermissionGlassCard(
                         .clip(CircleShape)
                         .background(
                             if (data.isGranted) primaryCyan.copy(alpha = 0.18f)
-                            else Color.White.copy(alpha = if (isDark) 0.08f else 0.4f)
+                            else Color.White.copy(alpha = 0.08f)
                         )
                         .border(
                             1.dp,
@@ -654,7 +651,7 @@ private fun PermissionGlassCard(
                         Text(
                             text = data.actionText,
                             style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                            color = if (data.category == PermissionType.REQUIRED) Color.White
+                            color = if (data.category == PermissionType.REQUIRED) Color(0xFF001F2B)
                             else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }

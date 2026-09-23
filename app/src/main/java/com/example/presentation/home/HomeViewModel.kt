@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -27,6 +28,16 @@ class HomeViewModel(
     private val packageManager: PackageManager = application.packageManager
     
     private val currentDateString = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+
+    init {
+        syncUsageData()
+    }
+
+    fun syncUsageData() {
+        viewModelScope.launch {
+            com.example.util.UsageStatsHelper.syncHistoricalUsageToDatabase(getApplication(), repository, 7)
+        }
+    }
 
     val userSettings = repository.userSettings.stateIn(
         scope = viewModelScope,
@@ -41,16 +52,12 @@ class HomeViewModel(
         limits.map { limit ->
             val usage = usageList.find { it.packageName == limit.packageName }?.usedMinutes ?: 0
             
-            // Try to get app name if it's empty
-            val appName = if (limit.appName.isEmpty()) {
-                try {
-                    val appInfo = packageManager.getApplicationInfo(limit.packageName, 0)
-                    packageManager.getApplicationLabel(appInfo).toString()
-                } catch (e: Exception) {
-                    limit.packageName
-                }
-            } else {
-                limit.appName
+            // Always retrieve real original device app name directly from PackageManager
+            val appName = try {
+                val appInfo = packageManager.getApplicationInfo(limit.packageName, 0)
+                packageManager.getApplicationLabel(appInfo).toString()
+            } catch (e: Exception) {
+                if (limit.appName.isNotEmpty()) limit.appName else limit.packageName
             }
             
             AppLimitUIModel(
@@ -67,16 +74,44 @@ class HomeViewModel(
         initialValue = emptyList()
     )
 
-    val statsSummary = limitsWithUsage.map { limits ->
-        val totalUsed = limits.sumOf { it.usedMinutes }
+    val statsSummary = combine(
+        limitsWithUsage,
+        repository.getUsageForDate(currentDateString)
+    ) { limits, allTodayUsage ->
+        val totalTodayScreenTime = allTodayUsage.sumOf { it.usedMinutes }
         val totalLimit = limits.sumOf { it.dailyLimitMinutes }
-        val timeSaved = maxOf(0, totalLimit - totalUsed)
-        StatsSummary(totalUsed, timeSaved)
+        val totalUsedOnLimitedApps = limits.sumOf { it.usedMinutes }
+        val timeSaved = if (totalLimit > 0) maxOf(0, totalLimit - totalUsedOnLimitedApps) else 0
+        StatsSummary(if (totalTodayScreenTime > 0) totalTodayScreenTime else totalUsedOnLimitedApps, timeSaved)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = StatsSummary(0, 0)
     )
+
+    fun updateLimit(packageName: String, appName: String, dailyMinutes: Int) {
+        viewModelScope.launch {
+            val existing = repository.getLimit(packageName)
+            if (existing != null) {
+                repository.insertLimit(existing.copy(dailyLimitMinutes = dailyMinutes, isEnabled = true))
+            } else {
+                repository.insertLimit(
+                    AppLimit(
+                        packageName = packageName,
+                        appName = appName,
+                        isEnabled = true,
+                        dailyLimitMinutes = dailyMinutes
+                    )
+                )
+            }
+        }
+    }
+
+    fun removeLimit(packageName: String) {
+        viewModelScope.launch {
+            repository.deleteLimit(packageName)
+        }
+    }
 
     // A simple factory
     class Factory(private val application: Application) : ViewModelProvider.Factory {

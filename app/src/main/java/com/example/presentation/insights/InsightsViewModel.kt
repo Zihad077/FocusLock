@@ -29,7 +29,18 @@ class InsightsViewModel(
     val userSettings = repository.userSettings
 
     init {
-        loadInsights()
+        syncAndLoad()
+    }
+
+    fun refresh() {
+        syncAndLoad()
+    }
+
+    private fun syncAndLoad() {
+        viewModelScope.launch {
+            com.example.util.UsageStatsHelper.syncHistoricalUsageToDatabase(getApplication(), repository, 7)
+            loadInsights()
+        }
     }
 
     private fun loadInsights() {

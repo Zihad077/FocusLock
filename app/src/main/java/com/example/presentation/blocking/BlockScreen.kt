@@ -2,13 +2,10 @@ package com.example.presentation.blocking
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Block
-import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.*
@@ -20,15 +17,15 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.R
 import com.example.ui.theme.LiquidBackground
 import com.example.ui.theme.liquidGlass
-
 import com.example.ui.theme.SleekPrimaryDark
-import com.example.ui.theme.SleekPrimaryLight
 import com.example.ui.theme.SleekError
 
 @Composable
@@ -41,8 +38,7 @@ fun BlockScreen(
     onChallengeClick: () -> Unit,
     onEmergencyUnlockClick: () -> Unit
 ) {
-    val isDark = isSystemInDarkTheme()
-    val primaryCyan = if (isDark) SleekPrimaryDark else SleekPrimaryLight
+    val primaryCyan = SleekPrimaryDark
     val accentRed = SleekError
 
     LiquidBackground {
@@ -66,12 +62,9 @@ fun BlockScreen(
                     .clip(CircleShape)
                     .background(
                         Brush.radialGradient(
-                            colors = if (isDark) listOf(
+                            colors = listOf(
                                 (if (limitMinutes == 0) accentRed else primaryCyan).copy(alpha = 0.35f),
                                 Color(0x20000000)
-                            ) else listOf(
-                                (if (limitMinutes == 0) Color(0x40FFCDD2) else Color(0x40B3E5FC)),
-                                Color(0x10FFFFFF)
                             ),
                             center = Offset(200f, 200f),
                             radius = 300f
@@ -102,7 +95,11 @@ fun BlockScreen(
             Spacer(modifier = Modifier.height(28.dp))
             
             Text(
-                text = if (limitMinutes == 0) "APP RESTRICTED" else "TIME'S UP",
+                text = if (limitMinutes == 0) {
+                    stringResource(R.string.app_restricted)
+                } else {
+                    stringResource(R.string.times_up)
+                },
                 style = MaterialTheme.typography.headlineMedium.copy(
                     fontWeight = FontWeight.ExtraBold,
                     letterSpacing = 1.sp
@@ -114,9 +111,9 @@ fun BlockScreen(
             
             Text(
                 text = if (limitMinutes == 0) {
-                    "\"$appName\" is restricted to protect your productivity. Focus on what truly matters."
+                    stringResource(R.string.restricted_reason, appName)
                 } else {
-                    "You've reached your daily quota for \"$appName\". Step back, breathe, and reset."
+                    stringResource(R.string.quota_reached_reason, appName)
                 },
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f),
@@ -134,7 +131,7 @@ fun BlockScreen(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = "USAGE TODAY",
+                        text = stringResource(R.string.usage_today),
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 1.2.sp
@@ -143,7 +140,11 @@ fun BlockScreen(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = if (limitMinutes == 0) "Strict Block (0m limit)" else "$usedMinutes / $limitMinutes min",
+                        text = if (limitMinutes == 0) {
+                            stringResource(R.string.strict_block_0m)
+                        } else {
+                            stringResource(R.string.used_format, usedMinutes, limitMinutes)
+                        },
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
                         color = if (limitMinutes == 0) accentRed else primaryCyan
                     )
@@ -166,8 +167,7 @@ fun BlockScreen(
                         .clip(RoundedCornerShape(18.dp))
                         .background(
                             Brush.horizontalGradient(
-                                if (isDark) listOf(com.example.ui.theme.SleekPrimaryDark, com.example.ui.theme.SleekPrimaryDark.copy(alpha = 0.8f))
-                                else listOf(com.example.ui.theme.SleekPrimaryLight, com.example.ui.theme.SleekPrimaryLight.copy(alpha = 0.8f))
+                                listOf(SleekPrimaryDark, SleekPrimaryDark.copy(alpha = 0.8f))
                             )
                         )
                         .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(18.dp)),
@@ -180,7 +180,7 @@ fun BlockScreen(
                         shape = RoundedCornerShape(18.dp)
                     ) {
                         Text(
-                            "Return to Home",
+                            text = stringResource(R.string.return_to_home),
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             color = Color.White
                         )
@@ -202,7 +202,7 @@ fun BlockScreen(
                         shape = RoundedCornerShape(18.dp)
                     ) {
                         Text(
-                            "Complete Challenge to Unlock",
+                            text = stringResource(R.string.complete_challenge_to_unlock),
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.onBackground
                         )
@@ -222,7 +222,11 @@ fun BlockScreen(
                     )
                 ) {
                     Text(
-                        text = if (emergencyRemaining > 0) "Emergency Bypass ($emergencyRemaining left)" else "No Emergency Passes Left",
+                        text = if (emergencyRemaining > 0) {
+                            stringResource(R.string.emergency_bypass_left, emergencyRemaining)
+                        } else {
+                            stringResource(R.string.no_emergency_passes_left)
+                        },
                         style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold)
                     )
                 }

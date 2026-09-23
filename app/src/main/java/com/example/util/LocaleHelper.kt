@@ -24,6 +24,19 @@ object LocaleHelper {
         return prefs.getString(KEY_LANGUAGE, "en") ?: "en"
     }
 
+    fun findActivity(context: Context): Activity? {
+        var ctx: Context? = context
+        while (ctx != null) {
+            if (ctx is Activity) return ctx
+            if (ctx is android.content.ContextWrapper) {
+                ctx = ctx.baseContext
+            } else {
+                break
+            }
+        }
+        return null
+    }
+
     fun applyLocale(context: Context, languageCode: String, recreateActivity: Boolean = true) {
         try {
             // 1. Save to SharedPreferences synchronously for immediate cold-start and recreate loading
@@ -44,7 +57,7 @@ object LocaleHelper {
                 localeManager?.applicationLocales = LocaleList.forLanguageTags(languageCode)
             }
 
-            // 3. Update Configuration on resources
+            // 3. Update Configuration on current resources
             val resources = context.resources
             val config = Configuration(resources.configuration)
             config.setLocale(locale)
@@ -64,9 +77,13 @@ object LocaleHelper {
 
             Log.d(TAG, "Locale successfully applied to: $languageCode")
 
-            // 5. Recreate activity if requested so Compose completely reloads localized strings
-            if (recreateActivity && context is Activity) {
-                context.recreate()
+            // 5. Recreate activity cleanly so all Composables re-render in the new language
+            val activity = findActivity(context)
+            if (recreateActivity && activity != null) {
+                activity.finish()
+                val intent = activity.intent
+                intent.flags = android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                activity.startActivity(intent)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error applying locale: ${e.message}", e)
@@ -86,6 +103,10 @@ object LocaleHelper {
         val config = Configuration(base.resources.configuration)
         config.setLocale(locale)
         config.setLayoutDirection(locale)
+
+        @Suppress("DEPRECATION")
+        base.resources.updateConfiguration(config, base.resources.displayMetrics)
+
         return base.createConfigurationContext(config)
     }
 }

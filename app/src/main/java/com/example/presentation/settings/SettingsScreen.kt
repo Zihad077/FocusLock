@@ -12,6 +12,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -27,7 +30,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import androidx.compose.ui.res.stringResource
+import com.example.R
 import com.example.ads.LiquidGlassAdaptiveBanner
+import com.example.ui.theme.BackgroundThemeType
+import com.example.ui.theme.ThemePreviewCard
 import com.example.ui.theme.liquidGlass
 import androidx.compose.ui.unit.sp
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -66,7 +73,8 @@ fun SettingsScreen(
     var showAboutDialog by remember { mutableStateOf(false) }
     var showPermissionsDialog by remember { mutableStateOf(false) }
 
-    val themeLabel = "Liquid Glass Dark (Permanent)"
+    val currentBgTheme = remember(settings.theme) { BackgroundThemeType.fromKey(settings.theme) }
+    val themeLabel = "${currentBgTheme.titleEn} • ${currentBgTheme.titleBn}"
 
     val languageLabel = when (settings.language) {
         "es" -> "Español"
@@ -85,7 +93,7 @@ fun SettingsScreen(
             TopAppBar(
                 title = { 
                     Text(
-                        text = "Settings",
+                        text = stringResource(R.string.settings_title),
                         style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold)
                     )
                 },
@@ -101,14 +109,14 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(bottom = 96.dp),
+            contentPadding = PaddingValues(top = 4.dp, bottom = 100.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                SettingsSection("ACCOUNT") {
+                SettingsSection(stringResource(R.string.account_section)) {
                     SettingsRow(
                         icon = Icons.Default.Person,
-                        title = "Profile & Level",
+                        title = stringResource(R.string.profile_level),
                         subtitle = "Level ${settings.level} • ${settings.xp} XP",
                         onClick = { showProfileDialog = true }
                     )
@@ -116,22 +124,22 @@ fun SettingsScreen(
             }
 
             item {
-                SettingsSection("PREFERENCES") {
+                SettingsSection(stringResource(R.string.preferences_section)) {
                     SettingsRow(
-                        icon = Icons.Default.Palette,
-                        title = "Appearance",
+                        icon = Icons.Default.Wallpaper,
+                        title = stringResource(R.string.appearance),
                         subtitle = themeLabel,
                         onClick = { showThemeDialog = true }
                     )
                     SettingsRow(
                         icon = Icons.Default.Notifications,
-                        title = "Notifications",
-                        subtitle = "Alerts & reminders",
+                        title = stringResource(R.string.notifications),
+                        subtitle = stringResource(R.string.notifications_subtitle),
                         onClick = { showNotificationDialog = true }
                     )
                     SettingsRow(
                         icon = Icons.Default.Language,
-                        title = "Language",
+                        title = stringResource(R.string.language),
                         subtitle = languageLabel,
                         onClick = { showLanguageDialog = true }
                     )
@@ -139,80 +147,80 @@ fun SettingsScreen(
             }
 
             item {
-                SettingsSection("FEATURES") {
+                SettingsSection(stringResource(R.string.features_section)) {
                     SettingsRow(
                         icon = Icons.Default.FitnessCenter,
-                        title = "Anti-Distraction Challenges",
-                        subtitle = "Practice mindful typing unlock",
+                        title = stringResource(R.string.anti_distraction_challenges),
+                        subtitle = stringResource(R.string.anti_distraction_challenges_subtitle),
                         onClick = { showChallengeDialog = true }
                     )
                     SettingsRow(
                         icon = Icons.Default.Timer,
-                        title = "Focus Mode",
-                        subtitle = if (settings.isFocusModeActive) "Active session running" else "Configure deep work sessions",
+                        title = stringResource(R.string.focus_mode_setting),
+                        subtitle = if (settings.isFocusModeActive) stringResource(R.string.focus_mode_subtitle_active) else stringResource(R.string.focus_mode_subtitle_idle),
                         onClick = onNavigateToFocus
                     )
                     SettingsRow(
                         icon = Icons.Default.Lock,
-                        title = "App Limits & Schedules",
-                        subtitle = "Manage restricted apps",
+                        title = stringResource(R.string.app_limits_schedules),
+                        subtitle = stringResource(R.string.app_limits_schedules_subtitle),
                         onClick = onNavigateToApps
                     )
                     SettingsRow(
                         icon = Icons.Default.MedicalServices,
-                        title = "Emergency Unlock",
+                        title = stringResource(R.string.emergency_unlock_setting),
                         subtitle = "${settings.emergencyUnlocksRemaining} of ${settings.maxEmergencyUnlocks} remaining today",
                         onClick = { showEmergencyDialog = true }
                     )
                     SettingsRow(
                         icon = Icons.Default.AdminPanelSettings,
-                        title = "Permission Center",
-                        subtitle = "Manage required & optional system guards",
+                        title = stringResource(R.string.permission_center),
+                        subtitle = stringResource(R.string.permission_center_subtitle),
                         onClick = onNavigateToPermissions
                     )
                     SettingsRow(
                         icon = Icons.Default.Security,
-                        title = "Escape Prevention",
-                        subtitle = "Configure anti-delete & stable lock modes",
+                        title = stringResource(R.string.escape_prevention),
+                        subtitle = stringResource(R.string.escape_prevention_subtitle),
                         onClick = { onNavigateToEscapePrevention() }
                     )
                 }
             }
 
             item {
-                SettingsSection("PREMIUM") {
+                SettingsSection(stringResource(R.string.premium_section)) {
                     SettingsRow(
                         icon = Icons.Default.Star,
-                        title = "FocusLock Premium",
-                        subtitle = if (settings.isPremiumActive) "Premium Active" else "Remove ads forever and support development",
+                        title = stringResource(R.string.focuslock_premium),
+                        subtitle = if (settings.isPremiumActive) stringResource(R.string.premium_active) else stringResource(R.string.premium_inactive),
                         onClick = onNavigateToPremium
                     )
                 }
             }
 
             item {
-                SettingsSection("DATA MANAGEMENT") {
+                SettingsSection(stringResource(R.string.data_management_section)) {
                     SettingsRow(
                         icon = Icons.Default.Storage,
-                        title = "Data & Backup",
-                        subtitle = "Export, import, and backup your data",
+                        title = stringResource(R.string.data_backup),
+                        subtitle = stringResource(R.string.data_backup_subtitle),
                         onClick = { onNavigateToDataBackup() }
                     )
                 }
             }
 
             item {
-                SettingsSection("ABOUT") {
+                SettingsSection(stringResource(R.string.about_section)) {
                     SettingsRow(
                         icon = Icons.Default.Security,
-                        title = "Privacy & Data Safety",
-                        subtitle = "100% on-device & private",
+                        title = stringResource(R.string.privacy_policy),
+                        subtitle = stringResource(R.string.privacy_policy_subtitle),
                         onClick = { showPrivacyDialog = true }
                     )
                     SettingsRow(
                         icon = Icons.Default.Info,
-                        title = "About FocusLock",
-                        subtitle = "Version 1.0.0 (Build 1)",
+                        title = stringResource(R.string.about_app),
+                        subtitle = stringResource(R.string.about_app_subtitle),
                         onClick = { showAboutDialog = true }
                     )
                 }
@@ -229,74 +237,178 @@ fun SettingsScreen(
 
     // --- DIALOGS ---
 
-    // 1. Theme Dialog - Permanent Liquid Glass Dark
+    // 1. Background Theme Chooser Dialog (Visual Animated Live Preview Gallery)
     if (showThemeDialog) {
         AlertDialog(
             onDismissRequest = { showThemeDialog = false },
-            title = { Text("Liquid Glass Appearance", fontWeight = FontWeight.Bold) },
+            modifier = Modifier.liquidGlass(shape = RoundedCornerShape(28.dp), isElevated = true),
+            containerColor = Color.Transparent,
+            title = {
+                Column {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AutoAwesome,
+                            contentDescription = null,
+                            tint = Color(0xFF00E5FF),
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Text(
+                            text = "Animated Themes",
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "লাইভ অ্যানিমেটেড দৃশ্য নির্বাচন করুন",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF00E5FF).copy(alpha = 0.9f)
+                    )
+                }
+            },
             text = {
-                Text(
-                    "FocusLock is exclusively designed and permanently locked to Liquid Glass Dark aesthetic for eye protection, OLED battery conservation, and distraction-free visual flow.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f)
-                )
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 440.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    contentPadding = PaddingValues(vertical = 4.dp)
+                ) {
+                    items(BackgroundThemeType.entries) { theme ->
+                        ThemePreviewCard(
+                            theme = theme,
+                            isSelected = currentBgTheme == theme,
+                            onClick = {
+                                viewModel.updateTheme(theme.key)
+                            }
+                        )
+                    }
+                }
             },
             confirmButton = {
                 TextButton(onClick = { showThemeDialog = false }) {
-                    Text("OK", color = Color(0xFF00E5FF))
+                    Text(
+                        text = stringResource(R.string.done),
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF00E5FF),
+                        fontSize = 15.sp
+                    )
                 }
             }
         )
     }
 
-    // 2. Language Dialog
+    // 2. Language Dialog (Liquid Glass Style with Instant Locale Switcher)
     if (showLanguageDialog) {
         AlertDialog(
             onDismissRequest = { showLanguageDialog = false },
-            title = { Text("Choose Language", fontWeight = FontWeight.Bold) },
-            text = {
-                LazyColumn(modifier = Modifier.heightIn(max = 360.dp)) {
-                    val languages = listOf(
-                        "en" to "English",
-                        "bn" to "বাংলা (Bengali)",
-                        "es" to "Español (Spanish)",
-                        "fr" to "Français (French)",
-                        "de" to "Deutsch (German)",
-                        "pt" to "Português (Portuguese)",
-                        "hi" to "हिन्दी (Hindi)",
-                        "ar" to "العربية (Arabic)"
+            modifier = Modifier.liquidGlass(shape = RoundedCornerShape(28.dp), isElevated = true),
+            containerColor = Color.Transparent,
+            title = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Language,
+                        contentDescription = null,
+                        tint = Color(0xFF00E5FF),
+                        modifier = Modifier.size(24.dp)
                     )
+                    Text(
+                        text = stringResource(R.string.choose_language),
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+            },
+            text = {
+                val languages = listOf(
+                    Triple("bn", "বাংলা", "Bengali"),
+                    Triple("en", "English", "English (US/UK)"),
+                    Triple("es", "Español", "Spanish"),
+                    Triple("fr", "Français", "French"),
+                    Triple("de", "Deutsch", "German"),
+                    Triple("pt", "Português", "Portuguese"),
+                    Triple("hi", "हिन्दी", "Hindi"),
+                    Triple("ar", "العربية", "Arabic")
+                )
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 380.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     items(languages.size) { index ->
-                        val (code, label) = languages[index]
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .clickable {
-                                    viewModel.updateLanguage(code)
-                                    com.example.util.LocaleHelper.applyLocale(context, code, recreateActivity = true)
-                                    showLanguageDialog = false
-                                }
-                                .padding(vertical = 12.dp, horizontal = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                        val (code, nativeName, englishName) = languages[index]
+                        val isSelected = (settings.language == code)
+
+                        Surface(
+                            onClick = {
+                                viewModel.updateLanguage(code)
+                                com.example.util.LocaleHelper.applyLocale(context, code, recreateActivity = true)
+                                showLanguageDialog = false
+                            },
+                            shape = RoundedCornerShape(16.dp),
+                            color = if (isSelected) Color(0x3300E5FF) else Color(0x22132338),
+                            border = if (isSelected) {
+                                androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFF00E5FF))
+                            } else {
+                                androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.12f))
+                            },
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            RadioButton(
-                                selected = (settings.language == code),
-                                onClick = {
-                                    viewModel.updateLanguage(code)
-                                    com.example.util.LocaleHelper.applyLocale(context, code, recreateActivity = true)
-                                    showLanguageDialog = false
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column {
+                                    Text(
+                                        text = nativeName,
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                        ),
+                                        color = if (isSelected) Color(0xFF00E5FF) else MaterialTheme.colorScheme.onBackground
+                                    )
+                                    Text(
+                                        text = englishName,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f)
+                                    )
                                 }
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(label, style = MaterialTheme.typography.bodyLarge)
+
+                                RadioButton(
+                                    selected = isSelected,
+                                    onClick = {
+                                        viewModel.updateLanguage(code)
+                                        com.example.util.LocaleHelper.applyLocale(context, code, recreateActivity = true)
+                                        showLanguageDialog = false
+                                    },
+                                    colors = RadioButtonDefaults.colors(
+                                        selectedColor = Color(0xFF00E5FF)
+                                    )
+                                )
+                            }
                         }
                     }
                 }
             },
             confirmButton = {
                 TextButton(onClick = { showLanguageDialog = false }) {
-                    Text("Close")
+                    Text(
+                        text = stringResource(R.string.close),
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF00E5FF)
+                    )
                 }
             }
         )

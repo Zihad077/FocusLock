@@ -3,41 +3,48 @@ package com.example.presentation.focus
 import android.app.Application
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ui.theme.liquidGlass
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FocusScreen(
+    onNavigateToHome: () -> Unit = {},
     viewModel: FocusViewModel = viewModel(
         factory = FocusViewModel.Factory(LocalContext.current.applicationContext as Application)
     )
@@ -47,496 +54,530 @@ fun FocusScreen(
     val selectedDuration by viewModel.selectedDurationMinutes.collectAsStateWithLifecycle()
     val showJournalDialog by viewModel.showJournalDialog.collectAsStateWithLifecycle()
     val cooldownRemaining by viewModel.cooldownRemainingSeconds.collectAsStateWithLifecycle()
-    val showExitConfirmation by viewModel.showExitConfirmation.collectAsStateWithLifecycle()
-    val isDark = isSystemInDarkTheme()
+    val userSettings by viewModel.userSettings.collectAsStateWithLifecycle(initialValue = null)
 
-    // Back navigation disabled during active Focus Mode:
-    // Prevents bypasses via hardware/gesture back button.
+    // Back navigation disabled strictly only during active Focus Mode to prevent escape
     BackHandler(enabled = isFocusActive) {
-        // Intentionally consumed: Focus Mode screen must remain the only accessible screen
+        // Intentionally consumed: Focus Mode screen must remain the only accessible screen during active focus
     }
 
     val primaryCyan = Color(0xFF00E5FF)
+    val accentBlue = Color(0xFF2979FF)
+    val accentPurple = Color(0xFF9D4EDD)
     val accentError = Color(0xFFFF5252)
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 24.dp, vertical = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(modifier = Modifier.height(16.dp))
+    val scrollState = rememberScrollState()
 
-        Text(
-            text = "Focus Session",
-            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold),
-            color = MaterialTheme.colorScheme.onBackground
-        )
+    // Smooth pulsing glow when in active focus mode
+    val infiniteTransition = rememberInfiniteTransition(label = "focus_pulse")
+    val pulseGlow by infiniteTransition.animateFloat(
+        initialValue = 0.7f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2500, easing = EaseInOutSine),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse_glow"
+    )
 
-        Spacer(modifier = Modifier.height(6.dp))
-
-        Text(
-            text = if (isFocusActive) "Deep work in progress. Distractions filtered." else "Immerse in uninterrupted flow state.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
-        )
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        // Liquid Glass Circular Timer Display with ambient glow ring
-        Box(
-            modifier = Modifier
-                .size(280.dp)
-                .shadow(
-                    elevation = 20.dp,
-                    shape = CircleShape,
-                    ambientColor = Color(0x60001025),
-                    spotColor = if (isFocusActive) primaryCyan else Color(0x3500E5FF)
-                )
-                .clip(CircleShape)
-                .background(
-                    brush = Brush.radialGradient(
-                        colors = if (isDark) {
-                            listOf(
-                                (if (isFocusActive) Color(0x4000E5FF) else Color(0x301E3555)),
-                                Color(0x200C1625),
-                                Color(0x40050B12)
-                            )
-                        } else {
-                            listOf(
-                                (if (isFocusActive) Color(0x50E0F7FA) else Color(0x60FFFFFF)),
-                                Color(0x40E8F1F8),
-                                Color(0x80D5E5F2)
-                            )
-                        },
-                        center = Offset(400f, 400f),
-                        radius = 500f
-                    )
-                )
-                .border(
-                    width = 4.dp,
-                    brush = Brush.sweepGradient(
-                        colors = if (isFocusActive) {
-                            listOf(
-                                primaryCyan,
-                                Color(0xFF2979FF),
-                                Color.White.copy(alpha = 0.8f),
-                                primaryCyan
-                            )
-                        } else {
-                            listOf(
-                                Color.White.copy(alpha = 0.5f),
-                                Color(0x3080D8FF),
-                                Color.White.copy(alpha = 0.1f),
-                                Color.White.copy(alpha = 0.5f)
-                            )
-                        }
-                    ),
-                    shape = CircleShape
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            val displayTime = if (isFocusActive) {
-                val m = remainingSeconds / 60
-                val s = remainingSeconds % 60
-                String.format("%02d:%02d", m, s)
-            } else {
-                "$selectedDuration:00"
-            }
-
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = displayTime,
-                    style = MaterialTheme.typography.displayLarge.copy(
-                        fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = 1.sp
-                    ),
-                    color = if (isFocusActive) primaryCyan else MaterialTheme.colorScheme.onBackground
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = if (isFocusActive) "MINUTES REMAINING" else "TARGET DURATION",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.2.sp
-                    ),
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        AnimatedVisibility(visible = !isFocusActive) {
-            val durations = listOf(15, 25, 45, 60, 90)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                durations.forEach { duration ->
-                    DurationGlassChip(
-                        minutes = duration,
-                        isSelected = selectedDuration == duration,
-                        onClick = { viewModel.setDuration(duration) }
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(28.dp))
-
-        val isCooldownLocked = isFocusActive && ((cooldownRemaining ?: 0) > 0)
-        val cooldownMinutes = (cooldownRemaining ?: 0) / 60
-        val cooldownSeconds = (cooldownRemaining ?: 0) % 60
-        val cooldownFormatted = String.format("%d:%02d", cooldownMinutes, cooldownSeconds)
-
-        // Main Action Liquid Button
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(60.dp)
-                .shadow(
-                    elevation = if (isCooldownLocked) 4.dp else 12.dp,
-                    shape = RoundedCornerShape(20.dp),
-                    spotColor = if (isFocusActive) (if (isCooldownLocked) Color(0x60FF5252) else accentError) else primaryCyan
-                )
-                .clip(RoundedCornerShape(20.dp))
-                .background(
-                    brush = Brush.horizontalGradient(
-                        colors = if (isFocusActive) {
-                            if (isCooldownLocked) {
-                                listOf(Color(0xFF3E1E24), Color(0xFF2C1418))
-                            } else {
-                                listOf(Color(0xFFFF5252), Color(0xFFD50000))
-                            }
-                        } else {
-                            listOf(Color(0xFF00E5FF), Color(0xFF0091EA))
-                        }
-                    )
-                )
-                .border(
-                    width = 1.dp,
-                    color = if (isCooldownLocked) Color(0x40FF5252) else Color.White.copy(alpha = 0.4f),
-                    shape = RoundedCornerShape(20.dp)
-                )
-                .clickable(enabled = !isCooldownLocked) {
-                    if (isFocusActive) {
-                        viewModel.endFocusSession(completed = false)
-                    } else {
-                        viewModel.startFocusSession()
-                    }
-                },
-            contentAlignment = Alignment.Center
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Icon(
-                    imageVector = when {
-                        !isFocusActive -> Icons.Default.PlayArrow
-                        isCooldownLocked -> Icons.Default.Lock
-                        else -> Icons.Default.Stop
-                    },
-                    contentDescription = null,
-                    tint = if (isCooldownLocked) Color(0xFFFF8A80) else Color.White
-                )
-                Text(
-                    text = when {
-                        !isFocusActive -> "Start Focus Session"
-                        isCooldownLocked -> "End Focus Locked ($cooldownFormatted)"
-                        else -> "End Focus Session"
-                    },
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = if (isCooldownLocked) Color(0xFFFF8A80) else Color.White
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(36.dp))
-
-        if (showJournalDialog) {
-            var journalEntry by remember { mutableStateOf("") }
-            AlertDialog(
-                onDismissRequest = { viewModel.dismissJournalDialog() },
-                modifier = Modifier.liquidGlass(shape = RoundedCornerShape(28.dp), isElevated = true),
+    Scaffold(
+        containerColor = Color.Transparent,
+        topBar = {
+            TopAppBar(
                 title = {
                     Text(
-                        "Focus Journal",
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        text = "Focus Mode",
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
                         color = MaterialTheme.colorScheme.onBackground
                     )
                 },
-                text = {
-                    Column {
-                        Text(
-                            "What milestones did you accomplish during this session?",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
-                        )
-                        Spacer(modifier = Modifier.height(14.dp))
-                        OutlinedTextField(
-                            value = journalEntry,
-                            onValueChange = { journalEntry = it },
-                            modifier = Modifier.fillMaxWidth(),
-                            minLines = 3,
-                            shape = RoundedCornerShape(16.dp),
-                            placeholder = { Text("Notes, insights, accomplishments...") }
-                        )
+                navigationIcon = {
+                    if (!isFocusActive) {
+                        IconButton(
+                            onClick = onNavigateToHome,
+                            modifier = Modifier.testTag("focus_back_to_home_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Return to Home",
+                                tint = primaryCyan
+                            )
+                        }
                     }
                 },
-                confirmButton = {
-                    TextButton(
-                        onClick = { viewModel.saveJournalEntry(journalEntry) },
-                        enabled = journalEntry.isNotBlank()
-                    ) {
-                        Text(
-                            "Save Entry",
-                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                            color = primaryCyan
-                        )
+                actions = {
+                    if (userSettings != null) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(primaryCyan.copy(alpha = 0.15f))
+                                .border(1.dp, primaryCyan.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Star,
+                                    contentDescription = null,
+                                    tint = primaryCyan,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = "Lv. ${userSettings?.level ?: 1}",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = primaryCyan
+                                )
+                            }
+                        }
                     }
                 },
-                dismissButton = {
-                    TextButton(onClick = { viewModel.dismissJournalDialog() }) {
-                        Text(
-                            "Skip",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
-                        )
-                    }
-                }
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground
+                )
             )
         }
-    }
-}
-
-@Composable
-private fun DurationGlassChip(
-    minutes: Int,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    val isDark = isSystemInDarkTheme()
-    val primaryColor = if (isDark) Color(0xFF00E5FF) else Color(0xFF0077D6)
-
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(
-                if (isSelected) {
-                    primaryColor.copy(alpha = if (isDark) 0.35f else 0.22f)
-                } else {
-                    if (isDark) Color(0x2022354E) else Color(0x40FFFFFF)
-                }
-            )
-            .border(
-                width = 1.dp,
-                color = if (isSelected) primaryColor else Color.White.copy(alpha = if (isDark) 0.15f else 0.4f),
-                shape = RoundedCornerShape(16.dp)
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "${minutes}m",
-            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-            color = if (isSelected) primaryColor else MaterialTheme.colorScheme.onBackground
-        )
-    }
-}
-
-/**
- * 2:30 Mandatory Waiting & Reflection Screen.
- * Calms user impulse, provides mindful countdown and breathing exercise.
- */
-@Composable
-private fun MandatoryCooldownScreen(
-    remainingSeconds: Int,
-    onResume: () -> Unit,
-    onEndRequest: () -> Unit
-) {
-    val infiniteTransition = rememberInfiniteTransition(label = "breathe")
-    val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 0.85f,
-        targetValue = 1.15f,
-        animationSpec = infiniteRepeatable<Float>(
-            animation = tween(4000, easing = EaseInOutSine),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "pulse_scale"
-    )
-
-    val minutes = remainingSeconds / 60
-    val seconds = remainingSeconds % 60
-    val formattedTime = String.format("%02d:%02d", minutes, seconds)
-    val isFinished = remainingSeconds == 0
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 24.dp, vertical = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(modifier = Modifier.height(20.dp))
-
-        Text(
-            text = "Mandatory Cooling Down",
-            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold),
-            color = Color.White
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = "Take a breath. Breaking focus requires conscious pause.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color.White.copy(alpha = 0.7f),
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-        )
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        // Breathing Orb & Countdown
-        Box(
+    ) { innerPadding ->
+        Column(
             modifier = Modifier
-                .size(240.dp),
-            contentAlignment = Alignment.Center
+                .fillMaxSize()
+                .padding(innerPadding)
+                .verticalScroll(scrollState)
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 120.dp), // Generous bottom padding to ensure start button is always above floating bottom bar
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // Pulsing breathing ring
-            Box(
-                modifier = Modifier
-                    .size((200 * pulseScale).dp)
-                    .clip(CircleShape)
-                    .background(
-                        brush = Brush.radialGradient(
-                            colors = listOf(
-                                Color(0x3500E5FF),
-                                Color(0x150077D6),
-                                Color.Transparent
-                            )
-                        )
-                    )
+            // Header Description Subtitle
+            Text(
+                text = if (isFocusActive) "Deep work in progress. Distractions & notifications blocked." else "Enter uninterrupted deep flow state. Pick your focus duration.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 8.dp)
             )
 
-            // Inner glass timer
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // ==========================================
+            // CLEAN CIRCULAR TIMER (NO GEOMETRY LINES / ARTIFACTS)
+            // ==========================================
+            val totalSeconds = (selectedDuration * 60).toFloat()
+            val progressFraction = if (isFocusActive && totalSeconds > 0) {
+                (remainingSeconds.toFloat() / totalSeconds).coerceIn(0f, 1f)
+            } else {
+                1f
+            }
+
+            val animatedProgress by animateFloatAsState(
+                targetValue = progressFraction,
+                animationSpec = tween(500, easing = LinearEasing),
+                label = "timer_progress"
+            )
+
             Box(
                 modifier = Modifier
-                    .size(190.dp)
+                    .size(260.dp)
+                    .shadow(
+                        elevation = if (isFocusActive) (16 * pulseGlow).dp else 8.dp,
+                        shape = CircleShape,
+                        ambientColor = Color(0x60001025),
+                        spotColor = if (isFocusActive) primaryCyan else Color(0x2500E5FF)
+                    )
                     .clip(CircleShape)
                     .background(
                         brush = Brush.verticalGradient(
-                            colors = listOf(
-                                Color(0x4016253C),
-                                Color(0x200C1625)
-                            )
+                            colors = if (isFocusActive) {
+                                listOf(
+                                    Color(0x35122B48),
+                                    Color(0x250B1728),
+                                    Color(0x40060E18)
+                                )
+                            } else {
+                                listOf(
+                                    Color(0x2816253C),
+                                    Color(0x180D1726),
+                                    Color(0x2E070D16)
+                                )
+                            }
                         )
                     )
                     .border(
-                        width = 2.dp,
-                        brush = Brush.sweepGradient(
-                            colors = listOf(
-                                Color(0xFF00E5FF),
-                                Color(0xFF2979FF),
-                                Color(0xFF00E5FF)
-                            )
-                        ),
+                        width = 1.5.dp,
+                        color = if (isFocusActive) primaryCyan.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.15f),
                         shape = CircleShape
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                // Smooth Clean Canvas Arc Ring - NO inner diagonal lines or sweep gradient artifacts
+                Canvas(modifier = Modifier.fillMaxSize().padding(14.dp)) {
+                    val strokePx = 10.dp.toPx()
+                    val arcSize = Size(size.width - strokePx, size.height - strokePx)
+                    val arcTopLeft = Offset(strokePx / 2f, strokePx / 2f)
+
+                    // 1. Subtle Background Track Ring
+                    drawArc(
+                        color = Color.White.copy(alpha = 0.08f),
+                        startAngle = 0f,
+                        sweepAngle = 360f,
+                        useCenter = false,
+                        topLeft = arcTopLeft,
+                        size = arcSize,
+                        style = Stroke(width = strokePx, cap = StrokeCap.Round)
+                    )
+
+                    // 2. Active Animated Gradient Arc
+                    val sweepAngle = 360f * animatedProgress
+                    if (sweepAngle > 0f) {
+                        drawArc(
+                            brush = Brush.linearGradient(
+                                colors = if (isFocusActive) {
+                                    listOf(primaryCyan, accentBlue, accentPurple)
+                                } else {
+                                    listOf(primaryCyan.copy(alpha = 0.85f), accentBlue.copy(alpha = 0.7f))
+                                },
+                                start = Offset(0f, 0f),
+                                end = Offset(size.width, size.height)
+                            ),
+                            startAngle = -90f,
+                            sweepAngle = sweepAngle,
+                            useCenter = false,
+                            topLeft = arcTopLeft,
+                            size = arcSize,
+                            style = Stroke(width = strokePx, cap = StrokeCap.Round)
+                        )
+                    }
+                }
+
+                // Inner Display Time & Status
+                val displayTime = if (isFocusActive) {
+                    val m = remainingSeconds / 60
+                    val s = remainingSeconds % 60
+                    String.format("%02d:%02d", m, s)
+                } else {
+                    "$selectedDuration:00"
+                }
+
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    // Status Pill
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                if (isFocusActive) primaryCyan.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.08f)
+                            )
+                            .border(
+                                1.dp,
+                                if (isFocusActive) primaryCyan.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.15f),
+                                RoundedCornerShape(12.dp)
+                            )
+                            .padding(horizontal = 10.dp, vertical = 3.dp)
+                    ) {
+                        Text(
+                            text = if (isFocusActive) "FLOW STATE ACTIVE" else "TARGET DURATION",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp,
+                                fontSize = 10.sp
+                            ),
+                            color = if (isFocusActive) primaryCyan else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
                     Text(
-                        text = formattedTime,
+                        text = displayTime,
                         style = MaterialTheme.typography.displayMedium.copy(
-                            fontWeight = FontWeight.ExtraBold,
+                            fontWeight = FontWeight.Black,
                             letterSpacing = 1.sp
                         ),
-                        color = if (isFinished) Color(0xFFFF5252) else Color(0xFF00E5FF)
+                        color = if (isFocusActive) primaryCyan else Color.White
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
                     Text(
-                        text = if (isFinished) "COOLDOWN FINISHED" else "COOLING DOWN (2:30)",
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        color = Color.White.copy(alpha = 0.6f)
+                        text = if (isFocusActive) "STAY FOCUSED" else "$selectedDuration MIN SESSION",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = 1.2.sp
+                        ),
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f)
                     )
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.weight(1f))
+            // Duration selection chips (Visible when not active)
+            AnimatedVisibility(
+                visible = !isFocusActive,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = "Select Focus Time",
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
 
-        // Mindful reflection card
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .liquidGlass(shape = RoundedCornerShape(20.dp), isElevated = false)
-                .padding(18.dp)
-        ) {
-            Column {
-                Text(
-                    text = "Mindful Reflection",
-                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                    color = Color(0xFF00E5FF)
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = "Are you ending this session out of real necessity, or an urge to scroll? Impulses usually dissolve in 2 minutes.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.85f),
-                    lineHeight = 18.sp
-                )
+                    val durations = listOf(15, 25, 45, 60, 90, 120)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        durations.forEach { duration ->
+                            val isSelected = selectedDuration == duration
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(
+                                        if (isSelected) primaryCyan.copy(alpha = 0.3f) else Color(0x2022354E)
+                                    )
+                                    .border(
+                                        width = if (isSelected) 1.5.dp else 1.dp,
+                                        color = if (isSelected) primaryCyan else Color.White.copy(alpha = 0.15f),
+                                        shape = RoundedCornerShape(14.dp)
+                                    )
+                                    .clickable { viewModel.setDuration(duration) }
+                                    .padding(vertical = 10.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = if (duration >= 60) "${duration / 60}h" else "${duration}m",
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold
+                                    ),
+                                    color = if (isSelected) primaryCyan else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ==========================================
+            // MAIN ACTION BUTTON (PROMINENT, NEVER COVERED BY BOTTOM NAV BAR)
+            // ==========================================
+            val isCooldownLocked = isFocusActive && ((cooldownRemaining ?: 0) > 0)
+            val cooldownMinutes = (cooldownRemaining ?: 0) / 60
+            val cooldownSeconds = (cooldownRemaining ?: 0) % 60
+            val cooldownFormatted = String.format("%d:%02d", cooldownMinutes, cooldownSeconds)
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(58.dp)
+                    .shadow(
+                        elevation = if (isCooldownLocked) 4.dp else 12.dp,
+                        shape = RoundedCornerShape(18.dp),
+                        spotColor = if (isFocusActive) (if (isCooldownLocked) Color(0x60FF5252) else accentError) else primaryCyan
+                    )
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(
+                        brush = Brush.horizontalGradient(
+                            colors = if (isFocusActive) {
+                                if (isCooldownLocked) {
+                                    listOf(Color(0xFF3E1E24), Color(0xFF2C1418))
+                                } else {
+                                    listOf(Color(0xFFFF5252), Color(0xFFD50000))
+                                }
+                            } else {
+                                listOf(Color(0xFF00E5FF), Color(0xFF0091EA))
+                            }
+                        )
+                    )
+                    .border(
+                        width = 1.dp,
+                        color = if (isCooldownLocked) Color(0x40FF5252) else Color.White.copy(alpha = 0.4f),
+                        shape = RoundedCornerShape(18.dp)
+                    )
+                    .clickable(enabled = !isCooldownLocked) {
+                        if (isFocusActive) {
+                            viewModel.endFocusSession(completed = false)
+                        } else {
+                            viewModel.startFocusSession()
+                        }
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Icon(
+                        imageVector = when {
+                            !isFocusActive -> Icons.Default.PlayArrow
+                            isCooldownLocked -> Icons.Default.Lock
+                            else -> Icons.Default.Stop
+                        },
+                        contentDescription = null,
+                        tint = if (isCooldownLocked) Color(0xFFFF8A80) else Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Text(
+                        text = when {
+                            !isFocusActive -> "Start Focus Session (${selectedDuration}m)"
+                            isCooldownLocked -> "Cooldown Active ($cooldownFormatted)"
+                            else -> "End Focus Session"
+                        },
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = if (isCooldownLocked) Color(0xFFFF8A80) else Color.White
+                    )
+                }
+            }
+
+            // Return to Home Dashboard button (Available when not in active focus session)
+            if (!isFocusActive) {
+                OutlinedButton(
+                    onClick = onNavigateToHome,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                        .testTag("return_to_home_button"),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = Color.White.copy(alpha = 0.05f),
+                        contentColor = primaryCyan
+                    ),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        primaryCyan.copy(alpha = 0.35f)
+                    )
+                ) {
+                    Icon(
+                        Icons.Default.Home,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = primaryCyan
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Return to Home Dashboard",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = Color.White
+                    )
+                }
+            }
+
+            // Info & Protection Card
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .liquidGlass(shape = RoundedCornerShape(20.dp), isElevated = false)
+                    .padding(16.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(CircleShape)
+                            .background(primaryCyan.copy(alpha = 0.15f))
+                            .border(1.dp, primaryCyan.copy(alpha = 0.35f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Shield,
+                            contentDescription = null,
+                            tint = primaryCyan,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = if (isFocusActive) "Distraction Shield Active" else "Strict Focus Protection",
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                            color = Color.White
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = if (isFocusActive) "Restricted apps are blocked until your session concludes." else "Includes 2:30 cooling down pause to prevent impulsive unlocking.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                    }
+                }
             }
         }
+    }
 
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Resume button (Always Available)
-        Button(
-            onClick = onResume,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF00E5FF)
-            ),
-            shape = RoundedCornerShape(18.dp)
-        ) {
-            Text(
-                text = "Resume Focus (Stay on track)",
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                color = Color.Black
-            )
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // End button (Only enabled when 2:30 countdown completes)
-        OutlinedButton(
-            onClick = onEndRequest,
-            enabled = isFinished,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(54.dp),
-            colors = ButtonDefaults.outlinedButtonColors(
-                containerColor = if (isFinished) Color(0x30FF5252) else Color.Transparent,
-                contentColor = if (isFinished) Color(0xFFFF5252) else Color.White.copy(alpha = 0.35f),
-                disabledContentColor = Color.White.copy(alpha = 0.35f)
-            ),
-            border = androidx.compose.foundation.BorderStroke(
-                1.dp,
-                if (isFinished) Color(0xFFFF5252) else Color.White.copy(alpha = 0.15f)
-            ),
-            shape = RoundedCornerShape(18.dp)
-        ) {
-            Text(
-                text = if (isFinished) "Confirm & End Session" else "Locked for Cooling Down ($formattedTime)",
-                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
+    // Journal Dialog upon session completion
+    if (showJournalDialog) {
+        var journalEntry by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = {
+                viewModel.dismissJournalDialog()
+                onNavigateToHome()
+            },
+            modifier = Modifier.liquidGlass(shape = RoundedCornerShape(28.dp), isElevated = true),
+            containerColor = Color.Transparent,
+            title = {
+                Text(
+                    "Focus Session Complete! 🎉",
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        "Great job staying in the zone! What did you accomplish?",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                    OutlinedTextField(
+                        value = journalEntry,
+                        onValueChange = { journalEntry = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 3,
+                        shape = RoundedCornerShape(16.dp),
+                        placeholder = { Text("Notes, insights, accomplishments...") }
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.saveJournalEntry(journalEntry)
+                        onNavigateToHome()
+                    },
+                    enabled = journalEntry.isNotBlank()
+                ) {
+                    Text(
+                        "Save & View Dashboard",
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                        color = primaryCyan
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.dismissJournalDialog()
+                        onNavigateToHome()
+                    }
+                ) {
+                    Text(
+                        "Skip to Home",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                    )
+                }
+            }
+        )
     }
 }
-

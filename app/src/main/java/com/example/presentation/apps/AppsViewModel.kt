@@ -28,12 +28,16 @@ class AppsViewModel(
 
     private val _installedApps = MutableStateFlow<List<AppItem>>(emptyList())
     
+    private val currentDateString = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+
     val appsList = combine(
         _installedApps,
         repository.allLimits,
-        repository.allTemporaryUnlocks
-    ) { installed, limits, tempUnlocks ->
+        repository.allTemporaryUnlocks,
+        repository.getUsageForDate(currentDateString)
+    ) { installed, limits, tempUnlocks, todayUsages ->
         val limitMap = limits.associateBy { it.packageName }
+        val usageMap = todayUsages.associate { it.packageName to it.usedMinutes }
         val currentMillis = System.currentTimeMillis()
         val tempUnlockMap = tempUnlocks
             .filter { it.startTime + (it.durationMinutes * 60 * 1000L) > currentMillis }
@@ -43,10 +47,12 @@ class AppsViewModel(
             val limit = limitMap[app.packageName]
             val isHigh = isHighImpactApp(app.packageName, app.appName)
             val unlock = tempUnlockMap[app.packageName]
+            val usedMins = usageMap[app.packageName] ?: 0
             app.copy(
                 isLimited = limit != null && limit.isEnabled,
                 dailyLimitMinutes = limit?.dailyLimitMinutes ?: 0,
                 sessionLimitMinutes = limit?.sessionLimitMinutes,
+                usedTodayMinutes = usedMins,
                 isHighImpact = isHigh,
                 activeUnlockMethod = unlock?.type,
                 activeUnlockRemainingMinutes = if (unlock != null) {
@@ -56,6 +62,7 @@ class AppsViewModel(
         }.sortedWith(
             compareByDescending<AppItem> { it.activeUnlockMethod != null }
                 .thenByDescending { it.isLimited }
+                .thenByDescending { it.usedTodayMinutes }
                 .thenByDescending { it.isHighImpact }
                 .thenBy { it.appName.lowercase() }
         )
@@ -66,7 +73,14 @@ class AppsViewModel(
     )
 
     init {
-        loadInstalledApps()
+        syncAndLoad()
+    }
+
+    fun syncAndLoad() {
+        viewModelScope.launch {
+            com.example.util.UsageStatsHelper.syncHistoricalUsageToDatabase(getApplication(), repository, 7)
+            loadInstalledApps()
+        }
     }
 
     private fun loadInstalledApps() {
@@ -216,6 +230,7 @@ data class AppItem(
     val isLimited: Boolean = false,
     val dailyLimitMinutes: Int = 0,
     val sessionLimitMinutes: Int? = null,
+    val usedTodayMinutes: Int = 0,
     val isHighImpact: Boolean = false,
     val activeUnlockMethod: String? = null,
     val activeUnlockRemainingMinutes: Int? = null

@@ -3,6 +3,7 @@
     <string name="accessibility_service_description">Used by FocusLock to detect when distracting apps are opened so they can be blocked.</string>
     
     <!-- Home / Dashboard -->
+    <string name="digital_equilibrium">DIGITAL EQUILIBRIUM</string>
     <string name="level_xp">Level %1$d • %2$d XP to next</string>
     <string name="limits">Limits</string>
     <string name="schedules">Schedules</string>
@@ -11,15 +12,81 @@
     <string name="total_focus">Total Focus</string>
     <string name="time_saved">Time Saved</string>
     <string name="start_focus">Start Focus</string>
-    
+    <string name="focus_score">Focus Score</string>
+    <string name="todays_usage">TODAY\'S USAGE</string>
+    <string name="time_reclaimed">TIME RECLAIMED</string>
+    <string name="blocked_apps">Blocked Apps</string>
+    <string name="current_streak">Current Streak</string>
+    <string name="days_suffix">Days</string>
+    <string name="active_limits">Active Limits</string>
+    <string name="monitored_suffix">monitored</string>
+    <string name="no_limits_set">No limits set yet</string>
+    <string name="no_limits_desc">Configure app restrictions in the Apps tab to start building mindful habits.</string>
+    <string name="set_app_limits">Set App Limits</string>
+    <string name="active_protection">Active Protection</string>
+    <string name="protection_limited">Protection Limited</string>
+    <string name="protection_active_desc">Accessibility monitor and screen interception running smoothly.</string>
+    <string name="accessibility_needed_desc">Accessibility permission needed for instant app interception.</string>
+    <string name="overlay_needed_desc">Overlay permission needed to display mindful lock screen.</string>
+    <string name="enable_btn">Enable</string>
+    <string name="adjust_limit_title">Adjust Limit: %1$s</string>
+    <string name="daily_allowance">Daily Allowance: %1$d minutes</string>
+    <string name="min_5">5 min</string>
+    <string name="hours_4">4 hours</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="blocked_status">Blocked</string>
+    <string name="min_left">%1$dm left</string>
+    <string name="used_format">%1$d / %2$d min used</string>
+
     <!-- Block Screen -->
     <string name="app_blocked">%1$s is Blocked</string>
+    <string name="app_restricted">APP RESTRICTED</string>
+    <string name="times_up">TIME\'S UP</string>
+    <string name="restricted_reason">\"%1$s\" is restricted to protect your productivity. Focus on what truly matters.</string>
+    <string name="quota_reached_reason">You\'ve reached your daily quota for \"%1$s\". Step back, breathe, and reset.</string>
+    <string name="usage_today">USAGE TODAY</string>
     <string name="limit_reached">You\'ve reached your daily limit of %1$d minutes.</string>
+    <string name="strict_block_0m">Strict Block (0m limit)</string>
+    <string name="return_to_home">Return to Home</string>
+    <string name="complete_challenge_to_unlock">Complete Challenge to Unlock</string>
+    <string name="emergency_bypass_left">Emergency Bypass (%1$d left)</string>
+    <string name="no_emergency_passes_left">No Emergency Passes Left</string>
     <string name="wait_and_breathe">Wait &amp; Breathe</string>
     <string name="earn_more_time">Earn More Time</string>
     <string name="emergency_unlock">Emergency Unlock</string>
     <string name="take_a_deep_breath">Take a deep breath.</string>
-    <string name="challenge_instructions">Type the text above to unlock 5 extra minutes.</string>
+    <string name="challenge_instructions">Type the sentence below to unlock 5 extra minutes.</string>
+    
+    <!-- Challenge Screen -->
+    <string name="verification_gateway">VERIFICATION GATEWAY</string>
+    <string name="verification_gateway_desc">Complete a challenge to unlock a temporary session.</string>
+    <string name="no_challenges_enabled">No verification methods configured. Enable challenges in Settings.</string>
+    <string name="mental_math_challenge">Mental Math Challenge</string>
+    <string name="mental_math_subtitle">Solve an arithmetic problem</string>
+    <string name="patience_stillness">Patience &amp; Stillness</string>
+    <string name="patience_stillness_subtitle">Mindful pause countdown</string>
+    <string name="patience_stillness_desc">Keep your awareness steady without closing this view.</string>
+    <string name="typing_intention_title">Mindful Intention Typing</string>
+    <string name="typing_intention_subtitle">Type an affirmation prompt</string>
+    <string name="secure_pin_title">Secure PIN Authorization</string>
+    <string name="secure_pin_subtitle">Enter your preset passcode</string>
+    <string name="return_to_block_screen">Return to Block Screen</string>
+    <string name="what_is_math">What is %1$d + %2$d?</string>
+    <string name="your_answer">Your Answer</string>
+    <string name="verify_answer">Verify Answer</string>
+    <string name="give_up">Give Up</string>
+    <string name="security_passcode">Security Passcode</string>
+    <string name="enter_pin">Enter PIN</string>
+    <string name="authorize_unlock">Authorize Unlock</string>
+
+    <!-- Typing Challenge -->
+    <string name="mindful_intention_prompt">Mindful Intention Challenge</string>
+    <string name="type_affirmation_exact">Type the sentence below exactly:</string>
+    <string name="type_affirmation_placeholder">Type the sentence here</string>
+    <string name="confirm_intention">Confirm Intention</string>
+    <string name="new_sentence">New Sentence</string>
+    <string name="incorrect_try_again">Text does not match. Please try again.</string>
     
     <!-- Stats -->
     <string name="statistics">Statistics</string>
@@ -59,13 +126,65 @@
     <string name="nav_home">Home</string>
     <string name="nav_apps">Apps</string>
     <string name="nav_focus">Focus</string>
+    <string name="nav_goals">Goals</string>
     <string name="nav_stats">Stats</string>
     <string name="nav_settings">Settings</string>
 
     <!-- Settings Sections & Items -->
-    <string name="appearance">Appearance</string>
-    <string name="appearance_desc">Liquid Glass Dark (Permanent)</string>
+    <string name="account_section">Account</string>
+    <string name="preferences_section">Preferences</string>
+    <string name="features_section">Features</string>
+    <string name="premium_section">Premium</string>
+    <string name="data_management_section">Data Management</string>
+    <string name="about_section">About</string>
+
+    <string name="appearance">Background Theme</string>
+    <string name="appearance_desc">Choose live animated scenes</string>
     <string name="language">Language</string>
+    <string name="language_desc">Select app language</string>
+    <string name="choose_language">Choose Language</string>
     <string name="profile_level">Profile &amp; Level</string>
     <string name="notifications">Notifications</string>
+    <string name="notifications_subtitle">Alerts &amp; reminders</string>
+    <string name="anti_distraction_challenges">Anti-Distraction Challenges</string>
+    <string name="anti_distraction_challenges_subtitle">Practice mindful typing unlock</string>
+    <string name="focus_mode_setting">Focus Mode</string>
+    <string name="focus_mode_subtitle_active">Active session running</string>
+    <string name="focus_mode_subtitle_idle">Configure deep work sessions</string>
+    <string name="app_limits_schedules">App Limits &amp; Schedules</string>
+    <string name="app_limits_schedules_subtitle">Manage restricted apps</string>
+    <string name="emergency_unlock_setting">Emergency Unlock</string>
+    <string name="permission_center">Permission Center</string>
+    <string name="permission_center_subtitle">Manage required &amp; optional system guards</string>
+    <string name="escape_prevention">Escape Prevention</string>
+    <string name="escape_prevention_subtitle">Configure anti-delete &amp; stable lock modes</string>
+    <string name="focuslock_premium">FocusLock Premium</string>
+    <string name="premium_active">Premium Active</string>
+    <string name="premium_inactive">Remove ads forever and support development</string>
+    <string name="data_backup">Data &amp; Backup</string>
+    <string name="data_backup_subtitle">Export, import, and backup your data</string>
+    <string name="privacy_policy">Privacy &amp; Data Safety</string>
+    <string name="privacy_policy_subtitle">100% on-device &amp; private</string>
+    <string name="about_app">About FocusLock</string>
+    <string name="about_app_subtitle">Version 1.0.0 (Build 1)</string>
+
+    <!-- Welcome & Onboarding Hooking Texts -->
+    <string name="welcome_badge">✦ SMART MINDFULNESS &amp; PRODUCTIVITY</string>
+    <string name="welcome_hero_title">Reclaim Your Time.\nMaster Your Focus.</string>
+    <string name="welcome_hero_desc">Break the endless scroll loop. Build intentional screen-time habits, defeat impulse openings with mindful challenges, and gain 3+ hours back every single day.</string>
+    <string name="stat_hours_saved">2.8+ Hours</string>
+    <string name="stat_hours_saved_desc">Saved daily</string>
+    <string name="stat_reduction">94% Less</string>
+    <string name="stat_reduction_desc">Impulse opens</string>
+    <string name="stat_privacy">100% Private</string>
+    <string name="stat_privacy_desc">On-device only</string>
+    <string name="feature_friction_title">Mindful Friction Shields</string>
+    <string name="feature_friction_desc">Smart breathers &amp; reflection prompts replace mindless doom-scrolling instantly.</string>
+    <string name="feature_challenges_title">Cognitive Unlock Gateways</string>
+    <string name="feature_challenges_desc">Inspiring affirmations, math puzzles &amp; focus timers verify your real intent.</string>
+    <string name="feature_deepwork_title">Strict Quotas &amp; Schedules</string>
+    <string name="feature_deepwork_desc">Lock distracting apps during work hours and track streaks with gamified XP.</string>
+    <string name="feature_privacy_title">100% Offline &amp; Zero Tracking</string>
+    <string name="feature_privacy_desc">No cloud uploads, no logins, no data brokers. Your habits remain completely yours.</string>
+    <string name="get_started_btn">Start Reclaiming Your Time</string>
 </resources>

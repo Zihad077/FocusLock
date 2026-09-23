@@ -44,6 +44,12 @@ interface FocusDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertUsage(usage: DailyUsage)
     
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertUsages(usages: List<DailyUsage>)
+    
+    @Query("DELETE FROM daily_usage WHERE dateString = :dateString")
+    suspend fun deleteUsageForDate(dateString: String)
+    
     // Usage Events (Timeline)
     @Query("SELECT * FROM usage_events WHERE dateString = :dateString ORDER BY startTime ASC")
     fun getUsageEventsForDate(dateString: String): Flow<List<UsageEvent>>

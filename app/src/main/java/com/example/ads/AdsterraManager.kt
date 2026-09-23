@@ -25,15 +25,18 @@ import kotlinx.coroutines.flow.asStateFlow
 object AdsterraManager {
 
     // Adsterra Native Banner script URL / container key
-    const val NATIVE_BANNER_KEY = "cfa2281fa0e49be9d4a8ee92ae2499d3"
-    const val NATIVE_BANNER_SRC = "https://pl28108157.effectivegatecontent.com/cfa2281fa0e49be9d4a8ee92ae2499d3/invoke.js"
+    const val NATIVE_BANNER_KEY = "43cfe3dc4791cdf4c02fababba57f14d"
+    const val NATIVE_BANNER_SRC = "https://pl31271904.profitableratecpmnetwork.com/43cfe3dc4791cdf4c02fababba57f14d/invoke.js"
+    const val NATIVE_BANNER_BASE_URL = "https://pl31271904.profitableratecpmnetwork.com/"
 
     // Adsterra 320x50 Banner config
-    const val BANNER_320_50_KEY = "64c8fcf61dbd7590886da12d1b54cce0"
-    const val BANNER_320_50_SRC = "https://pl28108204.effectivegatecontent.com/64c8fcf61dbd7590886da12d1b54cce0/invoke.js"
+    const val BANNER_320_50_KEY = "ce907ceee43c8f2cbf521675591e593e"
+    const val BANNER_320_50_SRC = "https://www.highrevenueformat.com/ce907ceee43c8f2cbf521675591e593e/invoke.js"
+    const val BANNER_320_50_BASE_URL = "https://www.highrevenueformat.com/"
 
     // Adsterra Social Bar format
-    const val SOCIAL_BAR_SRC = "https://pl28108215.effectivegatecontent.com/5f/aa/76/5faa764065eb0090875c74ea6fc95ae8.js"
+    const val SOCIAL_BAR_SRC = "https://pl31271905.profitableratecpmnetwork.com/f4/00/28/f4002865e3ad4ae912683730e0522dc8.js"
+    const val SOCIAL_BAR_BASE_URL = "https://pl31271905.profitableratecpmnetwork.com/"
 
     // Social Bar Cooldown Management: Minimum 90 seconds between social bar triggers
     private const val SOCIAL_BAR_COOLDOWN_MS = 90_000L
@@ -60,7 +63,7 @@ object AdsterraManager {
 
     /**
      * Constructs HTML snippet for Adsterra 320x50 Mobile Banner.
-     * Incorporates safe document.write polyfill and ad rendering observer.
+     * Executes Adsterra script naturally in the HTML document without document.write interception.
      */
     fun getBanner320x50Html(isDark: Boolean): String {
         return """
@@ -82,7 +85,7 @@ object AdsterraManager {
                         justify-content: center;
                         align-items: center;
                     }
-                    #ad-container {
+                    #banner-container {
                         width: 320px;
                         height: 50px;
                         min-width: 320px;
@@ -95,78 +98,37 @@ object AdsterraManager {
                     }
                 </style>
                 <script type="text/javascript">
-                    // Polyfill document.write to prevent Chromium from blocking post-parse execution
-                    (function() {
-                        var originalWrite = document.write.bind(document);
-                        var originalWriteln = document.writeln.bind(document);
-                        function safeAppend(html) {
-                            var target = document.getElementById('ad-container') || document.body;
-                            var temp = document.createElement('div');
-                            temp.innerHTML = html;
-                            var scripts = [];
-                            var nodes = Array.prototype.slice.call(temp.childNodes);
-                            for (var i = 0; i < nodes.length; i++) {
-                                if (nodes[i].tagName === 'SCRIPT') {
-                                    scripts.push(nodes[i]);
-                                } else {
-                                    target.appendChild(nodes[i]);
-                                }
-                            }
-                            for (var j = 0; j < scripts.length; j++) {
-                                var s = document.createElement('script');
-                                var old = scripts[j];
-                                for (var a = 0; a < old.attributes.length; a++) {
-                                    s.setAttribute(old.attributes[a].name, old.attributes[a].value);
-                                }
-                                s.text = old.text;
-                                target.appendChild(s);
-                            }
-                        }
-                        document.write = function(content) {
-                            if (document.readyState === 'loading') {
-                                try {
-                                    originalWrite(content);
-                                    return;
-                                } catch(e) {
-                                    // fall through to safeAppend
-                                }
-                            }
-                            safeAppend(content);
-                        };
-                        document.writeln = function(content) {
-                            document.write(content + '\n');
-                        };
-                    })();
-
-                    // Global Adsterra Banner Options
-                    window.atOptions = {
-                        'key': '$BANNER_320_50_KEY',
-                        'format': 'iframe',
-                        'height': 50,
-                        'width': 320,
-                        'params': {}
-                    };
-                    var atOptions = window.atOptions;
-
-                    // Diagnostic Creative Observer
+                    console.log('[Adsterra Banner] Parsing HTML document for 320x50 Banner...');
+                    window.addEventListener('DOMContentLoaded', function() {
+                        console.log('[Adsterra Banner] DOMContentLoaded: container ready');
+                    });
                     window.addEventListener('load', function() {
-                        console.log('[Adsterra Banner] Page loaded, observing ad creative delivery...');
-                        setTimeout(function() {
-                            var container = document.getElementById('ad-container');
-                            var iframes = container ? container.getElementsByTagName('iframe') : [];
-                            var imgs = container ? container.getElementsByTagName('img') : [];
-                            var links = container ? container.getElementsByTagName('a') : [];
-                            if (iframes.length > 0 || imgs.length > 0 || links.length > 0) {
-                                console.log('[Adsterra Banner] Real ad creative rendered successfully! Elements found: iframes=' + iframes.length + ', imgs=' + imgs.length);
-                            } else {
-                                console.warn('[Adsterra Banner] [NO-FILL or PENDING] No active ad creative elements found in container after timeout. Adsterra has no matching campaign for this bid/region.');
-                            }
-                        }, 4000);
+                        console.log('[Adsterra Banner] Page loaded. Observing creative placement...');
+                        var container = document.getElementById('banner-container');
+                        if (container && window.MutationObserver) {
+                            var observer = new MutationObserver(function() {
+                                var iframes = container.getElementsByTagName('iframe');
+                                var imgs = container.getElementsByTagName('img');
+                                if (iframes.length > 0 || imgs.length > 0) {
+                                    console.log('[Adsterra Banner] Ad creative detected! iframes=' + iframes.length + ', imgs=' + imgs.length);
+                                }
+                            });
+                            observer.observe(container, { childList: true, subtree: true });
+                        }
                     });
                 </script>
             </head>
             <body>
-                <div id="ad-container">
+                <div id="banner-container">
+                    <script type="text/javascript">
+                        atOptions = {
+                            'key' : '$BANNER_320_50_KEY',
+                            'format' : 'iframe',
+                            'height' : 50,
+                            'width' : 320,
+                            'params' : {}
+                        };
+                    </script>
                     <script type="text/javascript" src="$BANNER_320_50_SRC"></script>
                 </div>
             </body>
@@ -176,7 +138,7 @@ object AdsterraManager {
 
     /**
      * Constructs HTML snippet for Adsterra Native Banner.
-     * Incorporates safe document.write polyfill and native ad rendering observer.
+     * Executes Adsterra script naturally in the HTML document without document.write interception.
      */
     fun getNativeBannerHtml(isDark: Boolean): String {
         return """
@@ -203,59 +165,22 @@ object AdsterraManager {
                     }
                 </style>
                 <script type="text/javascript">
-                    (function() {
-                        var originalWrite = document.write.bind(document);
-                        var originalWriteln = document.writeln.bind(document);
-                        function safeAppend(html) {
-                            var target = document.getElementById('container-$NATIVE_BANNER_KEY') || document.body;
-                            var temp = document.createElement('div');
-                            temp.innerHTML = html;
-                            var scripts = [];
-                            var nodes = Array.prototype.slice.call(temp.childNodes);
-                            for (var i = 0; i < nodes.length; i++) {
-                                if (nodes[i].tagName === 'SCRIPT') {
-                                    scripts.push(nodes[i]);
-                                } else {
-                                    target.appendChild(nodes[i]);
-                                }
-                            }
-                            for (var j = 0; j < scripts.length; j++) {
-                                var s = document.createElement('script');
-                                var old = scripts[j];
-                                for (var a = 0; a < old.attributes.length; a++) {
-                                    s.setAttribute(old.attributes[a].name, old.attributes[a].value);
-                                }
-                                s.text = old.text;
-                                target.appendChild(s);
-                            }
-                        }
-                        document.write = function(content) {
-                            if (document.readyState === 'loading') {
-                                try {
-                                    originalWrite(content);
-                                    return;
-                                } catch(e) {
-                                    // fall through to safeAppend
-                                }
-                            }
-                            safeAppend(content);
-                        };
-                        document.writeln = function(content) {
-                            document.write(content + '\n');
-                        };
-                    })();
-
+                    console.log('[Adsterra Native] Parsing HTML document for Native Banner...');
+                    window.addEventListener('DOMContentLoaded', function() {
+                        var container = document.getElementById('container-$NATIVE_BANNER_KEY');
+                        console.log('[Adsterra Native] DOMContentLoaded: container exists=' + (container !== null));
+                    });
                     window.addEventListener('load', function() {
-                        console.log('[Adsterra Native] Page loaded, observing native ad insertion...');
-                        setTimeout(function() {
-                            var container = document.getElementById('container-$NATIVE_BANNER_KEY');
-                            var hasContent = container && (container.children.length > 0 || container.innerText.trim().length > 0);
-                            if (hasContent) {
-                                console.log('[Adsterra Native] Native ad creative rendered with ' + container.children.length + ' elements!');
-                            } else {
-                                console.warn('[Adsterra Native] [NO-FILL or PENDING] Native banner container is empty. Adsterra has no matching campaign for this bid/region.');
-                            }
-                        }, 4500);
+                        console.log('[Adsterra Native] Page loaded. Observing native ad insertion...');
+                        var container = document.getElementById('container-$NATIVE_BANNER_KEY');
+                        if (container && window.MutationObserver) {
+                            var observer = new MutationObserver(function() {
+                                if (container.children.length > 0 || container.innerText.trim().length > 0) {
+                                    console.log('[Adsterra Native] Native ad creative rendered with ' + container.children.length + ' elements!');
+                                }
+                            });
+                            observer.observe(container, { childList: true, subtree: true });
+                        }
                     });
                 </script>
             </head>
@@ -282,11 +207,14 @@ object AdsterraManager {
                     html, body { background-color: transparent; width: 100%; height: 100%; overflow: hidden; }
                 </style>
                 <script type="text/javascript">
-                    console.log('[Adsterra SocialBar] Initializing Social Bar script tag...');
+                    console.log('[Adsterra SocialBar] Initializing Social Bar script tag: $SOCIAL_BAR_SRC');
+                    window.addEventListener('load', function() {
+                        console.log('[Adsterra SocialBar] Social Bar container window load event completed.');
+                    });
                 </script>
             </head>
             <body>
-                <script type='text/javascript' src='$SOCIAL_BAR_SRC'></script>
+                <script type="text/javascript" src="$SOCIAL_BAR_SRC"></script>
             </body>
             </html>
         """.trimIndent()

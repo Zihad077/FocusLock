@@ -7,6 +7,8 @@
         </trust-anchors>
     </base-config>
     <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">profitableratecpmnetwork.com</domain>
+        <domain includeSubdomains="true">highrevenueformat.com</domain>
         <domain includeSubdomains="true">effectivegatecontent.com</domain>
         <domain includeSubdomains="true">adsterra.com</domain>
         <domain includeSubdomains="true">binance.com</domain>

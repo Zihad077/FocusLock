@@ -25,10 +25,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.example.R
 import com.example.database.UserSettings
 import com.example.database.isPremiumActive
 import com.example.ui.theme.LiquidBackground
 import com.example.ui.theme.liquidGlass
+import com.example.util.TypingChallengePhrases
 import kotlinx.coroutines.delay
 
 enum class ChallengeType { MIND, FOCUS, TYPING, PIN }
@@ -61,7 +64,7 @@ fun ChallengeScreen(
                     onCancel = { selectedChallenge = null }
                 )
                 ChallengeType.TYPING -> TypingChallenge(
-                    difficulty = settings.difficulty,
+                    settings = settings,
                     onComplete = { onChallengeComplete(ChallengeType.TYPING) },
                     onCancel = { selectedChallenge = null }
                 )
@@ -94,7 +97,7 @@ fun ChallengeSelectionScreen(
         Spacer(modifier = Modifier.weight(1f))
         
         Text(
-            text = "VERIFICATION GATEWAY",
+            text = stringResource(R.string.verification_gateway),
             style = MaterialTheme.typography.labelSmall.copy(
                 fontWeight = FontWeight.ExtraBold,
                 letterSpacing = 1.2.sp
@@ -105,7 +108,7 @@ fun ChallengeSelectionScreen(
         Spacer(modifier = Modifier.height(12.dp))
         
         Text(
-            text = "Complete a challenge to unlock a temporary session.",
+            text = stringResource(R.string.verification_gateway_desc),
             style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold),
             color = MaterialTheme.colorScheme.onBackground,
             textAlign = TextAlign.Center
@@ -123,7 +126,7 @@ fun ChallengeSelectionScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No verification methods configured. Enable challenges in Settings.",
+                        text = stringResource(R.string.no_challenges_enabled),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.error,
                         textAlign = TextAlign.Center
@@ -132,32 +135,32 @@ fun ChallengeSelectionScreen(
             } else {
                 if (settings.mindChallengeEnabled) {
                     ChallengeGlassOptionCard(
-                        title = "Mental Math Challenge",
-                        subtitle = "Solve an arithmetic problem",
+                        title = stringResource(R.string.mental_math_challenge),
+                        subtitle = stringResource(R.string.mental_math_subtitle),
                         icon = Icons.Default.Psychology,
                         onClick = { onSelect(ChallengeType.MIND) }
                     )
                 }
                 if (settings.focusChallengeEnabled) {
                     ChallengeGlassOptionCard(
-                        title = "Patience & Stillness",
-                        subtitle = "Mindful pause countdown",
+                        title = stringResource(R.string.patience_stillness),
+                        subtitle = stringResource(R.string.patience_stillness_subtitle),
                         icon = Icons.Default.Timer,
                         onClick = { onSelect(ChallengeType.FOCUS) }
                     )
                 }
                 if (settings.typingChallengeEnabled) {
                     ChallengeGlassOptionCard(
-                        title = "Mindful Intention Typing",
-                        subtitle = "Type an affirmation prompt",
+                        title = stringResource(R.string.typing_intention_title),
+                        subtitle = stringResource(R.string.typing_intention_subtitle),
                         icon = Icons.Default.Keyboard,
                         onClick = { onSelect(ChallengeType.TYPING) }
                     )
                 }
                 if (settings.pinUnlockEnabled) {
                     ChallengeGlassOptionCard(
-                        title = "Secure PIN Authorization",
-                        subtitle = "Enter your preset passcode",
+                        title = stringResource(R.string.secure_pin_title),
+                        subtitle = stringResource(R.string.secure_pin_subtitle),
                         icon = Icons.Default.Dialpad,
                         onClick = { onSelect(ChallengeType.PIN) }
                     )
@@ -169,7 +172,7 @@ fun ChallengeSelectionScreen(
         
         TextButton(onClick = onCancel) {
             Text(
-                "Return to Block Screen",
+                text = stringResource(R.string.return_to_block_screen),
                 style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f)
             )
@@ -185,8 +188,7 @@ fun ChallengeGlassOptionCard(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     onClick: () -> Unit
 ) {
-    val isDark = isSystemInDarkTheme()
-    val primaryColor = if (isDark) com.example.ui.theme.SleekPrimaryDark else com.example.ui.theme.SleekPrimaryLight
+    val primaryColor = com.example.ui.theme.SleekPrimaryDark
 
     Box(
         modifier = Modifier
@@ -235,18 +237,11 @@ fun ChallengeGlassOptionCard(
 @Composable
 fun MindChallenge(difficulty: String, onComplete: () -> Unit, onCancel: () -> Unit) {
     var answer by remember { mutableStateOf("") }
-    var question by remember { mutableStateOf("") }
-    var expected by remember { mutableIntStateOf(0) }
+    var a by remember { mutableIntStateOf((12..48).random()) }
+    var b by remember { mutableIntStateOf((12..48).random()) }
+    val expected by remember(a, b) { derivedStateOf { a + b } }
     var error by remember { mutableStateOf(false) }
-    val isDark = isSystemInDarkTheme()
-    val primaryColor = if (isDark) com.example.ui.theme.SleekPrimaryDark else com.example.ui.theme.SleekPrimaryLight
-
-    LaunchedEffect(Unit) {
-        val a = (12..48).random()
-        val b = (12..48).random()
-        question = "What is $a + $b?"
-        expected = a + b
-    }
+    val primaryColor = com.example.ui.theme.SleekPrimaryDark
 
     Column(
         modifier = Modifier
@@ -263,22 +258,23 @@ fun MindChallenge(difficulty: String, onComplete: () -> Unit, onCancel: () -> Un
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    "Mental Math Challenge",
+                    text = stringResource(R.string.mental_math_challenge),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Spacer(modifier = Modifier.height(20.dp))
                 Text(
-                    question,
-                    style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.ExtraBold),
-                    color = primaryColor
+                    text = stringResource(R.string.what_is_math, a, b),
+                    style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.ExtraBold),
+                    color = primaryColor,
+                    textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(28.dp))
                 
                 OutlinedTextField(
                     value = answer,
                     onValueChange = { answer = it; error = false },
-                    label = { Text("Your Answer") },
+                    label = { Text(stringResource(R.string.your_answer)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     isError = error,
                     singleLine = true,
@@ -286,10 +282,19 @@ fun MindChallenge(difficulty: String, onComplete: () -> Unit, onCancel: () -> Un
                     modifier = Modifier.fillMaxWidth()
                 )
                 
+                if (error) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = stringResource(R.string.incorrect_try_again),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                
                 Spacer(modifier = Modifier.height(24.dp))
                 Button(
                     onClick = {
-                        if (answer.toIntOrNull() == expected) {
+                        if (answer.trim().toIntOrNull() == expected) {
                             onComplete()
                         } else {
                             error = true
@@ -301,14 +306,20 @@ fun MindChallenge(difficulty: String, onComplete: () -> Unit, onCancel: () -> Un
                         .height(54.dp),
                     shape = RoundedCornerShape(16.dp)
                 ) {
-                    Text("Verify Answer", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+                    Text(
+                        text = stringResource(R.string.verify_answer),
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                    )
                 }
             }
         }
         
         Spacer(modifier = Modifier.height(24.dp))
         TextButton(onClick = onCancel) {
-            Text("Cancel", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f))
+            Text(
+                text = stringResource(R.string.cancel),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f)
+            )
         }
     }
 }
@@ -316,8 +327,7 @@ fun MindChallenge(difficulty: String, onComplete: () -> Unit, onCancel: () -> Un
 @Composable
 fun FocusChallenge(durationSecs: Int, onComplete: () -> Unit, onCancel: () -> Unit) {
     var countdown by remember { mutableIntStateOf(durationSecs) }
-    val isDark = isSystemInDarkTheme()
-    val primaryColor = if (isDark) com.example.ui.theme.SleekPrimaryDark else com.example.ui.theme.SleekPrimaryLight
+    val primaryColor = com.example.ui.theme.SleekPrimaryDark
     
     LaunchedEffect(countdown) {
         if (countdown > 0) {
@@ -344,13 +354,13 @@ fun FocusChallenge(durationSecs: Int, onComplete: () -> Unit, onCancel: () -> Un
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    "Patience & Stillness",
+                    text = stringResource(R.string.patience_stillness),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(
-                    "Keep your awareness steady without closing this view.",
+                    text = stringResource(R.string.patience_stillness_desc),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                     textAlign = TextAlign.Center
@@ -376,14 +386,19 @@ fun FocusChallenge(durationSecs: Int, onComplete: () -> Unit, onCancel: () -> Un
         
         Spacer(modifier = Modifier.height(32.dp))
         TextButton(onClick = onCancel) {
-            Text("Give Up", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f))
+            Text(
+                text = stringResource(R.string.give_up),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f)
+            )
         }
     }
 }
 
 @Composable
-fun TypingChallenge(difficulty: String, onComplete: () -> Unit, onCancel: () -> Unit) {
-    val phrase = "I will stay focused on my goals"
+fun TypingChallenge(settings: UserSettings, onComplete: () -> Unit, onCancel: () -> Unit) {
+    var phrase by remember {
+        mutableStateOf(TypingChallengePhrases.getRandomPhrase(settings.language))
+    }
     var input by remember { mutableStateOf("") }
     var error by remember { mutableStateOf(false) }
 
@@ -397,58 +412,132 @@ fun TypingChallenge(difficulty: String, onComplete: () -> Unit, onCancel: () -> 
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .liquidGlass(shape = RoundedCornerShape(28.dp), isElevated = true)
-                .padding(28.dp)
+                .liquidGlass(shape = RoundedCornerShape(28.dp), isElevated = true, isHighlight = true)
+                .padding(24.dp)
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.mindful_intention_prompt),
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    IconButton(
+                        onClick = {
+                            phrase = TypingChallengePhrases.getRandomPhrase(settings.language)
+                            input = ""
+                            error = false
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = stringResource(R.string.new_sentence),
+                            tint = Color(0xFF00E5FF)
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                
                 Text(
-                    "Mindful Intention Prompt",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    "Type the affirmation below exactly:",
+                    text = stringResource(R.string.type_affirmation_exact),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    "\"$phrase\"",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.primary,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                     textAlign = TextAlign.Center
                 )
-                Spacer(modifier = Modifier.height(24.dp))
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Highlighted quote bubble
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color(0x2000E5FF))
+                        .border(1.dp, Color(0x5000E5FF), RoundedCornerShape(16.dp))
+                        .padding(16.dp)
+                ) {
+                    Text(
+                        text = "\"$phrase\"",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            lineHeight = 24.sp
+                        ),
+                        color = Color(0xFF00E5FF),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(20.dp))
                 
                 OutlinedTextField(
                     value = input,
-                    onValueChange = { input = it; error = false },
-                    label = { Text("Type affirmation") },
+                    onValueChange = { 
+                        input = it
+                        error = false 
+                    },
+                    placeholder = { 
+                        Text(
+                            stringResource(R.string.type_affirmation_placeholder),
+                            style = MaterialTheme.typography.bodyMedium
+                        ) 
+                    },
                     isError = error,
-                    singleLine = true,
+                    singleLine = false,
+                    maxLines = 3,
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.fillMaxWidth()
                 )
                 
+                if (error) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = stringResource(R.string.incorrect_try_again),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                
                 Spacer(modifier = Modifier.height(24.dp))
+                
                 Button(
                     onClick = {
-                        if (input.trim().equals(phrase, ignoreCase = true)) onComplete() else error = true
+                        val cleanInput = input.trim().replace("\n", " ").replace("  ", " ")
+                        val cleanPhrase = phrase.trim().replace("  ", " ")
+                        if (cleanInput.equals(cleanPhrase, ignoreCase = true) || cleanInput == cleanPhrase) {
+                            onComplete()
+                        } else {
+                            error = true
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(54.dp),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF00E5FF),
+                        contentColor = Color.Black
+                    )
                 ) {
-                    Text("Confirm Intention", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+                    Text(
+                        text = stringResource(R.string.confirm_intention),
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                    )
                 }
             }
         }
         
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
         TextButton(onClick = onCancel) {
-            Text("Cancel", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f))
+            Text(
+                stringResource(R.string.cancel),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+            )
         }
     }
 }
@@ -473,7 +562,7 @@ fun PinChallenge(settings: UserSettings, onComplete: () -> Unit, onCancel: () ->
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    "Security Passcode",
+                    text = stringResource(R.string.security_passcode),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onBackground
                 )
@@ -482,7 +571,7 @@ fun PinChallenge(settings: UserSettings, onComplete: () -> Unit, onCancel: () ->
                 OutlinedTextField(
                     value = input,
                     onValueChange = { input = it; error = false },
-                    label = { Text("Enter PIN") },
+                    label = { Text(stringResource(R.string.enter_pin)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                     isError = error,
                     singleLine = true,
@@ -500,14 +589,20 @@ fun PinChallenge(settings: UserSettings, onComplete: () -> Unit, onCancel: () ->
                         .height(54.dp),
                     shape = RoundedCornerShape(16.dp)
                 ) {
-                    Text("Authorize Unlock", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+                    Text(
+                        text = stringResource(R.string.authorize_unlock),
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                    )
                 }
             }
         }
         
         Spacer(modifier = Modifier.height(24.dp))
         TextButton(onClick = onCancel) {
-            Text("Cancel", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f))
+            Text(
+                text = stringResource(R.string.cancel),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f)
+            )
         }
     }
 }

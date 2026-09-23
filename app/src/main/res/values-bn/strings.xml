@@ -1,21 +1,94 @@
 <resources>
     <string name="app_name">FocusLock</string>
     <string name="accessibility_service_description">ফোকাসলক দ্বারা ব্যবহৃত হয় যখন বিভ্রান্তিকর অ্যাপগুলি খোলা হয় তা সনাক্ত করতে যাতে সেগুলি ব্লক করা যায়।</string>
-    <string name="level_xp">স্তর %1$d • পরবর্তী স্তরের জন্য %2$d XP</string>
-    <string name="limits">সীমা</string>
+    
+    <!-- Home / Dashboard -->
+    <string name="digital_equilibrium">ডিজিটাল ভারসাম্য</string>
+    <string name="level_xp">লেভেল %1$d • পরবর্তী লেভেলের জন্য %2$d XP</string>
+    <string name="limits">লিমিট</string>
     <string name="schedules">সময়সূচী</string>
     <string name="time_limits_today">আজকের জন্য সময় সীমা</string>
     <string name="stats">পরিসংখ্যান</string>
     <string name="total_focus">মোট ফোকাস</string>
     <string name="time_saved">বাঁচানো সময়</string>
     <string name="start_focus">শুরু করুন</string>
+    <string name="focus_score">ফোকাস স্কোর</string>
+    <string name="todays_usage">আজকের ব্যবহার</string>
+    <string name="time_reclaimed">বাঁচানো সময়</string>
+    <string name="blocked_apps">ব্লক করা অ্যাপস</string>
+    <string name="current_streak">বর্তমান স্ট্রিক</string>
+    <string name="days_suffix">দিন</string>
+    <string name="active_limits">সক্রিয় লিমিট</string>
+    <string name="monitored_suffix">নজরদারিতে আছে</string>
+    <string name="no_limits_set">এখনও কোনো লিমিট সেট করা হয়নি</string>
+    <string name="no_limits_desc">সচেতন অভ্যাস গড়ে তুলতে অ্যাপস ট্যাবে গিয়ে অ্যাপ সীমাবদ্ধতা কনফিগার করুন।</string>
+    <string name="set_app_limits">অ্যাপ লিমিট সেট করুন</string>
+    <string name="active_protection">সুরক্ষা সক্রিয়</string>
+    <string name="protection_limited">সুরক্ষা সীমিত</string>
+    <string name="protection_active_desc">অ্যাক্সেসিবিলিটি মনিটর এবং স্ক্রিন ইন্টারসেপশন স্বাভাবিকভাবে চলছে।</string>
+    <string name="accessibility_needed_desc">তাৎক্ষণিক অ্যাপ ইন্টারসেপ্ট করার জন্য অ্যাক্সেসিবিলিটি পারমিশন প্রয়োজন।</string>
+    <string name="overlay_needed_desc">মাইন্ডফুল লক স্ক্রিন প্রদর্শনের জন্য ওভারলে পারমিশন প্রয়োজন।</string>
+    <string name="enable_btn">চালু করুন</string>
+    <string name="adjust_limit_title">লিমিট পরিবর্তন: %1$s</string>
+    <string name="daily_allowance">দৈনিক বরাদ্দ: %1$d মিনিট</string>
+    <string name="min_5">৫ মি</string>
+    <string name="hours_4">৪ ঘণ্টা</string>
+    <string name="save">সংরক্ষণ করুন</string>
+    <string name="cancel">বাতিল</string>
+    <string name="blocked_status">ব্লকড</string>
+    <string name="min_left">%1$d মি বাকি</string>
+    <string name="used_format">%1$d / %2$d মিনিট ব্যবহৃত</string>
+
+    <!-- Block Screen -->
     <string name="app_blocked">%1$s ব্লক করা হয়েছে</string>
+    <string name="app_restricted">অ্যাপ সীমাবদ্ধ</string>
+    <string name="times_up">সময় শেষ</string>
+    <string name="restricted_reason">আপনার উৎপাদনশীলতা রক্ষার জন্য \"%1$s\" সীমাবদ্ধ করা হয়েছে। আসল কাজে মনোযোগ দিন।</string>
+    <string name="quota_reached_reason">আপনি \"%1$s\"-এর জন্য আপনার দৈনিক কোটা শেষ করেছেন। একটু থামুন, শ্বাস নিন এবং নতুন উদ্যমে শুরু করুন।</string>
+    <string name="usage_today">আজকের ব্যবহার</string>
     <string name="limit_reached">আপনি আপনার দৈনিক %1$d মিনিটের সীমায় পৌঁছেছেন।</string>
+    <string name="strict_block_0m">কঠোরভাবে ব্লকড (০ মিনিট সীমা)</string>
+    <string name="return_to_home">হোম স্ক্রিনে ফিরে যান</string>
+    <string name="complete_challenge_to_unlock">আনলক করতে চ্যালেঞ্জ সম্পন্ন করুন</string>
+    <string name="emergency_bypass_left">জরুরী বাইপাস (%1$d বাকি)</string>
+    <string name="no_emergency_passes_left">কোনো জরুরী পাস বাকি নেই</string>
     <string name="wait_and_breathe">অপেক্ষা করুন এবং শ্বাস নিন</string>
     <string name="earn_more_time">আরও সময় উপার্জন করুন</string>
     <string name="emergency_unlock">জরুরী আনলক</string>
     <string name="take_a_deep_breath">একটি গভীর শ্বাস নিন।</string>
-    <string name="challenge_instructions">অতিরিক্ত ৫ মিনিট আনলক করতে উপরের লেখাটি টাইপ করুন।</string>
+    <string name="challenge_instructions">অতিরিক্ত ৫ মিনিট আনলক করতে নিচের বাক্যটি হুবহু টাইপ করুন।</string>
+
+    <!-- Challenge Screen -->
+    <string name="verification_gateway">যাচাইকরণ গেটওয়ে</string>
+    <string name="verification_gateway_desc">একটি অস্থায়ী সেশন আনলক করতে নিচের যেকোনো একটি চ্যালেঞ্জ সম্পন্ন করুন।</string>
+    <string name="no_challenges_enabled">কোনো যাচাইকরণ পদ্ধতি সক্রিয় নেই। সেটিংসে গিয়ে চ্যালেঞ্জ চালু করুন।</string>
+    <string name="mental_math_challenge">মানসিক গণিত চ্যালেঞ্জ</string>
+    <string name="mental_math_subtitle">একটি পাটিগণিত সমস্যার সমাধান করুন</string>
+    <string name="patience_stillness">ধৈর্য ও স্থিরতা</string>
+    <string name="patience_stillness_subtitle">মাইন্ডফুল বিরতি ও কাউন্টডাউন</string>
+    <string name="patience_stillness_desc">স্ক্রিন বন্ধ না করে স্থির মনোযোগ বজায় রাখুন।</string>
+    <string name="typing_intention_title">মনোযোগী টাইপিং</string>
+    <string name="typing_intention_subtitle">অনুপ্রেরণামূলক বাক্য টাইপ করুন</string>
+    <string name="secure_pin_title">নিরাপদ পিন কোড</string>
+    <string name="secure_pin_subtitle">আপনার পূর্বনির্ধারিত পাসকোড লিখুন</string>
+    <string name="return_to_block_screen">ব্লক স্ক্রিনে ফিরে যান</string>
+    <string name="what_is_math">%1$d + %2$d এর মান কত?</string>
+    <string name="your_answer">আপনার উত্তর</string>
+    <string name="verify_answer">উত্তর যাচাই করুন</string>
+    <string name="give_up">ছেড়ে দিন</string>
+    <string name="security_passcode">নিরাপত্তা পাসকোড</string>
+    <string name="enter_pin">পিন লিখুন</string>
+    <string name="authorize_unlock">আনলক অনুমোদন করুন</string>
+    
+    <!-- Typing Challenge -->
+    <string name="mindful_intention_prompt">মাইন্ডফুল টাইপিং চ্যালেঞ্জ</string>
+    <string name="type_affirmation_exact">নিচের বাক্যটি হুবহু নিচে টাইপ করুন:</string>
+    <string name="type_affirmation_placeholder">বাক্যটি এখানে টাইপ করুন</string>
+    <string name="confirm_intention">নিশ্চিত করুন</string>
+    <string name="new_sentence">নতুন বাক্য</string>
+    <string name="incorrect_try_again">লেখাটি মিলছে না। আবার চেষ্টা করুন।</string>
+
+    <!-- Stats -->
     <string name="statistics">পরিসংখ্যান</string>
     <string name="most_distracting">সবচেয়ে বেশি বিভ্রান্তিকর</string>
     <string name="insufficient_data">নির্ধারণ করার জন্য অপর্যাপ্ত ডেটা।</string>
@@ -39,15 +112,47 @@
     <string name="nav_home">হোম</string>
     <string name="nav_apps">অ্যাপস</string>
     <string name="nav_focus">ফোকাস</string>
+    <string name="nav_goals">লক্ষ্য</string>
     <string name="nav_stats">পরিসংখ্যান</string>
     <string name="nav_settings">সেটিংস</string>
 
     <!-- Settings Sections & Items -->
-    <string name="appearance">চেহারা ও থিম</string>
-    <string name="appearance_desc">লিকুইড গ্লাস ডার্ক (স্থায়ী)</string>
+    <string name="account_section">অ্যাকাউন্ট</string>
+    <string name="preferences_section">পছন্দসমূহ</string>
+    <string name="features_section">ফিচারসমূহ</string>
+    <string name="premium_section">প্রিমিয়াম</string>
+    <string name="data_management_section">ডেটা ব্যবস্থাপনা</string>
+    <string name="about_section">সম্পর্কে</string>
+
+    <string name="appearance">ব্যাকগ্রাউন্ড থিম</string>
+    <string name="appearance_desc">লাইভ অ্যানিমেটেড দৃশ্য বেছে নিন</string>
     <string name="language">ভাষা (Language)</string>
+    <string name="language_desc">অ্যাপের ভাষা নির্বাচন করুন</string>
+    <string name="choose_language">ভাষা নির্বাচন করুন</string>
     <string name="profile_level">প্রোফাইল ও লেভেল</string>
-    <string name="notifications">বিজ্ঞপ্তি</string>
+    <string name="notifications">বিজ্ঞপ্তি ও নোটিফিকেশন</string>
+    <string name="notifications_subtitle">অ্যালার্ট ও রিমাইন্ডার</string>
+    <string name="anti_distraction_challenges">মাইন্ডফুল চ্যালেঞ্জ</string>
+    <string name="anti_distraction_challenges_subtitle">টাইপিং ও মানসিক অনুশীলনের মাধ্যমে আনলক</string>
+    <string name="focus_mode_setting">ফোকাস মোড</string>
+    <string name="focus_mode_subtitle_active">সক্রিয় সেশন চলছে</string>
+    <string name="focus_mode_subtitle_idle">ডিপ ওয়ার্ক সেশন কনফিগার করুন</string>
+    <string name="app_limits_schedules">অ্যাপ লিমিট ও শিডিউল</string>
+    <string name="app_limits_schedules_subtitle">সীমাবদ্ধ অ্যাপ পরিচালনা করুন</string>
+    <string name="emergency_unlock_setting">জরুরী আনলক</string>
+    <string name="permission_center">পারমিশন সেন্টার</string>
+    <string name="permission_center_subtitle">প্রয়োজনীয় ও ঐচ্ছিক সিস্টেম গার্ড পরিচালনা করুন</string>
+    <string name="escape_prevention">আনইনস্টল সুরক্ষা ও এসকেপ প্রিভেনশন</string>
+    <string name="escape_prevention_subtitle">অ্যান্টি-ডিলিট ও স্ট্যাবল লক মোড কনফিগার করুন</string>
+    <string name="focuslock_premium">ফোকাসলক প্রিমিয়াম</string>
+    <string name="premium_active">প্রিমিয়াম সক্রিয়</string>
+    <string name="premium_inactive">আজীবন বিজ্ঞাপনমুক্ত করুন ও ডেভেলপমেন্টে সহায়তা করুন</string>
+    <string name="data_backup">ডেটা ব্যাকআপ ও এক্সপোর্ট</string>
+    <string name="data_backup_subtitle">আপনার ডেটা এক্সপোর্ট, ইম্পোর্ট ও ব্যাকআপ করুন</string>
+    <string name="privacy_policy">গোপনীয়তা ও ডেটা সুরক্ষা</string>
+    <string name="privacy_policy_subtitle">১০০% অন-ডিভাইস ও সম্পূর্ণ ব্যক্তিগত</string>
+    <string name="about_app">ফোকাসলক সম্পর্কে</string>
+    <string name="about_app_subtitle">সংস্করণ ১.০.০ (বিল্ড ১)</string>
 
     <!-- Notifications -->
     <string name="notification_channel_name">ফোকাসলক নোটিফিকেশন</string>
@@ -60,4 +165,24 @@
     <string name="deep_focus_active_desc">ফোকাসলক বিভ্রান্তিকর অ্যাপ ব্লক করছে। বাকি: %1$d মিনিট।</string>
     <string name="deep_focus_complete_title">ডিপ ফোকাস সফল!</string>
     <string name="deep_focus_complete_desc">চমৎকার! আপনার ফোকাস সেশন সম্পন্ন হয়েছে। +৫০ এক্সপি যুক্ত হয়েছে।</string>
+
+    <!-- Welcome & Onboarding Hooking Texts (Bengali) -->
+    <string name="welcome_badge">✦ স্মার্ট ডিজিটাল মাইন্ডফুলনেস ও প্রোডাক্টিভিটি</string>
+    <string name="welcome_hero_title">আপনার সময় ফিরিয়ে নিন।\nফোকাসকে করুন অপরাজেয়।</string>
+    <string name="welcome_hero_desc">অবিরাম স্ক্রলিংয়ের চক্র ভাঙুন। সচেতন স্ক্রিন-টাইম অভ্যাস গড়ে তুলুন, মাইন্ডফুল চ্যালেঞ্জের মাধ্যমে অপ্রয়োজনীয় অ্যাপ ওপেন বন্ধ করুন এবং প্রতিদিন ৩+ ঘণ্টা সময় নিজের কাজে লাগান।</string>
+    <string name="stat_hours_saved">২.৮+ ঘণ্টা</string>
+    <string name="stat_hours_saved_desc">দৈনিক সাশ্রয়</string>
+    <string name="stat_reduction">৯৪% কম</string>
+    <string name="stat_reduction_desc">অপ্রয়োজনীয় ওপেন</string>
+    <string name="stat_privacy">১০০% প্রাইভেট</string>
+    <string name="stat_privacy_desc">অন-ডিভাইস নিরাপদ</string>
+    <string name="feature_friction_title">স্মার্ট মাইন্ডফুল শিল্ড</string>
+    <string name="feature_friction_desc">বিভ্রান্তিকর অ্যাপ খোলার সাথে সাথে মাইন্ডফুল বিরতি আপনাকে সঠিক সিদ্ধান্তে ফেরায়।</string>
+    <string name="feature_challenges_title">কগনিটিভ আনলক চ্যালেঞ্জ</string>
+    <string name="feature_challenges_desc">অনুপ্রেরণামূলক বাক্য টাইপিং, গণিত সমাধান ও টাইমার দিয়ে দৃঢ় সংকল্প যাচাই।</string>
+    <string name="feature_deepwork_title">কঠোর কোটা ও শিডিউল</string>
+    <string name="feature_deepwork_desc">কাজের সময় সোশ্যাল অ্যাপ লক রাখুন এবং এক্সপি ও স্ট্রিক অর্জন করে নিজেকে অনুপ্রাণিত করুন।</string>
+    <string name="feature_privacy_title">সম্পূর্ণ অফলাইন ও জিরো ট্র্যাকিং</string>
+    <string name="feature_privacy_desc">কোনো ক্লাউড বা ট্র্যাকিং নেই। আপনার ব্যক্তিগত ডেটা সম্পূর্ণ আপনার ডিভাইসেই সীমাবদ্ধ।</string>
+    <string name="get_started_btn">আপনার সময় নিয়ন্ত্রণ শুরু করুন</string>
 </resources>
