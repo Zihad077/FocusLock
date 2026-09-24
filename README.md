@@ -1,57 +1,118 @@
 <div align="center">
 
-# 🔒 FocusLock
+# FocusLock
 
 ### Focus. Without distractions.
 
-A modern Android app designed to help you control distracting apps
-and take back control of your screen time.
+A modern Android app designed to help you take control of distracting apps
+and build better digital habits.
 
 <br>
 
-[![📲 Download APK](https://img.shields.io/badge/📲_Download_APK-FocusLock-black?style=for-the-badge)](https://github.com/Zihad077/FocusLock/raw/refs/heads/main/APK_DOWNLOAD/FocusLock.apk)
+<a href="https://github.com/Zihad077/FocusLock/raw/refs/heads/main/APK_DOWNLOAD/FocusLock.apk">
+<img src="https://img.shields.io/badge/DOWNLOAD%20FOCUSLOCK%20APK-111111?style=for-the-badge&logo=android&logoColor=white&labelColor=111111" height="64">
+</a>
 
 <br><br>
 
-**⏱️ Set limits** · **🔒 Stay focused** · **🎯 Build better habits**
+**Set limits** &nbsp;·&nbsp; **Stay focused** &nbsp;·&nbsp; **Take control**
+
+<br><br>
 
 </div>
 
 ---
 
-## ✦ Features
+## What is FocusLock?
 
-⏱️ **Custom App Limits**  
-Set individual time limits for your apps.
+FocusLock creates a simple barrier between you and distracting apps.
 
-🔒 **Focus Protection**  
-Get blocked when your selected limit is reached.
+Choose the apps you want to control, set your limits, and let FocusLock
+help you stay focused when your time runs out.
 
-🎯 **Unlock Challenges**  
-Make unlocking intentional instead of automatic.
+---
 
-📊 **Usage Monitoring**  
-Keep track of your app usage.
+## Features
 
-💾 **Import & Export**  
-Keep your FocusLock data backed up.
+<table>
+<tr>
+<td width="50%">
+
+### App Limits
+
+Set individual usage limits for the apps you choose.
+
+</td>
+<td width="50%">
+
+### Focus Protection
+
+Automatically protect your focus when a limit is reached.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+### Unlock Challenges
+
+Make additional access an intentional decision.
+
+</td>
+<td>
+
+### Usage Monitoring
+
+Keep track of how you're spending your screen time.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+### Data Management
+
+Import and export your FocusLock data.
+
+</td>
+<td>
+
+### Modern Android UI
+
+A clean interface designed for everyday use.
+
+</td>
+</tr>
+</table>
 
 ---
 
 <div align="center">
 
-### 🛠 Built with
+## Built with
 
-**Kotlin · Jetpack Compose · Android SDK**
+**Kotlin** · **Jetpack Compose** · **Android SDK**
 
-<br>
+<br><br>
 
 > **Make distraction harder. Make focus easier.**
 
 <br>
 
-⭐ [Star FocusLock on GitHub](https://github.com/Zihad077/FocusLock)
+<a href="https://github.com/Zihad077/FocusLock">
+View Source Code
+</a>
 
-**Made with ❤️ by Zihad**
+&nbsp;&nbsp;·&nbsp;&nbsp;
+
+<a href="https://github.com/Zihad077/FocusLock/issues">
+Report an Issue
+</a>
+
+<br><br>
+
+**Made by Zihad**
 
 </div>
