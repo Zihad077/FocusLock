@@ -9,7 +9,7 @@ and take back control of your screen time.
 
 <br>
 
-[![📲 Download APK](https://img.shields.io/badge/📲_Download_APK-FocusLock-black?style=for-the-badge)](https://github.com/Zihad077/FocusLock/raw/refs/heads/main/APK_DOWNLOAD/app-debug.apk)
+[![📲 Download APK](https://img.shields.io/badge/📲_Download_APK-FocusLock-black?style=for-the-badge)](https://github.com/Zihad077/FocusLock/blob/main/APK_DOWNLOAD/FocusLock.apk)
 
 <br><br>
 
