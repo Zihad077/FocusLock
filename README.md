@@ -1,42 +1,53 @@
-<div align="center">🔒 FocusLock
+<div align="center">
 
-Focus. Without distractions.
+# 🔒 FocusLock
 
-A modern Android app that helps you take control of distracting apps and your screen time.
+### Focus. Without distractions.
 
-<br>""Android" (https://img.shields.io/badge/Android-000000?style=flat-square&logo=android&logoColor=3DDC84)" (https://github.com/Zihad077/FocusLock)
-""Kotlin" (https://img.shields.io/badge/Kotlin-000000?style=flat-square&logo=kotlin&logoColor=7F52FF)" (https://github.com/Zihad077/FocusLock)
-""GitHub" (https://img.shields.io/github/stars/Zihad077/FocusLock?style=flat-square&logo=github&color=000000)" (https://github.com/Zihad077/FocusLock)
+A modern Android app designed to help you control distracting apps  
+and take back control of your screen time.
 
-<br>⏱️ Set limits · 🔒 Stay focused · 🎯 Build better habits
+<br>
 
-</div>---
+**⏱️ Set limits** · **🔒 Stay focused** · **🎯 Build better habits**
 
-✦ What is FocusLock?
-
-FocusLock puts a simple barrier between you and distracting apps.
-
-Choose → Limit → Focus.
-
-✨ Highlights
-
-- ⏱️ Custom app limits
-- 🔒 Automatic focus protection
-- 🎯 Intentional unlock challenges
-- 📊 Usage monitoring
-- 💾 Import & export
-- 🎨 Modern Android UI
+</div>
 
 ---
 
-<div align="center">🧩 Built with
+## ✦ Features
 
-Kotlin · Jetpack Compose · Android SDK
+⏱️ **Custom App Limits**  
+Set individual time limits for your apps.
 
-<br>«Make distraction harder. Make focus easier.»
+🔒 **Focus Protection**  
+Get blocked when your selected limit is reached.
 
-<br>" ⭐ Star on GitHub " (https://github.com/Zihad077/FocusLock)
+🎯 **Unlock Challenges**  
+Make unlocking intentional instead of automatic.
 
-<br>Made with ❤️ by "Zihad" (https://github.com/Zihad077)
+📊 **Usage Monitoring**  
+Keep track of your app usage.
+
+💾 **Import & Export**  
+Keep your FocusLock data backed up.
+
+---
+
+<div align="center">
+
+### 🛠 Built with
+
+**Kotlin · Jetpack Compose · Android SDK**
+
+<br>
+
+> **Make distraction harder. Make focus easier.**
+
+<br>
+
+⭐ **[Star FocusLock on GitHub](https://github.com/Zihad077/FocusLock)**
+
+**Made with ❤️ by Zihad**
 
 </div>
