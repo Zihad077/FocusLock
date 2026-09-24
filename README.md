@@ -87,8 +87,6 @@ A clean interface designed for everyday use.
 </tr>
 </table>
 
----
-
 <div align="center">
 
 ## Built with
@@ -100,18 +98,6 @@ A clean interface designed for everyday use.
 > **Make distraction harder. Make focus easier.**
 
 <br>
-
-<a href="https://github.com/Zihad077/FocusLock">
-View Source Code
-</a>
-
-&nbsp;&nbsp;·&nbsp;&nbsp;
-
-<a href="https://github.com/Zihad077/FocusLock/issues">
-Report an Issue
-</a>
-
-<br><br>
 
 **Made by Zihad**
 
