@@ -1,54 +1,42 @@
 <div align="center">🔒 FocusLock
 
-🎯 Take back control of your screen time.
+Focus. Without distractions.
 
-A modern Android app for limiting distracting apps and staying focused.
+A modern Android app that helps you take control of distracting apps and your screen time.
 
-<p>
-  <img src="https://img.shields.io/badge/Platform-Android-3DDC84?style=for-the-badge&logo=android&logoColor=white">
-  <img src="https://img.shields.io/badge/Kotlin-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white">
-  <img src="https://img.shields.io/github/last-commit/Zihad077/FocusLock?style=for-the-badge">
-</p></div>---
+<br>""Android" (https://img.shields.io/badge/Android-000000?style=flat-square&logo=android&logoColor=3DDC84)" (https://github.com/Zihad077/FocusLock)
+""Kotlin" (https://img.shields.io/badge/Kotlin-000000?style=flat-square&logo=kotlin&logoColor=7F52FF)" (https://github.com/Zihad077/FocusLock)
+""GitHub" (https://img.shields.io/github/stars/Zihad077/FocusLock?style=flat-square&logo=github&color=000000)" (https://github.com/Zihad077/FocusLock)
 
-✨ Features
+<br>⏱️ Set limits · 🔒 Stay focused · 🎯 Build better habits
 
-⏱️ App Limits| 🔒 Focus Lock| 🎯 Challenges
-Set custom limits| Block distracting apps| Unlock intentionally
+</div>---
 
-📊 Usage Tracking| 💾 Data Backup| 🎨 Modern UI
-Monitor usage| Import & export| Clean Android experience
+✦ What is FocusLock?
 
----
+FocusLock puts a simple barrier between you and distracting apps.
 
-🚀 Quick Start
+Choose → Limit → Focus.
 
-git clone https://github.com/Zihad077/FocusLock.git
-cd FocusLock
+✨ Highlights
 
-Open the project in Android Studio → Sync → Run ▶️
-
----
-
-🛠️ Built With
-
-Kotlin • Jetpack Compose • Gradle • Android SDK
+- ⏱️ Custom app limits
+- 🔒 Automatic focus protection
+- 🎯 Intentional unlock challenges
+- 📊 Usage monitoring
+- 💾 Import & export
+- 🎨 Modern Android UI
 
 ---
 
-🎯 Philosophy
+<div align="center">🧩 Built with
 
-«Make distraction harder. Make focus easier.»
+Kotlin · Jetpack Compose · Android SDK
 
-FocusLock is built to help you use your phone intentionally, not endlessly.
+<br>«Make distraction harder. Make focus easier.»
 
----
+<br>" ⭐ Star on GitHub " (https://github.com/Zihad077/FocusLock)
 
-<div align="center">⭐ Like FocusLock?
-
-Star the repository and support the project!
-
-""GitHub" (https://img.shields.io/badge/GitHub-Zihad077%2FFocusLock-black?style=for-the-badge&logo=github)" (https://github.com/Zihad077/FocusLock)
-
-Made with ❤️ by Zihad
+<br>Made with ❤️ by "Zihad" (https://github.com/Zihad077)
 
 </div>
