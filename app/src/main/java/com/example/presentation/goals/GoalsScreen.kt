@@ -52,7 +52,6 @@ fun GoalsScreen(
     val goals by viewModel.goals.collectAsStateWithLifecycle()
     val achievements by viewModel.achievements.collectAsStateWithLifecycle()
     val userSettings by viewModel.userSettings.collectAsStateWithLifecycle()
-    val isDark = isSystemInDarkTheme()
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -61,12 +60,16 @@ fun GoalsScreen(
                 title = { 
                     Text(
                         text = "Focus Goals & Milestones",
-                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold)
+                        style = MaterialTheme.typography.headlineSmall.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 24.sp
+                        ),
+                        color = Color.White
                     )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.Transparent,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground
+                    titleContentColor = Color.White
                 )
             )
         }
@@ -77,7 +80,7 @@ fun GoalsScreen(
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp),
             contentPadding = PaddingValues(top = 8.dp, bottom = 100.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             userSettings?.let { settings ->
                 item {
@@ -88,8 +91,11 @@ fun GoalsScreen(
             item {
                 Text(
                     text = "Active Commitments",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onBackground
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 17.sp
+                    ),
+                    color = Color.White
                 )
             }
 
@@ -98,14 +104,14 @@ fun GoalsScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .liquidGlass(shape = RoundedCornerShape(20.dp))
+                            .liquidGlass(shape = RoundedCornerShape(24.dp))
                             .padding(24.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = "No active focus targets set. Consistency fuels progress.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
+                            color = Color.White.copy(alpha = 0.65f)
                         )
                     }
                 }
@@ -128,8 +134,11 @@ fun GoalsScreen(
             item {
                 Text(
                     text = "Achievements & Badges",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onBackground
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 17.sp
+                    ),
+                    color = Color.White
                 )
             }
 
@@ -138,14 +147,14 @@ fun GoalsScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .liquidGlass(shape = RoundedCornerShape(20.dp))
+                            .liquidGlass(shape = RoundedCornerShape(24.dp))
                             .padding(24.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = "Complete your daily focus routines to earn trophies.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
+                            color = Color.White.copy(alpha = 0.65f)
                         )
                     }
                 }
@@ -175,15 +184,14 @@ fun GoalsScreen(
 
 @Composable
 fun StreakGlassSection(settings: UserSettings) {
-    val isDark = isSystemInDarkTheme()
-    val fireColor = if (isDark) Color(0xFFFFAB00) else Color(0xFFF57C00)
-    val trophyColor = if (isDark) Color(0xFF00E5FF) else Color(0xFF0077D6)
+    val fireColor = Color(0xFFFF9100)
+    val cyanColor = Color(0xFF24DFEC)
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .liquidGlass(shape = RoundedCornerShape(28.dp), isElevated = true, isHighlight = true)
-            .padding(24.dp)
+            .liquidGlass(shape = RoundedCornerShape(26.dp))
+            .padding(20.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -193,69 +201,79 @@ fun StreakGlassSection(settings: UserSettings) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(
                     modifier = Modifier
+                        .size(50.dp)
                         .clip(CircleShape)
                         .background(fireColor.copy(alpha = 0.2f))
-                        .border(1.dp, fireColor.copy(alpha = 0.4f), CircleShape)
-                        .padding(12.dp)
+                        .border(1.dp, fireColor.copy(alpha = 0.5f), CircleShape),
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         Icons.Default.LocalFireDepartment,
                         contentDescription = null,
                         tint = fireColor,
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(26.dp)
                     )
                 }
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     "${settings.currentStreak}",
-                    style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.ExtraBold),
+                    style = MaterialTheme.typography.displaySmall.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 32.sp
+                    ),
                     color = fireColor
                 )
                 Text(
                     "CURRENT STREAK",
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp
+                        letterSpacing = 1.sp,
+                        fontSize = 11.sp
                     ),
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f)
+                    color = Color.White.copy(alpha = 0.65f)
                 )
             }
 
             Box(
                 modifier = Modifier
                     .width(1.dp)
-                    .height(80.dp)
+                    .height(70.dp)
                     .background(Color.White.copy(alpha = 0.15f))
             )
 
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(
                     modifier = Modifier
+                        .size(50.dp)
                         .clip(CircleShape)
-                        .background(trophyColor.copy(alpha = 0.2f))
-                        .border(1.dp, trophyColor.copy(alpha = 0.4f), CircleShape)
-                        .padding(12.dp)
+                        .background(cyanColor.copy(alpha = 0.2f))
+                        .border(1.dp, cyanColor.copy(alpha = 0.5f), CircleShape),
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         Icons.Default.EmojiEvents,
                         contentDescription = null,
-                        tint = trophyColor,
-                        modifier = Modifier.size(32.dp)
+                        tint = cyanColor,
+                        modifier = Modifier.size(26.dp)
                     )
                 }
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     "${settings.bestStreak}",
-                    style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.ExtraBold),
-                    color = trophyColor
+                    style = MaterialTheme.typography.displaySmall.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 32.sp
+                    ),
+                    color = cyanColor
                 )
                 Text(
                     "BEST STREAK",
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp
+                        letterSpacing = 1.sp,
+                        fontSize = 11.sp
                     ),
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f)
+                    color = Color.White.copy(alpha = 0.65f)
                 )
             }
         }
@@ -267,8 +285,7 @@ fun GoalGlassCard(
     goal: Goal,
     onDelete: (() -> Unit)? = null
 ) {
-    val isDark = isSystemInDarkTheme()
-    val primaryColor = if (isDark) com.example.ui.theme.SleekPrimaryDark else com.example.ui.theme.SleekPrimaryLight
+    val primaryCyan = Color(0xFF24DFEC)
 
     val progress = if (goal.targetValue > 0) {
         (goal.currentValue.toFloat() / goal.targetValue.toFloat()).coerceIn(0f, 1f)
@@ -283,35 +300,43 @@ fun GoalGlassCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .liquidGlass(shape = RoundedCornerShape(20.dp))
-            .padding(18.dp)
+            .liquidGlass(shape = RoundedCornerShape(24.dp))
+            .padding(16.dp)
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
+                        .size(42.dp)
                         .clip(CircleShape)
-                        .background(primaryColor.copy(alpha = 0.2f))
-                        .padding(8.dp)
+                        .background(Color(0x283E4C5E))
+                        .border(1.dp, Color.White.copy(alpha = 0.25f), CircleShape),
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         Icons.Default.Flag,
                         contentDescription = null,
-                        tint = primaryColor,
-                        modifier = Modifier.size(18.dp)
+                        tint = primaryCyan,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = goal.title,
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onBackground
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.5.sp
+                        ),
+                        color = Color.White
                     )
                     Text(
                         text = "${goal.currentValue} / ${goal.targetValue}",
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        color = primaryColor
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        ),
+                        color = primaryCyan
                     )
                 }
 
@@ -320,13 +345,13 @@ fun GoalGlassCard(
                         onClick = onDelete,
                         modifier = Modifier
                             .testTag("delete_goal_${goal.id}")
-                            .size(36.dp)
+                            .size(34.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.DeleteOutline,
                             contentDescription = "Delete Goal",
-                            tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                            modifier = Modifier.size(20.dp)
+                            tint = Color.White.copy(alpha = 0.5f),
+                            modifier = Modifier.size(19.dp)
                         )
                     }
                 }
@@ -335,20 +360,16 @@ fun GoalGlassCard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(8.dp)
+                    .height(6.dp)
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = if (isDark) 0.15f else 0.4f))
+                    .background(Color.White.copy(alpha = 0.12f))
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth(animatedProgress)
                         .fillMaxHeight()
                         .clip(CircleShape)
-                        .background(
-                            brush = Brush.horizontalGradient(
-                                listOf(primaryColor.copy(alpha = 0.7f), primaryColor)
-                            )
-                        )
+                        .background(primaryCyan)
                 )
             }
         }
@@ -357,22 +378,18 @@ fun GoalGlassCard(
 
 @Composable
 fun AchievementGlassCard(achievement: Achievement) {
-    val isDark = isSystemInDarkTheme()
     val isUnlocked = achievement.isUnlocked
-    val trophyColor = if (isUnlocked) {
-        if (isDark) Color(0xFF00E5FF) else Color(0xFF0077D6)
-    } else {
-        Color.Gray
-    }
+    val cyanColor = Color(0xFF24DFEC)
+    val inactiveColor = Color.White.copy(alpha = 0.4f)
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .liquidGlass(
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(24.dp),
                 isHighlight = isUnlocked
             )
-            .padding(18.dp)
+            .padding(16.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -380,53 +397,54 @@ fun AchievementGlassCard(achievement: Achievement) {
         ) {
             Box(
                 modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(16.dp))
+                    .size(46.dp)
+                    .clip(CircleShape)
                     .background(
-                        if (isUnlocked) {
-                            trophyColor.copy(alpha = 0.25f)
-                        } else {
-                            Color.White.copy(alpha = if (isDark) 0.08f else 0.2f)
-                        }
+                        if (isUnlocked) cyanColor.copy(alpha = 0.2f)
+                        else Color(0x283E4C5E)
                     )
                     .border(
                         1.dp,
-                        if (isUnlocked) trophyColor.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.15f),
-                        RoundedCornerShape(16.dp)
+                        if (isUnlocked) cyanColor.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.2f),
+                        CircleShape
                     ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = if (isUnlocked) Icons.Default.EmojiEvents else Icons.Default.Lock,
                     contentDescription = null,
-                    tint = trophyColor,
-                    modifier = Modifier.size(24.dp)
+                    tint = if (isUnlocked) cyanColor else inactiveColor,
+                    modifier = Modifier.size(22.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(14.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = achievement.title,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onBackground
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.5.sp
+                    ),
+                    color = Color.White
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = achievement.description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                    color = Color.White.copy(alpha = 0.65f)
                 )
                 if (isUnlocked) {
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(3.dp))
                     Text(
                         text = "UNLOCKED",
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.ExtraBold,
-                            letterSpacing = 1.sp
+                            letterSpacing = 1.sp,
+                            fontSize = 10.sp
                         ),
-                        color = trophyColor
+                        color = cyanColor
                     )
                 }
             }

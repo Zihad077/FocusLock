@@ -154,12 +154,35 @@ object AdsterraManager {
                         margin: 0;
                         padding: 0;
                         width: 100%;
-                        overflow-x: hidden;
+                        height: 100%;
+                        overflow: hidden;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
                     }
                     #container-$NATIVE_BANNER_KEY {
                         width: 100%;
                         max-width: 100%;
-                        min-height: 80px;
+                        min-height: 250px;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        margin: 0 auto;
+                    }
+                    iframe {
+                        max-width: 100% !important;
+                        min-height: 250px !important;
+                        border: none !important;
+                        border-radius: 12px;
+                        display: block;
+                        margin: 0 auto;
+                    }
+                    img, video {
+                        max-width: 100% !important;
+                        height: auto;
+                        border-radius: 12px;
+                        object-fit: contain;
                         display: block;
                         margin: 0 auto;
                     }

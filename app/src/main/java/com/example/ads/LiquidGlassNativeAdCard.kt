@@ -225,8 +225,9 @@ fun LiquidGlassNativeAdCard(
             AndroidView(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(110.dp)
-                    .clip(RoundedCornerShape(16.dp)),
+                    .height(270.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color(0x22122030)),
                 factory = {
                     (webView.parent as? ViewGroup)?.removeView(webView)
                     webView.onResume()

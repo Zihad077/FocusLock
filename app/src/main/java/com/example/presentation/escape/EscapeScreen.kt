@@ -4,8 +4,10 @@ import android.app.Application
 import android.content.Intent
 import android.provider.Settings
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -22,6 +24,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -44,22 +47,37 @@ fun EscapeScreen(
 ) {
     val context = LocalContext.current
     val settings by viewModel.userSettings.collectAsStateWithLifecycle()
+    val primaryCyan = Color(0xFF24DFEC)
 
     Scaffold(
-        containerColor = androidx.compose.ui.graphics.Color.Transparent,
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
                 title = { 
-                    Text("Escape Prevention", style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold))
+                    Text(
+                        "Escape Prevention",
+                        style = MaterialTheme.typography.headlineSmall.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 24.sp
+                        ),
+                        color = Color.White
+                    )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    IconButton(
+                        onClick = onNavigateBack,
+                        modifier = Modifier
+                            .padding(8.dp)
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.1f))
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = androidx.compose.ui.graphics.Color.Transparent,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground
+                    containerColor = Color.Transparent,
+                    titleContentColor = Color.White
                 )
             )
         }
@@ -69,16 +87,16 @@ fun EscapeScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(bottom = 96.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            contentPadding = PaddingValues(top = 4.dp, bottom = 96.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             item {
                 Text(
-                    text = "Strengthen FocusLock against bypass attempts. Some features depend on system permissions or OS limits.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f)
+                    text = "Strengthen FocusLock against bypass attempts. System permissions enforce real-time reliability.",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+                    color = Color.White.copy(alpha = 0.7f)
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(2.dp))
             }
 
             settings?.let { s ->
@@ -100,7 +118,7 @@ fun EscapeScreen(
                         statusText = if (s.notificationProtectionEnabled && !hasDndAccess) "Permission Required" 
                                      else if (s.notificationProtectionEnabled) "Enabled" 
                                      else "Disabled",
-                        statusColor = if (s.notificationProtectionEnabled && !hasDndAccess) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                        statusColor = if (s.notificationProtectionEnabled && !hasDndAccess) Color(0xFFFF5252) else primaryCyan
                     )
                 }
 
@@ -171,7 +189,7 @@ fun EscapeScreen(
                 }
             }
 
-            item { Spacer(modifier = Modifier.height(32.dp)) }
+            item { Spacer(modifier = Modifier.height(24.dp)) }
         }
     }
 }
@@ -184,44 +202,86 @@ fun PreventionCard(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     statusText: String,
-    statusColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.primary
+    statusColor: Color = Color(0xFF24DFEC)
 ) {
+    val primaryCyan = Color(0xFF24DFEC)
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .liquidGlass(shape = RoundedCornerShape(22.dp), isHighlight = checked)
-            .padding(18.dp)
+            .liquidGlass(shape = RoundedCornerShape(24.dp), isHighlight = checked)
+            .padding(16.dp)
     ) {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)),
+                        .size(46.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (checked) primaryCyan.copy(alpha = 0.2f)
+                            else Color(0x283E4C5E)
+                        )
+                        .border(
+                            1.dp,
+                            if (checked) primaryCyan.copy(alpha = 0.5f)
+                            else Color.White.copy(alpha = 0.25f),
+                            CircleShape
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Icon(
+                        icon,
+                        contentDescription = null,
+                        tint = if (checked) primaryCyan else Color.White,
+                        modifier = Modifier.size(22.dp)
+                    )
                 }
                 Spacer(modifier = Modifier.width(14.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(text = title, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onBackground)
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.5.sp
+                        ),
+                        color = Color.White
+                    )
                     Spacer(modifier = Modifier.height(2.dp))
-                    Text(text = statusText, style = MaterialTheme.typography.labelSmall, color = statusColor, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = statusText,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.5.sp
+                        ),
+                        color = statusColor
+                    )
                 }
                 Switch(
                     checked = checked,
-                    onCheckedChange = onCheckedChange
+                    onCheckedChange = onCheckedChange,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color.Black,
+                        checkedTrackColor = primaryCyan,
+                        uncheckedThumbColor = Color.White.copy(alpha = 0.7f),
+                        uncheckedTrackColor = Color.White.copy(alpha = 0.12f),
+                        uncheckedBorderColor = Color.White.copy(alpha = 0.25f)
+                    )
                 )
             }
             Spacer(modifier = Modifier.height(10.dp))
             Row(verticalAlignment = Alignment.Top) {
-                Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f), modifier = Modifier.size(16.dp))
+                Icon(
+                    Icons.Default.Info,
+                    contentDescription = null,
+                    tint = Color.White.copy(alpha = 0.45f),
+                    modifier = Modifier.size(15.dp)
+                )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                    color = Color.White.copy(alpha = 0.65f),
                     lineHeight = 16.sp
                 )
             }

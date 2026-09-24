@@ -7,16 +7,10 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
 import android.provider.Settings
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -29,14 +23,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -48,9 +40,11 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.ads.LiquidGlassAdaptiveBanner
-import com.example.ads.LiquidGlassNativeAdCard
-import com.example.database.isPremiumActive
+import com.example.R
+import com.example.database.Achievement
+import com.example.database.Goal
+import com.example.presentation.goals.GoalsViewModel
+import com.example.presentation.insights.InsightsViewModel
 import com.example.ui.theme.liquidGlass
 import com.example.util.AppUsageInfo
 import com.example.util.DailyStat
@@ -60,76 +54,132 @@ import com.example.util.UsageTimeRange
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatsScreen(
-    viewModel: StatsViewModel = viewModel(
+    statsViewModel: StatsViewModel = viewModel(
         factory = StatsViewModel.Factory(LocalContext.current.applicationContext as Application)
+    ),
+    insightsViewModel: InsightsViewModel = viewModel(
+        factory = InsightsViewModel.Factory(LocalContext.current.applicationContext as Application)
+    ),
+    goalsViewModel: GoalsViewModel = viewModel(
+        factory = GoalsViewModel.Factory(LocalContext.current.applicationContext as Application)
     )
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    val selectedTimeRange by viewModel.selectedTimeRange.collectAsStateWithLifecycle()
-    val isUsageAccessGranted by viewModel.isUsageAccessGranted.collectAsStateWithLifecycle()
-    val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
-    val summary by viewModel.screenTimeSummary.collectAsStateWithLifecycle()
-    val userSettings by viewModel.userSettings.collectAsStateWithLifecycle()
-    val totalFocusSessions by viewModel.totalFocusSessions.collectAsStateWithLifecycle()
-    val totalFocusTime by viewModel.totalFocusTime.collectAsStateWithLifecycle()
-    val totalEscapeAttempts by viewModel.totalEscapeAttempts.collectAsStateWithLifecycle()
+    var selectedTabIndex by remember { mutableIntStateOf(0) }
+    val tabs = listOf(
+        stringResource(R.string.tab_analytics),
+        stringResource(R.string.tab_insights),
+        stringResource(R.string.tab_goals)
+    )
+
+    val selectedTimeRange by statsViewModel.selectedTimeRange.collectAsStateWithLifecycle()
+    val isUsageAccessGranted by statsViewModel.isUsageAccessGranted.collectAsStateWithLifecycle()
+    val summary by statsViewModel.screenTimeSummary.collectAsStateWithLifecycle()
+    val totalFocusSessions by statsViewModel.totalFocusSessions.collectAsStateWithLifecycle()
+    val totalFocusTime by statsViewModel.totalFocusTime.collectAsStateWithLifecycle()
+    val totalEscapeAttempts by statsViewModel.totalEscapeAttempts.collectAsStateWithLifecycle()
+
+    val insightsState by insightsViewModel.state.collectAsStateWithLifecycle()
+    val goals by goalsViewModel.goals.collectAsStateWithLifecycle()
+    val achievements by goalsViewModel.achievements.collectAsStateWithLifecycle()
+    val userSettings by statsViewModel.userSettings.collectAsStateWithLifecycle()
 
     var searchQuery by remember { mutableStateOf("") }
     var appToSetLimitFor by remember { mutableStateOf<AppUsageInfo?>(null) }
+    var showAddGoalDialog by remember { mutableStateOf(false) }
 
-    // Auto-refresh when returning from Settings (e.g. after granting usage access)
+    // Auto-sync when resuming
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                viewModel.checkPermissionAndSync()
+                statsViewModel.checkPermissionAndSync()
+                insightsViewModel.refresh()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    val primaryCyan = Color(0xFF00E5FF)
-    val accentPurple = Color(0xFF9D4EDD)
+    val primaryCyan = Color(0xFF24DFEC)
 
     Scaffold(
         containerColor = Color.Transparent,
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = "Screen Time & Analytics",
-                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                        Text(
-                            text = "Identify distracting apps & usage trends",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
-                        )
-                    }
-                },
-                actions = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.screen_time_title),
+                        style = MaterialTheme.typography.headlineSmall.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 24.sp
+                        ),
+                        color = Color.White
+                    )
                     IconButton(
-                        onClick = { viewModel.refreshUsageData() },
-                        modifier = Modifier.testTag("refresh_stats_button")
+                        onClick = {
+                            statsViewModel.refreshUsageData()
+                            insightsViewModel.refresh()
+                        },
+                        modifier = Modifier
+                            .testTag("refresh_stats_button")
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.1f))
                     ) {
                         Icon(
-                            Icons.Default.Refresh,
-                            contentDescription = "Refresh Stats",
-                            tint = primaryCyan
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Refresh",
+                            tint = primaryCyan,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground
-                )
-            )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Unified 3-Segment Tab Bar (Analytics, Insights, Goals)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(Color(0x283E4C5E))
+                        .border(1.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(18.dp))
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    tabs.forEachIndexed { index, tabTitle ->
+                        val isSelected = selectedTabIndex == index
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(if (isSelected) primaryCyan.copy(alpha = 0.22f) else Color.Transparent)
+                                .clickable { selectedTabIndex = index }
+                                .padding(vertical = 9.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = tabTitle,
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    fontSize = 13.5.sp
+                                ),
+                                color = if (isSelected) primaryCyan else Color.White.copy(alpha = 0.65f)
+                            )
+                        }
+                    }
+                }
+            }
         }
     ) { innerPadding ->
         LazyColumn(
@@ -137,399 +187,790 @@ fun StatsScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(top = 8.dp, bottom = 100.dp),
+            contentPadding = PaddingValues(top = 8.dp, bottom = 150.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 1. Permission Warning Banner if not granted
-            if (!isUsageAccessGranted) {
-                item {
-                    UsagePermissionRequiredCard(
-                        onGrantClick = {
-                            try {
-                                val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
-                                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                // Fallback to main settings
-                                val fallbackIntent = Intent(Settings.ACTION_SETTINGS)
-                                context.startActivity(fallbackIntent)
-                            }
-                        }
-                    )
-                }
-            }
-
-            // 2. Time Range Selector Filter
-            item {
-                TimeRangeSelectorRow(
-                    selectedRange = selectedTimeRange,
-                    onRangeSelected = { viewModel.setTimeRange(it) }
-                )
-            }
-
-            // 3. Hero Total Screen Time Card
-            item {
-                HeroScreenTimeCard(
-                    summary = summary,
-                    selectedRange = selectedTimeRange,
-                    primaryCyan = primaryCyan
-                )
-            }
-
-            // 4. Focus & Protection Stat Row
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // Focus Time Glass Card
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .liquidGlass(shape = RoundedCornerShape(20.dp), isElevated = false)
-                            .padding(16.dp)
-                    ) {
-                        Column {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .clip(CircleShape)
-                                        .background(primaryCyan.copy(alpha = 0.2f))
-                                        .padding(5.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Default.Timer,
-                                        contentDescription = null,
-                                        tint = primaryCyan,
-                                        modifier = Modifier.size(15.dp)
-                                    )
+            when (selectedTabIndex) {
+                0 -> {
+                    // TAB 0: ANALYTICS & SCREEN TIME
+                    if (!isUsageAccessGranted) {
+                        item {
+                            UsagePermissionRequiredCard(
+                                onGrantClick = {
+                                    try {
+                                        val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+                                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                        context.startActivity(intent)
+                                    } catch (_: Exception) {
+                                        val fallbackIntent = Intent(Settings.ACTION_SETTINGS)
+                                        context.startActivity(fallbackIntent)
+                                    }
                                 }
-                                Text(
-                                    "Focus Time",
-                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                "${totalFocusTime / 60}h ${totalFocusTime % 60}m",
-                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
-                                color = primaryCyan
                             )
                         }
                     }
 
-                    // Escape Attempts Deflected Card
-                    val errorColor = Color(0xFFFF5252)
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .liquidGlass(shape = RoundedCornerShape(20.dp), isHighlight = totalEscapeAttempts > 0)
-                            .padding(16.dp)
-                    ) {
-                        Column {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    item {
+                        TimeRangeSelectorRow(
+                            selectedRange = selectedTimeRange,
+                            onRangeSelected = { statsViewModel.setTimeRange(it) }
+                        )
+                    }
+
+                    item {
+                        HeroScreenTimeCard(
+                            summary = summary,
+                            selectedRange = selectedTimeRange,
+                            primaryCyan = primaryCyan
+                        )
+                    }
+
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            // Focus Time
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .liquidGlass(shape = RoundedCornerShape(22.dp))
+                                    .padding(16.dp)
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .clip(CircleShape)
-                                        .background(errorColor.copy(alpha = 0.2f))
-                                        .padding(5.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Default.Shield,
-                                        contentDescription = null,
-                                        tint = errorColor,
-                                        modifier = Modifier.size(15.dp)
+                                Column {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(28.dp)
+                                                .clip(CircleShape)
+                                                .background(primaryCyan.copy(alpha = 0.2f)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Timer,
+                                                contentDescription = null,
+                                                tint = primaryCyan,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                        Text(
+                                            stringResource(R.string.total_focus),
+                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                            color = Color.White.copy(alpha = 0.65f)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        "${totalFocusTime / 60}h ${totalFocusTime % 60}m",
+                                        style = MaterialTheme.typography.titleLarge.copy(
+                                            fontWeight = FontWeight.ExtraBold,
+                                            fontSize = 20.sp
+                                        ),
+                                        color = primaryCyan
                                     )
                                 }
+                            }
+
+                            // Deflected Stops
+                            val errorColor = Color(0xFFFF5252)
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .liquidGlass(shape = RoundedCornerShape(22.dp))
+                                    .padding(16.dp)
+                            ) {
+                                Column {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(28.dp)
+                                                .clip(CircleShape)
+                                                .background(errorColor.copy(alpha = 0.2f)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Shield,
+                                                contentDescription = null,
+                                                tint = errorColor,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                        Text(
+                                            stringResource(R.string.blocked_apps),
+                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                            color = Color.White.copy(alpha = 0.65f)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        "$totalEscapeAttempts",
+                                        style = MaterialTheme.typography.titleLarge.copy(
+                                            fontWeight = FontWeight.ExtraBold,
+                                            fontSize = 20.sp
+                                        ),
+                                        color = errorColor
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    if (summary.dailyStats.isNotEmpty()) {
+                        item {
+                            WeeklyTrendChartCard(
+                                dailyStats = summary.dailyStats,
+                                primaryCyan = primaryCyan
+                            )
+                        }
+                    }
+
+                    // App Usage List Header & Search Bar
+                    item {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text(
+                                text = stringResource(R.string.all_monitored_apps),
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 17.sp
+                                ),
+                                color = Color.White
+                            )
+                            OutlinedTextField(
+                                value = searchQuery,
+                                onValueChange = { searchQuery = it },
+                                placeholder = {
+                                    Text(
+                                        stringResource(R.string.search_apps),
+                                        color = Color.White.copy(alpha = 0.45f)
+                                    )
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Search,
+                                        contentDescription = null,
+                                        tint = primaryCyan
+                                    )
+                                },
+                                singleLine = true,
+                                shape = RoundedCornerShape(16.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = primaryCyan,
+                                    unfocusedBorderColor = Color.White.copy(alpha = 0.18f),
+                                    focusedContainerColor = Color(0x283E4C5E),
+                                    unfocusedContainerColor = Color(0x283E4C5E),
+                                    focusedTextColor = Color.White,
+                                    unfocusedTextColor = Color.White
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+
+                    val filteredApps = if (searchQuery.isBlank()) {
+                        summary.appUsageList
+                    } else {
+                        summary.appUsageList.filter {
+                            it.appName.contains(searchQuery, ignoreCase = true) ||
+                                    it.packageName.contains(searchQuery, ignoreCase = true)
+                        }
+                    }
+
+                    if (filteredApps.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .liquidGlass(shape = RoundedCornerShape(22.dp))
+                                    .padding(24.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
                                 Text(
-                                    "Blocked Stops",
-                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                                    text = stringResource(R.string.insufficient_data),
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
+                                    color = Color.White.copy(alpha = 0.6f)
                                 )
                             }
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                "$totalEscapeAttempts",
-                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
-                                color = errorColor
+                        }
+                    } else {
+                        items(filteredApps, key = { it.packageName }) { appInfo ->
+                            AppUsageRowItem(
+                                appInfo = appInfo,
+                                maxUsageMinutes = summary.appUsageList.maxOfOrNull { it.usedMinutes } ?: 1,
+                                primaryCyan = primaryCyan,
+                                onSetLimitClick = { appToSetLimitFor = appInfo }
                             )
                         }
                     }
                 }
-            }
 
-            // 5. Most Distracting App Spotlight Card
-            if (summary.topApp != null && summary.topApp!!.usedMinutes > 0) {
-                item {
-                    DistractingSpotlightCard(
-                        topApp = summary.topApp!!,
-                        onSetLimitClick = { appToSetLimitFor = summary.topApp }
-                    )
-                }
-            }
+                1 -> {
+                    // TAB 1: INSIGHTS & SMART RECOMMENDATIONS
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .liquidGlass(shape = RoundedCornerShape(26.dp))
+                                .padding(24.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(100.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0x283E4C5E))
+                                        .border(2.dp, primaryCyan, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text(
+                                            "${insightsState.todayScore}",
+                                            style = MaterialTheme.typography.headlineLarge.copy(
+                                                fontWeight = FontWeight.ExtraBold,
+                                                fontSize = 32.sp
+                                            ),
+                                            color = primaryCyan
+                                        )
+                                        Text(
+                                            stringResource(R.string.focus_score),
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 10.sp
+                                            ),
+                                            color = Color.White.copy(alpha = 0.7f)
+                                        )
+                                    }
+                                }
 
-            // 6. 7-Day Screen Time Trend Chart
-            if (summary.dailyStats.isNotEmpty()) {
-                item {
-                    WeeklyTrendChartCard(
-                        dailyStats = summary.dailyStats,
-                        primaryCyan = primaryCyan
-                    )
-                }
-            }
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = if (insightsState.todayScore >= 80) "Optimal Focus Habits" else "Distraction Warning",
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 17.sp
+                                    ),
+                                    color = Color.White
+                                )
+                            }
+                        }
+                    }
 
-            // 7. Category Breakdown
-            if (summary.categoryDistribution.isNotEmpty()) {
-                item {
-                    CategoryBreakdownCard(
-                        distribution = summary.categoryDistribution,
-                        totalMinutes = summary.totalScreenTimeMinutes
-                    )
-                }
-            }
-
-            // 8. App Usage List Header & Search Bar
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                    item {
                         Text(
-                            text = "App Usage Breakdown",
+                            text = stringResource(R.string.smart_recommendations),
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 17.sp
+                            ),
+                            color = Color.White
+                        )
+                    }
+
+                    if (insightsState.recommendations.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .liquidGlass(shape = RoundedCornerShape(22.dp))
+                                    .padding(24.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.no_insights_desc),
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
+                                    color = Color.White.copy(alpha = 0.6f),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    } else {
+                        items(insightsState.recommendations) { rec ->
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .liquidGlass(shape = RoundedCornerShape(22.dp))
+                                    .padding(16.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.Top,
+                                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(38.dp)
+                                            .clip(CircleShape)
+                                            .background(primaryCyan.copy(alpha = 0.2f))
+                                            .border(1.dp, primaryCyan.copy(alpha = 0.4f), CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Lightbulb,
+                                            contentDescription = null,
+                                            tint = primaryCyan,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                    Text(
+                                        text = rec,
+                                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
+                                        color = Color.White
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                2 -> {
+                    // TAB 2: GOALS & ACHIEVEMENTS
+                    userSettings?.let { settings ->
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .liquidGlass(shape = RoundedCornerShape(26.dp))
+                                    .padding(20.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column {
+                                        Text(
+                                            stringResource(R.string.current_streak),
+                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                            color = Color.White.copy(alpha = 0.65f)
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            "${settings.currentStreak} ${stringResource(R.string.days_suffix)}",
+                                            style = MaterialTheme.typography.headlineMedium.copy(
+                                                fontWeight = FontWeight.ExtraBold,
+                                                fontSize = 28.sp
+                                            ),
+                                            color = Color(0xFFFF9100)
+                                        )
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .size(54.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0x33FF9100))
+                                            .border(1.dp, Color(0xFFFF9100).copy(alpha = 0.4f), CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            Icons.Default.LocalFireDepartment,
+                                            contentDescription = null,
+                                            tint = Color(0xFFFF9100),
+                                            modifier = Modifier.size(30.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = stringResource(R.string.active_commitments),
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 17.sp
+                                ),
+                                color = Color.White
+                            )
+                            FilledTonalButton(
+                                onClick = { showAddGoalDialog = true },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.filledTonalButtonColors(
+                                    containerColor = primaryCyan.copy(alpha = 0.2f),
+                                    contentColor = primaryCyan
+                                )
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(stringResource(R.string.add_goal), fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+
+                    if (goals.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .liquidGlass(shape = RoundedCornerShape(20.dp))
+                                    .padding(24.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        text = stringResource(R.string.no_goals_set),
+                                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.onBackground
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = stringResource(R.string.no_goals_desc),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        items(goals, key = { it.id }) { goal ->
+                            GoalGlassCard(
+                                goal = goal,
+                                onDelete = { goalsViewModel.deleteGoal(goal.id) }
+                            )
+                        }
+                    }
+
+                    item {
+                        Text(
+                            text = stringResource(R.string.achievements_badges),
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.onBackground
                         )
-                        Text(
-                            text = "${summary.appUsageList.size} apps tracked",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = primaryCyan
-                        )
                     }
 
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        placeholder = {
-                            Text(
-                                "Search app usage...",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
-                            )
-                        },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Search,
-                                contentDescription = null,
-                                tint = primaryCyan.copy(alpha = 0.8f)
-                            )
-                        },
-                        trailingIcon = {
-                            if (searchQuery.isNotEmpty()) {
-                                IconButton(onClick = { searchQuery = "" }) {
-                                    Icon(Icons.Default.Clear, contentDescription = "Clear search")
-                                }
-                            }
-                        },
-                        singleLine = true,
-                        shape = RoundedCornerShape(16.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = primaryCyan,
-                            unfocusedBorderColor = Color.White.copy(alpha = 0.15f),
-                            focusedContainerColor = Color(0xFF131824).copy(alpha = 0.6f),
-                            unfocusedContainerColor = Color(0xFF131824).copy(alpha = 0.4f)
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("app_usage_search_field")
-                    )
-                }
-            }
-
-            // 9. Ranked App Usage Items
-            val filteredApps = summary.appUsageList.filter {
-                it.appName.contains(searchQuery, ignoreCase = true) ||
-                        it.packageName.contains(searchQuery, ignoreCase = true) ||
-                        it.category.contains(searchQuery, ignoreCase = true)
-            }
-
-            if (filteredApps.isEmpty()) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .liquidGlass(shape = RoundedCornerShape(18.dp))
-                            .padding(24.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = if (isUsageAccessGranted) "No app activity recorded for this period." else "Grant Usage Access above to see your app usage breakdown.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                            textAlign = TextAlign.Center
-                        )
+                    items(achievements, key = { it.id }) { ach ->
+                        AchievementGlassCard(achievement = ach)
                     }
                 }
-            } else {
-                items(filteredApps, key = { it.packageName }) { appInfo ->
-                    AppUsageItemRow(
-                        appInfo = appInfo,
-                        onSetLimitClick = { appToSetLimitFor = appInfo }
-                    )
-                }
-            }
-
-            // 10. Native Ad Card
-            item {
-                LiquidGlassNativeAdCard(
-                    isPremium = userSettings?.isPremiumActive ?: false
-                )
-            }
-
-            // 11. Bottom Banner
-            item {
-                LiquidGlassAdaptiveBanner(
-                    isPremium = userSettings?.isPremiumActive ?: false
-                )
             }
         }
     }
 
-    // Quick Limit Dialog
-    if (appToSetLimitFor != null) {
-        SetAppLimitDialog(
-            appInfo = appToSetLimitFor!!,
+    // Daily Limit Adjustment Dialog
+    appToSetLimitFor?.let { appInfo ->
+        DailyLimitEditDialog(
+            appInfo = appInfo,
             onDismiss = { appToSetLimitFor = null },
-            onSaveLimit = { minutes ->
-                viewModel.setDailyLimit(
-                    packageName = appToSetLimitFor!!.packageName,
-                    appName = appToSetLimitFor!!.appName,
-                    dailyMinutes = minutes
+            onSave = { minutes ->
+                if (minutes <= 0) {
+                    statsViewModel.removeDailyLimit(appInfo.packageName)
+                } else {
+                    statsViewModel.setDailyLimit(appInfo.packageName, appInfo.appName, minutes)
+                }
+                appToSetLimitFor = null
+            }
+        )
+    }
+
+    // Add Goal Dialog
+    if (showAddGoalDialog) {
+        var goalTitle by remember { mutableStateOf("") }
+        var goalTarget by remember { mutableStateOf("60") }
+
+        AlertDialog(
+            onDismissRequest = { showAddGoalDialog = false },
+            containerColor = Color(0xFF162534),
+            title = {
+                Text(
+                    stringResource(R.string.add_goal),
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
                 )
-                appToSetLimitFor = null
             },
-            onRemoveLimit = {
-                viewModel.removeDailyLimit(appToSetLimitFor!!.packageName)
-                appToSetLimitFor = null
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = goalTitle,
+                        onValueChange = { goalTitle = it },
+                        label = { Text("Goal Title (e.g., Daily Deep Focus)") },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = primaryCyan,
+                            unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = goalTarget,
+                        onValueChange = { goalTarget = it.filter { ch -> ch.isDigit() } },
+                        label = { Text("Target Minutes") },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = primaryCyan,
+                            unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val target = goalTarget.toIntOrNull() ?: 60
+                        if (goalTitle.isNotBlank()) {
+                            goalsViewModel.addGoal(
+                                title = goalTitle.trim(),
+                                target = target,
+                                current = 0,
+                                type = "FOCUS_MINUTES"
+                            )
+                            showAddGoalDialog = false
+                        }
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = primaryCyan,
+                        contentColor = Color(0xFF0C1929)
+                    )
+                ) {
+                    Text(stringResource(R.string.save), fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddGoalDialog = false }) {
+                    Text(stringResource(R.string.cancel), color = Color.White.copy(alpha = 0.7f))
+                }
             }
         )
     }
 }
 
 @Composable
-fun UsagePermissionRequiredCard(onGrantClick: () -> Unit) {
-    val primaryCyan = Color(0xFF00E5FF)
-    val warningOrange = Color(0xFFFF9100)
+private fun GoalGlassCard(
+    goal: Goal,
+    onDelete: () -> Unit
+) {
+    val progress = (goal.currentValue.toFloat() / goal.targetValue.coerceAtLeast(1).toFloat()).coerceIn(0f, 1f)
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .liquidGlass(
-                shape = RoundedCornerShape(22.dp),
-                isHighlight = true,
-                borderWidth = 1.5.dp
-            )
-            .padding(18.dp)
+            .liquidGlass(shape = RoundedCornerShape(22.dp))
+            .padding(16.dp)
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
+                Text(
+                    text = goal.title,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    ),
+                    color = Color.White
+                )
+                IconButton(
+                    onClick = onDelete,
                     modifier = Modifier
-                        .size(42.dp)
+                        .size(32.dp)
                         .clip(CircleShape)
-                        .background(warningOrange.copy(alpha = 0.2f))
-                        .border(1.dp, warningOrange.copy(alpha = 0.5f), CircleShape),
-                    contentAlignment = Alignment.Center
+                        .background(Color.White.copy(alpha = 0.08f))
                 ) {
                     Icon(
-                        Icons.Default.Security,
-                        contentDescription = null,
-                        tint = warningOrange,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Usage Access Required",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = Color.White
-                    )
-                    Text(
-                        text = "Enable access to import historical screen time and see distracting apps.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.75f)
+                        Icons.Default.DeleteOutline,
+                        contentDescription = "Delete",
+                        tint = Color(0xFFFF5252),
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }
 
-            Button(
-                onClick = onGrantClick,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = primaryCyan,
-                    contentColor = Color.Black
-                ),
-                shape = RoundedCornerShape(12.dp),
+            LinearProgressIndicator(
+                progress = { progress },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .testTag("grant_usage_permission_button")
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(4.dp)),
+                color = Color(0xFF24DFEC),
+                trackColor = Color.White.copy(alpha = 0.12f)
+            )
+
+            Text(
+                text = "${goal.currentValue} / ${goal.targetValue} min (${(progress * 100).toInt()}%)",
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                color = Color.White.copy(alpha = 0.7f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun AchievementGlassCard(achievement: Achievement) {
+    val isUnlocked = achievement.isUnlocked
+    val primaryCyan = Color(0xFF24DFEC)
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .liquidGlass(shape = RoundedCornerShape(22.dp))
+            .padding(16.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(if (isUnlocked) primaryCyan.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.08f))
+                    .border(
+                        1.dp,
+                        if (isUnlocked) primaryCyan.copy(alpha = 0.4f) else Color.White.copy(alpha = 0.12f),
+                        CircleShape
+                    ),
+                contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Key, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Grant Usage Access Permission", fontWeight = FontWeight.Bold)
+                Icon(
+                    imageVector = if (isUnlocked) Icons.Default.EmojiEvents else Icons.Default.Lock,
+                    contentDescription = null,
+                    tint = if (isUnlocked) primaryCyan else Color.White.copy(alpha = 0.4f),
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = achievement.title,
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp
+                    ),
+                    color = if (isUnlocked) Color.White else Color.White.copy(alpha = 0.5f)
+                )
+                Text(
+                    text = achievement.description,
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                    color = Color.White.copy(alpha = 0.6f)
+                )
             }
         }
     }
 }
 
 @Composable
-fun TimeRangeSelectorRow(
+private fun UsagePermissionRequiredCard(onGrantClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .liquidGlass(shape = RoundedCornerShape(24.dp))
+            .padding(20.dp)
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(Color(0x33FFB300)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.WarningAmber,
+                        contentDescription = null,
+                        tint = Color(0xFFFFB300),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Text(
+                    text = stringResource(R.string.permission_required),
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    ),
+                    color = Color(0xFFFFB300)
+                )
+            }
+
+            Text(
+                text = stringResource(R.string.grant_permission_desc),
+                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
+                color = Color.White.copy(alpha = 0.8f)
+            )
+
+            Button(
+                onClick = onGrantClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF24DFEC),
+                    contentColor = Color(0xFF0C1929)
+                )
+            ) {
+                Text(
+                    stringResource(R.string.grant_permission_btn),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TimeRangeSelectorRow(
     selectedRange: UsageTimeRange,
     onRangeSelected: (UsageTimeRange) -> Unit
 ) {
-    val primaryCyan = Color(0xFF00E5FF)
-
+    val primaryCyan = Color(0xFF24DFEC)
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .liquidGlass(shape = RoundedCornerShape(16.dp), isElevated = false)
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color(0x283E4C5E))
+            .border(1.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(16.dp))
             .padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
+        horizontalArrangement = Arrangement.SpaceEvenly
     ) {
-        UsageTimeRange.values().forEach { range ->
-            val isSelected = range == selectedRange
+        UsageTimeRange.entries.forEach { range ->
+            val isSelected = selectedRange == range
+            val label = when (range) {
+                UsageTimeRange.TODAY -> stringResource(R.string.today_label)
+                UsageTimeRange.YESTERDAY -> stringResource(R.string.yesterday_label)
+                UsageTimeRange.LAST_7_DAYS -> stringResource(R.string.this_week_label)
+            }
+
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(
-                        if (isSelected) primaryCyan.copy(alpha = 0.25f) else Color.Transparent
-                    )
-                    .border(
-                        width = if (isSelected) 1.dp else 0.dp,
-                        color = if (isSelected) primaryCyan.copy(alpha = 0.6f) else Color.Transparent,
-                        shape = RoundedCornerShape(12.dp)
-                    )
+                    .background(if (isSelected) primaryCyan.copy(alpha = 0.22f) else Color.Transparent)
                     .clickable { onRangeSelected(range) }
-                    .padding(vertical = 8.dp),
+                    .padding(vertical = 7.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = range.label,
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                    text = label,
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        fontSize = 12.sp
                     ),
-                    color = if (isSelected) primaryCyan else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                    color = if (isSelected) primaryCyan else Color.White.copy(alpha = 0.65f)
                 )
             }
         }
@@ -537,288 +978,123 @@ fun TimeRangeSelectorRow(
 }
 
 @Composable
-fun HeroScreenTimeCard(
+private fun HeroScreenTimeCard(
     summary: ScreenTimeSummary,
     selectedRange: UsageTimeRange,
     primaryCyan: Color
 ) {
-    val hours = summary.totalScreenTimeMinutes / 60
-    val minutes = summary.totalScreenTimeMinutes % 60
+    val totalMinutes = summary.totalScreenTimeMinutes
+    val hours = totalMinutes / 60
+    val minutes = totalMinutes % 60
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .liquidGlass(shape = RoundedCornerShape(26.dp), isHighlight = true)
+            .liquidGlass(shape = RoundedCornerShape(26.dp))
             .padding(22.dp)
     ) {
-        Column {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = when (selectedRange) {
-                        UsageTimeRange.TODAY -> "Total Screen Time Today"
-                        UsageTimeRange.YESTERDAY -> "Screen Time Yesterday"
-                        UsageTimeRange.LAST_7_DAYS -> "Screen Time (Last 7 Days)"
-                    },
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
-                )
-
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(primaryCyan.copy(alpha = 0.15f))
-                        .border(1.dp, primaryCyan.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = "${summary.totalAppCount} Apps",
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        color = primaryCyan
-                    )
-                }
-            }
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = when (selectedRange) {
+                    UsageTimeRange.TODAY -> stringResource(R.string.todays_usage)
+                    UsageTimeRange.YESTERDAY -> "YESTERDAY'S USAGE"
+                    UsageTimeRange.LAST_7_DAYS -> "PAST 7 DAYS USAGE"
+                },
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 12.sp,
+                    letterSpacing = 1.sp
+                ),
+                color = Color.White.copy(alpha = 0.6f)
+            )
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(
-                    text = "${hours}h ${minutes}m",
-                    style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.Black),
-                    color = Color.White
-                )
-            }
+            Text(
+                text = "${hours}h ${minutes}m",
+                style = MaterialTheme.typography.displayMedium.copy(
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 38.sp
+                ),
+                color = primaryCyan
+            )
 
             Spacer(modifier = Modifier.height(6.dp))
 
-            if (summary.comparisonText.isNotEmpty()) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Icon(
-                        Icons.Default.TrendingUp,
-                        contentDescription = null,
-                        tint = primaryCyan,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Text(
-                        text = summary.comparisonText,
-                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun DistractingSpotlightCard(
-    topApp: AppUsageInfo,
-    onSetLimitClick: () -> Unit
-) {
-    val fieryRed = Color(0xFFFF5252)
-    val fieryOrange = Color(0xFFFF7A00)
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .liquidGlass(
-                shape = RoundedCornerShape(22.dp),
-                borderWidth = 1.5.dp,
-                isHighlight = true
+            Text(
+                text = "${summary.totalAppCount} active apps monitored",
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.5.sp),
+                color = Color.White.copy(alpha = 0.7f)
             )
-            .padding(18.dp)
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(46.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(Brush.linearGradient(listOf(fieryRed, fieryOrange)))
-                        .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(14.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Default.Whatshot,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(26.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(14.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text(
-                            text = "#1 Distracting App",
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                            color = fieryOrange
-                        )
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(fieryRed.copy(alpha = 0.2f))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = "${(topApp.percentageOfTotal * 100).toInt()}% of time",
-                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold),
-                                color = fieryRed
-                            )
-                        }
-                    }
-
-                    Text(
-                        text = topApp.appName,
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
-                        color = Color.White,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-
-                    Text(
-                        text = "${topApp.usedMinutes / 60}h ${topApp.usedMinutes % 60}m spent • ${topApp.category}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.7f)
-                    )
-                }
-            }
-
-            Button(
-                onClick = onSetLimitClick,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (topApp.isLimitActive) Color(0xFF00E5FF).copy(alpha = 0.2f) else fieryOrange,
-                    contentColor = if (topApp.isLimitActive) Color(0xFF00E5FF) else Color.Black
-                ),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(
-                    if (topApp.isLimitActive) Icons.Default.CheckCircle else Icons.Default.LockClock,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    if (topApp.isLimitActive) "Limit Active (${topApp.dailyLimitMinutes}m) • Tap to Edit" else "Set Daily Limit on ${topApp.appName}",
-                    fontWeight = FontWeight.Bold
-                )
-            }
         }
     }
 }
 
 @Composable
-fun WeeklyTrendChartCard(
+private fun WeeklyTrendChartCard(
     dailyStats: List<DailyStat>,
     primaryCyan: Color
 ) {
-    val maxMinutes = (dailyStats.maxOfOrNull { it.minutes } ?: 1).coerceAtLeast(30)
+    val maxMinutes = (dailyStats.maxOfOrNull { it.minutes } ?: 60).coerceAtLeast(60)
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .liquidGlass(shape = RoundedCornerShape(22.dp))
+            .liquidGlass(shape = RoundedCornerShape(24.dp))
             .padding(18.dp)
     ) {
-        Column {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Weekly Screen Time Trend",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Text(
-                    text = "Past 7 Days",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(18.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Text(
+                text = "Daily Screen Time Trend",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                ),
+                color = Color.White
+            )
 
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(140.dp),
+                    .height(110.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Bottom
             ) {
-                dailyStats.forEachIndexed { index, stat ->
-                    val isLatest = index == dailyStats.lastIndex
-                    val fraction = (stat.minutes.toFloat() / maxMinutes.toFloat()).coerceIn(0.05f, 1f)
-                    val animatedHeight by animateFloatAsState(
-                        targetValue = fraction,
-                        animationSpec = tween(600),
-                        label = "chart_bar"
-                    )
-
+                dailyStats.forEach { stat ->
+                    val barHeightFraction = (stat.minutes.toFloat() / maxMinutes.toFloat()).coerceIn(0.08f, 1f)
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Bottom,
                         modifier = Modifier.weight(1f)
                     ) {
-                        // Value label above bar
-                        if (stat.minutes > 0) {
-                            Text(
-                                text = if (stat.minutes >= 60) "${stat.minutes / 60}h" else "${stat.minutes}m",
-                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                                color = if (isLatest) primaryCyan else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
-                            )
-                        } else {
-                            Text("0", style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp), color = Color.Transparent)
-                        }
-
+                        Text(
+                            text = "${stat.minutes / 60}h",
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                            color = Color.White.copy(alpha = 0.6f)
+                        )
                         Spacer(modifier = Modifier.height(4.dp))
-
-                        // Bar
                         Box(
                             modifier = Modifier
-                                .width(22.dp)
-                                .fillMaxHeight(0.75f * animatedHeight)
-                                .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
+                                .width(20.dp)
+                                .fillMaxHeight(barHeightFraction)
+                                .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
                                 .background(
-                                    if (isLatest) {
-                                        Brush.verticalGradient(
-                                            listOf(primaryCyan, Color(0xFF0077B6))
-                                        )
-                                    } else {
-                                        Brush.verticalGradient(
-                                            listOf(Color.White.copy(alpha = 0.35f), Color.White.copy(alpha = 0.1f))
-                                        )
-                                    }
-                                )
-                                .border(
-                                    width = 1.dp,
-                                    color = if (isLatest) primaryCyan.copy(alpha = 0.8f) else Color.White.copy(alpha = 0.2f),
-                                    shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
+                                    Brush.verticalGradient(
+                                        listOf(primaryCyan, primaryCyan.copy(alpha = 0.35f))
+                                    )
                                 )
                         )
-
                         Spacer(modifier = Modifier.height(6.dp))
-
                         Text(
                             text = stat.day,
                             style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = if (isLatest) FontWeight.Bold else FontWeight.Medium
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Medium
                             ),
-                            color = if (isLatest) primaryCyan else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f)
+                            color = Color.White.copy(alpha = 0.8f)
                         )
                     }
                 }
@@ -828,102 +1104,18 @@ fun WeeklyTrendChartCard(
 }
 
 @Composable
-fun CategoryBreakdownCard(
-    distribution: Map<String, Int>,
-    totalMinutes: Int
-) {
-    if (totalMinutes <= 0) return
-
-    val categoryColors = mapOf(
-        "Social" to Color(0xFF00E5FF),
-        "Entertainment" to Color(0xFF9D4EDD),
-        "Gaming" to Color(0xFFFF7A00),
-        "Browsing" to Color(0xFF00B4D8),
-        "Productivity" to Color(0xFF00F5D4),
-        "Communication" to Color(0xFFFF007F),
-        "General" to Color(0xFF90E0EF)
-    )
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .liquidGlass(shape = RoundedCornerShape(22.dp))
-            .padding(18.dp)
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(
-                text = "Category Distribution",
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.onBackground
-            )
-
-            // Segmented Progress Bar
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(14.dp)
-                    .clip(RoundedCornerShape(7.dp))
-                    .background(Color.White.copy(alpha = 0.1f))
-            ) {
-                distribution.entries.sortedByDescending { it.value }.forEach { (cat, mins) ->
-                    val weight = (mins.toFloat() / totalMinutes.toFloat()).coerceAtLeast(0.01f)
-                    val color = categoryColors[cat] ?: Color(0xFF90E0EF)
-                    Box(
-                        modifier = Modifier
-                            .weight(weight)
-                            .fillMaxHeight()
-                            .background(color)
-                    )
-                }
-            }
-
-            // Legend pills
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                distribution.entries.sortedByDescending { it.value }.take(5).forEach { (cat, mins) ->
-                    val color = categoryColors[cat] ?: Color(0xFF90E0EF)
-                    val percent = (mins.toFloat() / totalMinutes.toFloat() * 100).toInt()
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color.White.copy(alpha = 0.05f))
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(color)
-                        )
-                        Text(
-                            text = "$cat: ${mins / 60}h ${mins % 60}m ($percent%)",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun AppUsageItemRow(
+private fun AppUsageRowItem(
     appInfo: AppUsageInfo,
+    maxUsageMinutes: Int,
+    primaryCyan: Color,
     onSetLimitClick: () -> Unit
 ) {
+    val progress = (appInfo.usedMinutes.toFloat() / maxUsageMinutes.coerceAtLeast(1).toFloat()).coerceIn(0f, 1f)
     val context = LocalContext.current
-    val primaryCyan = Color(0xFF00E5FF)
-
     val appIcon: Drawable? = remember(appInfo.packageName) {
         try {
             context.packageManager.getApplicationIcon(appInfo.packageName)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
     }
@@ -931,279 +1123,152 @@ fun AppUsageItemRow(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .liquidGlass(
-                shape = RoundedCornerShape(18.dp),
-                isHighlight = appInfo.isDistracting,
-                isElevated = false
-            )
+            .liquidGlass(shape = RoundedCornerShape(22.dp))
             .padding(14.dp)
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // App Icon
-                if (appIcon != null) {
-                    Image(
-                        bitmap = appIcon.toBitmap(96, 96).asImageBitmap(),
-                        contentDescription = appInfo.appName,
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Color.White.copy(alpha = 0.1f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Apps,
-                            contentDescription = null,
-                            tint = primaryCyan,
-                            modifier = Modifier.size(24.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    if (appIcon != null) {
+                        Image(
+                            bitmap = appIcon.toBitmap().asImageBitmap(),
+                            contentDescription = appInfo.appName,
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(RoundedCornerShape(12.dp))
                         )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(primaryCyan.copy(alpha = 0.2f))
+                                .border(1.dp, primaryCyan.copy(alpha = 0.4f), RoundedCornerShape(12.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = appInfo.appName.take(1).uppercase(),
+                                fontWeight = FontWeight.Bold,
+                                color = primaryCyan
+                            )
+                        }
                     }
-                }
 
-                Spacer(modifier = Modifier.width(12.dp))
-
-                // App info
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
+                    Column {
                         Text(
                             text = appInfo.appName,
-                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp
+                            ),
                             color = Color.White,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
-                        if (appInfo.isDistracting) {
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(Color(0xFFFF5252).copy(alpha = 0.2f))
-                                    .padding(horizontal = 4.dp, vertical = 1.dp)
-                            ) {
-                                Text(
-                                    "Distracting",
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.Bold
-                                    ),
-                                    color = Color(0xFFFF5252)
-                                )
-                            }
-                        }
+                        Text(
+                            text = "${appInfo.usedMinutes / 60}h ${appInfo.usedMinutes % 60}m (${appInfo.launchCount} opens)",
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                            color = Color.White.copy(alpha = 0.65f)
+                        )
                     }
-
-                    Text(
-                        text = appInfo.category,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
-                    )
                 }
 
-                // Time spent
-                Column(horizontalAlignment = Alignment.End) {
+                FilledTonalButton(
+                    onClick = onSetLimitClick,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = primaryCyan.copy(alpha = 0.18f),
+                        contentColor = primaryCyan
+                    ),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                ) {
                     Text(
-                        text = if (appInfo.usedMinutes >= 60) {
-                            "${appInfo.usedMinutes / 60}h ${appInfo.usedMinutes % 60}m"
-                        } else {
-                            "${appInfo.usedMinutes}m"
-                        },
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
-                        color = if (appInfo.isDistracting) Color(0xFFFF7A00) else primaryCyan
-                    )
-
-                    Text(
-                        text = "${(appInfo.percentageOfTotal * 100).toInt()}%",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                        text = if (appInfo.dailyLimitMinutes > 0) "${appInfo.dailyLimitMinutes}m limit" else stringResource(R.string.set_limit),
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
                     )
                 }
             }
 
-            // Proportion bar
             LinearProgressIndicator(
-                progress = { appInfo.percentageOfTotal },
+                progress = { progress },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(5.dp)
+                    .height(6.dp)
                     .clip(RoundedCornerShape(3.dp)),
-                color = if (appInfo.isDistracting) Color(0xFFFF7A00) else primaryCyan,
-                trackColor = Color.White.copy(alpha = 0.08f),
+                color = if (appInfo.dailyLimitMinutes > 0 && appInfo.usedMinutes >= appInfo.dailyLimitMinutes) Color(0xFFFF5252) else primaryCyan,
+                trackColor = Color.White.copy(alpha = 0.1f)
             )
-
-            // Limit Action Bar
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (appInfo.isLimitActive) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Shield,
-                            contentDescription = null,
-                            tint = Color(0xFF00F5D4),
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Text(
-                            "Daily Limit: ${appInfo.dailyLimitMinutes}m",
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                            color = Color(0xFF00F5D4)
-                        )
-                    }
-                } else {
-                    Text(
-                        "No limit set",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
-                    )
-                }
-
-                TextButton(
-                    onClick = onSetLimitClick,
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                    modifier = Modifier.height(28.dp)
-                ) {
-                    Icon(
-                        if (appInfo.isLimitActive) Icons.Default.Edit else Icons.Default.Add,
-                        contentDescription = null,
-                        tint = primaryCyan,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = if (appInfo.isLimitActive) "Edit Limit" else "Set Limit",
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        color = primaryCyan
-                    )
-                }
-            }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SetAppLimitDialog(
+private fun DailyLimitEditDialog(
     appInfo: AppUsageInfo,
     onDismiss: () -> Unit,
-    onSaveLimit: (Int) -> Unit,
-    onRemoveLimit: () -> Unit
+    onSave: (Int) -> Unit
 ) {
-    var selectedMinutes by remember {
-        mutableIntStateOf(if (appInfo.dailyLimitMinutes > 0) appInfo.dailyLimitMinutes else 30)
-    }
-
-    val primaryCyan = Color(0xFF00E5FF)
-    val presets = listOf(15, 30, 45, 60, 90, 120)
+    val primaryCyan = Color(0xFF24DFEC)
+    var limitInput by remember { mutableStateOf(if (appInfo.dailyLimitMinutes > 0) appInfo.dailyLimitMinutes.toString() else "30") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.liquidGlass(shape = RoundedCornerShape(28.dp), isElevated = true),
-        containerColor = Color.Transparent,
+        containerColor = Color(0xFF162534),
         title = {
-            Column {
-                Text(
-                    text = "Daily Limit: ${appInfo.appName}",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                )
-                Text(
-                    text = "App will be blocked once daily usage reaches this limit.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                )
-            }
+            Text(
+                "Set Daily Limit: ${appInfo.appName}",
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                // Large minute readout
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(primaryCyan.copy(alpha = 0.15f))
-                        .border(1.dp, primaryCyan.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = if (selectedMinutes >= 60) "${selectedMinutes / 60}h ${selectedMinutes % 60}m per day" else "$selectedMinutes minutes per day",
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
-                        color = primaryCyan
-                    )
-                }
-
-                // Slider
-                Slider(
-                    value = selectedMinutes.toFloat(),
-                    onValueChange = { selectedMinutes = (it / 5).toInt() * 5 },
-                    valueRange = 5f..240f,
-                    steps = 46,
-                    colors = SliderDefaults.colors(
-                        thumbColor = primaryCyan,
-                        activeTrackColor = primaryCyan,
-                        inactiveTrackColor = Color.White.copy(alpha = 0.2f)
-                    )
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    "Set how many minutes you are allowed to use this app per day before FocusLock restricts it.",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
+                    color = Color.White.copy(alpha = 0.75f)
                 )
-
-                // Quick preset pills
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                OutlinedTextField(
+                    value = limitInput,
+                    onValueChange = { limitInput = it.filter { ch -> ch.isDigit() } },
+                    label = { Text("Daily Minutes (0 to remove)") },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = primaryCyan,
+                        unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White
+                    ),
                     modifier = Modifier.fillMaxWidth()
-                ) {
-                    presets.forEach { mins ->
-                        val isSelected = selectedMinutes == mins
-                        FilterChip(
-                            selected = isSelected,
-                            onClick = { selectedMinutes = mins },
-                            label = { Text(if (mins >= 60) "${mins / 60}h" else "${mins}m") },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = primaryCyan,
-                                selectedLabelColor = Color.Black
-                            )
-                        )
-                    }
-                }
+                )
             }
         },
         confirmButton = {
             Button(
-                onClick = { onSaveLimit(selectedMinutes) },
+                onClick = {
+                    val minutes = limitInput.toIntOrNull() ?: 0
+                    onSave(minutes)
+                },
+                shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = primaryCyan,
-                    contentColor = Color.Black
+                    contentColor = Color(0xFF0C1929)
                 )
             ) {
-                Text("Save Limit", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.save), fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (appInfo.isLimitActive) {
-                    TextButton(
-                        onClick = onRemoveLimit,
-                        colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFFFF5252))
-                    ) {
-                        Text("Remove Limit")
-                    }
-                }
-                TextButton(onClick = onDismiss) {
-                    Text("Cancel")
-                }
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel), color = Color.White.copy(alpha = 0.7f))
             }
         }
     )

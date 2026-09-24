@@ -23,11 +23,11 @@ private val DarkColorScheme = darkColorScheme(
     onSecondaryContainer = Color(0xFFC7F0DE),
     background = Color(0xFF080D16),
     onBackground = Color(0xFFE2E8F0),
-    surface = Color(0x22132238), // Translucent liquid glass surface, prevents black square boxes
+    surface = Color(0x24FFFFFF), // Translucent frosted liquid glass surface
     onSurface = Color(0xFFE2E8F0),
-    surfaceVariant = Color(0x281B2E48), // Translucent glass variant
-    onSurfaceVariant = Color(0xFF94A3B8),
-    outline = Color(0x3580D8FF),
+    surfaceVariant = Color(0x1AFFFFFF), // Translucent frosted glass variant
+    onSurfaceVariant = Color(0xFFE2E8F0),
+    outline = Color(0x45FFFFFF),
     error = SleekError,
     onError = SleekOnError
 )

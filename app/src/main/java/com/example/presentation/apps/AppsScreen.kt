@@ -1,5 +1,4 @@
 package com.example.presentation.apps
-import com.example.database.isPremiumActive
 
 import android.app.Application
 import android.content.Intent
@@ -25,7 +24,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.material.icons.filled.List
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -38,8 +36,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ads.AdsterraSocialBar
 import com.example.ads.LiquidGlassAdaptiveBanner
 import com.example.ads.LiquidGlassNativeAdCard
-import com.example.presentation.blocking.BlockActivity
-import com.example.service.BlockOverlayManager
+import com.example.database.isPremiumActive
+import com.example.ui.theme.GlassButton
+import com.example.ui.theme.GlassButtonStyle
+import com.example.ui.theme.GlassEmptyState
+import com.example.ui.theme.GlassIconBubble
+import com.example.ui.theme.GlassSectionHeader
+import com.example.ui.theme.GlassStatusBadge
 import com.example.ui.theme.liquidGlass
 import com.example.util.PermissionHelper
 
@@ -70,21 +73,19 @@ fun AppsScreen(
     val appsList by viewModel.appsList.collectAsStateWithLifecycle()
     val userSettings by viewModel.userSettings.collectAsStateWithLifecycle(initialValue = null)
     var searchQuery by remember { mutableStateOf("") }
-    var selectedFilter by remember { mutableStateOf("ALL") } // ALL, RESTRICTED, HIGH_IMPACT
+    var selectedFilter by remember { mutableStateOf("ALL") } // ALL, LIMITED
 
-    // App being configured in Custom Time Dialog
     var appToConfigure by remember { mutableStateOf<AppItem?>(null) }
-    
-    // App pending confirmation before being added to high-impact blocklist: (AppItem, dailyMinutes, sessionMinutes?)
     var highImpactAppPending by remember { mutableStateOf<Triple<AppItem, Int, Int?>?>(null) }
+    var showTemplatesDialog by remember { mutableStateOf(false) }
 
     val filteredApps = remember(appsList, searchQuery, selectedFilter) {
         appsList.filter { app ->
-            val matchesSearch = app.appName.contains(searchQuery, ignoreCase = true) ||
+            val matchesSearch = searchQuery.isBlank() ||
+                    app.appName.contains(searchQuery, ignoreCase = true) ||
                     app.packageName.contains(searchQuery, ignoreCase = true)
             val matchesFilter = when (selectedFilter) {
-                "RESTRICTED" -> app.isLimited
-                "HIGH_IMPACT" -> app.isHighImpact
+                "LIMITED" -> app.isLimited
                 else -> true
             }
             matchesSearch && matchesFilter
@@ -92,116 +93,46 @@ fun AppsScreen(
     }
 
     Scaffold(
-        containerColor = androidx.compose.ui.graphics.Color.Transparent,
+        containerColor = Color.Transparent,
         topBar = {
-            var showTemplatesDialog by remember { mutableStateOf(false) }
             TopAppBar(
-                title = { 
-                    Text(
-                        text = "App Blocklist & Limits",
-                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold)
-                    )
+                title = {
+                    Column {
+                        Text(
+                            text = "App Limits",
+                            style = MaterialTheme.typography.headlineSmall.copy(
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 24.sp
+                            ),
+                            color = Color.White
+                        )
+                        Text(
+                            text = "MONITOR & RESTRICT APPS",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp,
+                                fontSize = 10.5.sp
+                            ),
+                            color = Color(0xFF24DFEC)
+                        )
+                    }
                 },
                 actions = {
-                    FilledTonalButton(
+                    // Secondary action: Templates in clean frosted pill
+                    GlassButton(
                         onClick = { showTemplatesDialog = true },
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.filledTonalButtonColors(
-                            containerColor = Color(0x3300E5FF),
-                            contentColor = Color(0xFF00E5FF)
-                        ),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                    ) {
-                        Icon(Icons.Default.Tune, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Templates", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold))
-                    }
+                        text = "Templates",
+                        icon = Icons.Default.Tune,
+                        style = GlassButtonStyle.SECONDARY,
+                        modifier = Modifier.testTag("templates_button")
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = androidx.compose.ui.graphics.Color.Transparent,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground
+                    containerColor = Color.Transparent,
+                    titleContentColor = Color.White
                 )
             )
-
-            if (showTemplatesDialog) {
-                AlertDialog(
-                    onDismissRequest = { showTemplatesDialog = false },
-                    modifier = Modifier.liquidGlass(shape = RoundedCornerShape(28.dp), isElevated = true),
-                    containerColor = Color.Transparent,
-                    title = { 
-                        Text("App Limit Templates", fontWeight = FontWeight.Bold) 
-                    },
-                    text = {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text(
-                                "Quickly apply proven daily limit presets to curb usage:",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Surface(
-                                onClick = { viewModel.applyTemplate("Social Media"); showTemplatesDialog = false },
-                                shape = RoundedCornerShape(14.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(14.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(Icons.Default.Lock, contentDescription = null, tint = Color(0xFF00E5FF))
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Column {
-                                        Text("Social Media", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
-                                        Text("30 min/day limit on social apps", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    }
-                                }
-                            }
-                            Surface(
-                                onClick = { viewModel.applyTemplate("Gaming"); showTemplatesDialog = false },
-                                shape = RoundedCornerShape(14.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(14.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(Icons.Default.SportsEsports, contentDescription = null, tint = Color(0xFF00E5FF))
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Column {
-                                        Text("Gaming", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
-                                        Text("45 min/day limit on game titles", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    }
-                                }
-                            }
-                            Surface(
-                                onClick = { viewModel.applyTemplate("Entertainment"); showTemplatesDialog = false },
-                                shape = RoundedCornerShape(14.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(14.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(Icons.Default.Movie, contentDescription = null, tint = Color(0xFF00E5FF))
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Column {
-                                        Text("Entertainment", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
-                                        Text("60 min/day limit on video & streaming", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    confirmButton = {
-                        TextButton(onClick = { showTemplatesDialog = false }) { 
-                            Text("Cancel") 
-                        }
-                    }
-                )
-            }
         }
     ) { innerPadding ->
         LazyColumn(
@@ -209,16 +140,17 @@ fun AppsScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(top = 8.dp, bottom = 100.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            contentPadding = PaddingValues(top = 8.dp, bottom = 150.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // Permission warning if needed
             if (!hasAccessibility || !hasOverlay) {
                 item {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .liquidGlass(
-                                shape = RoundedCornerShape(18.dp),
+                                shape = RoundedCornerShape(22.dp),
                                 isHighlight = true
                             )
                             .padding(14.dp)
@@ -227,28 +159,32 @@ fun AppsScreen(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                Icons.Default.Warning,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.size(24.dp)
+                            GlassIconBubble(
+                                icon = Icons.Default.WarningAmber,
+                                size = 44.dp,
+                                iconSize = 22.dp,
+                                isHighlight = false
                             )
-                            Spacer(modifier = Modifier.width(10.dp))
+                            Spacer(modifier = Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Blocking Inactive",
-                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.error
+                                    text = "Setup Needed",
+                                    style = MaterialTheme.typography.titleSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 15.sp
+                                    ),
+                                    color = Color(0xFFFF5252)
                                 )
+                                Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = if (!hasAccessibility) "Enable Accessibility to detect and block apps."
-                                    else "Enable Display Over Other Apps to show the block screen.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
+                                    text = if (!hasAccessibility) "Grant accessibility to detect apps."
+                                    else "Grant overlay to show lock screen.",
+                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.5.sp),
+                                    color = Color.White.copy(alpha = 0.72f)
                                 )
                             }
                             Spacer(modifier = Modifier.width(8.dp))
-                            Button(
+                            GlassButton(
                                 onClick = {
                                     if (!hasAccessibility) {
                                         try {
@@ -264,102 +200,143 @@ fun AppsScreen(
                                         context.startActivity(intent)
                                     }
                                 },
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                                modifier = Modifier.height(32.dp)
-                            ) {
-                                Text("Enable", style = MaterialTheme.typography.labelSmall)
-                            }
+                                text = "Fix",
+                                style = GlassButtonStyle.PRIMARY
+                            )
                         }
                     }
                 }
             }
+
+            // Search Bar & Filter Chips
             item {
-                Spacer(modifier = Modifier.height(2.dp))
-                
-                // Search Input with frosted background
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    placeholder = { Text("Search installed applications...") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+                    placeholder = {
+                        Text(
+                            "Search apps...",
+                            color = Color.White.copy(alpha = 0.5f),
+                            fontSize = 14.sp
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = "Search",
+                            tint = Color.White.copy(alpha = 0.65f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    },
                     trailingIcon = {
                         if (searchQuery.isNotEmpty()) {
                             IconButton(onClick = { searchQuery = "" }) {
-                                Icon(Icons.Default.Clear, contentDescription = "Clear search")
+                                Icon(
+                                    Icons.Default.Clear,
+                                    contentDescription = "Clear search",
+                                    tint = Color.White.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(18.dp)
+                                )
                             }
                         }
                     },
                     shape = RoundedCornerShape(20.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedBorderColor = Color(0xFF24DFEC).copy(alpha = 0.8f),
+                        unfocusedBorderColor = Color.White.copy(alpha = 0.35f),
+                        focusedContainerColor = Color(0x3538485B),
+                        unfocusedContainerColor = Color(0x2838485B)
+                    ),
                     modifier = Modifier
                         .testTag("app_search_input")
-                        .fillMaxWidth()
-                        .liquidGlass(
-                            shape = RoundedCornerShape(20.dp),
-                            isElevated = false
-                        ),
+                        .fillMaxWidth(),
                     singleLine = true
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
-                // Filter Chips
-                LazyRow(
+                // Prioritized Filters: All vs Limited
+                Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    item {
-                        FilterChip(
-                            selected = selectedFilter == "ALL",
-                            onClick = { selectedFilter = "ALL" },
-                            label = { Text("All (${appsList.size})") },
-                            shape = RoundedCornerShape(14.dp)
-                        )
-                    }
-                    item {
-                        FilterChip(
-                            selected = selectedFilter == "RESTRICTED",
-                            onClick = { selectedFilter = "RESTRICTED" },
-                            label = { Text("Restricted (${appsList.count { it.isLimited }})") },
-                            shape = RoundedCornerShape(14.dp),
-                            leadingIcon = {
-                                Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(16.dp))
-                            }
-                        )
-                    }
-                    item {
-                        FilterChip(
-                            selected = selectedFilter == "HIGH_IMPACT",
-                            onClick = { selectedFilter = "HIGH_IMPACT" },
-                            label = { Text("High-Impact (${appsList.count { it.isHighImpact }})") },
-                            shape = RoundedCornerShape(14.dp),
-                            leadingIcon = {
-                                Icon(Icons.Default.Whatshot, contentDescription = null, modifier = Modifier.size(16.dp))
-                            }
-                        )
-                    }
-                }
+                    val allSelected = selectedFilter == "ALL"
+                    val limitedSelected = selectedFilter == "LIMITED"
 
-                Spacer(modifier = Modifier.height(4.dp))
-            }
-
-            if (filteredApps.isEmpty()) {
-                item {
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 48.dp),
+                            .weight(1f)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(if (allSelected) Color(0x3524DFEC) else Color(0x303E4C5E))
+                            .border(
+                                1.dp,
+                                if (allSelected) Color(0xFF24DFEC) else Color.White.copy(alpha = 0.30f),
+                                RoundedCornerShape(16.dp)
+                            )
+                            .clickable { selectedFilter = "ALL" }
+                            .padding(vertical = 10.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "No applications match your filter.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                            text = "All Apps (${appsList.size})",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = if (allSelected) FontWeight.Bold else FontWeight.Medium,
+                                fontSize = 13.sp
+                            ),
+                            color = if (allSelected) Color(0xFF24DFEC) else Color.White.copy(alpha = 0.8f)
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(if (limitedSelected) Color(0x3524DFEC) else Color(0x303E4C5E))
+                            .border(
+                                1.dp,
+                                if (limitedSelected) Color(0xFF24DFEC) else Color.White.copy(alpha = 0.30f),
+                                RoundedCornerShape(16.dp)
+                            )
+                            .clickable { selectedFilter = "LIMITED" }
+                            .padding(vertical = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.Lock,
+                                contentDescription = null,
+                                tint = if (limitedSelected) Color(0xFF24DFEC) else Color.White.copy(alpha = 0.8f),
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Limited (${appsList.count { it.isLimited }})",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = if (limitedSelected) FontWeight.Bold else FontWeight.Medium,
+                                fontSize = 13.sp
+                            ),
+                            color = if (limitedSelected) Color(0xFF24DFEC) else Color.White.copy(alpha = 0.8f)
                         )
                     }
                 }
+            }
+        }
+
+            // App List
+            if (filteredApps.isEmpty()) {
+                item {
+                    GlassEmptyState(
+                        icon = if (selectedFilter == "LIMITED") Icons.Default.LockOpen else Icons.Default.SearchOff,
+                        title = if (selectedFilter == "LIMITED") "No Limited Apps" else "No Apps Found",
+                        subtitle = if (selectedFilter == "LIMITED") "Select 'All Apps' to configure limits on your installed apps."
+                        else "No apps match your search filter.",
+                        actionText = if (selectedFilter == "LIMITED") "View All Apps" else null,
+                        onAction = if (selectedFilter == "LIMITED") { { selectedFilter = "ALL" } } else null
+                    )
+                }
             } else {
-                // Split items to insert Native ad between usage sections
                 val halfSize = (filteredApps.size / 2).coerceAtLeast(1)
                 val firstBatch = filteredApps.take(halfSize)
                 val secondBatch = filteredApps.drop(halfSize)
@@ -367,12 +344,7 @@ fun AppsScreen(
                 items(firstBatch, key = { it.packageName }) { app ->
                     AppListItem(
                         app = app,
-                        onItemClick = {
-                            appToConfigure = app
-                        },
-                        onConfigureClick = {
-                            appToConfigure = app
-                        },
+                        onItemClick = { appToConfigure = app },
                         onCheckedChange = { isChecked ->
                             if (isChecked) {
                                 if (!app.isLimited) {
@@ -387,7 +359,7 @@ fun AppsScreen(
                     )
                 }
 
-                // Native ad between usage sections
+                // Native Ad Card
                 item {
                     LiquidGlassNativeAdCard(
                         isPremium = userSettings?.isPremiumActive ?: false
@@ -397,12 +369,7 @@ fun AppsScreen(
                 items(secondBatch, key = { it.packageName }) { app ->
                     AppListItem(
                         app = app,
-                        onItemClick = {
-                            appToConfigure = app
-                        },
-                        onConfigureClick = {
-                            appToConfigure = app
-                        },
+                        onItemClick = { appToConfigure = app },
                         onCheckedChange = { isChecked ->
                             if (isChecked) {
                                 if (!app.isLimited) {
@@ -418,26 +385,89 @@ fun AppsScreen(
                 }
             }
 
-            // 320x50 banner near the bottom (Zero ads for premium)
+            // Banner Ad
             item {
                 LiquidGlassAdaptiveBanner(
                     isPremium = userSettings?.isPremiumActive ?: false
                 )
             }
 
-            // Social Bar format (cooldown protected, zero ads for premium)
+            // Social Bar
             item {
                 AdsterraSocialBar(
                     isPremium = userSettings?.isPremiumActive ?: false,
                     isFocusActive = userSettings?.isFocusModeActive ?: false
                 )
             }
-
-            item { Spacer(modifier = Modifier.height(24.dp)) }
         }
     }
 
-    // --- CUSTOM TIME LIMIT DIALOG ---
+    // --- TEMPLATES DIALOG (Secondary Action) ---
+    if (showTemplatesDialog) {
+        AlertDialog(
+            onDismissRequest = { showTemplatesDialog = false },
+            modifier = Modifier.liquidGlass(shape = RoundedCornerShape(26.dp), isElevated = true),
+            containerColor = Color.Transparent,
+            title = {
+                Text(
+                    text = "Quick Restriction Templates",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = Color.White
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    val templates = listOf(
+                        Triple("Social Media", "30m daily allowance on social apps", Icons.Default.Lock),
+                        Triple("Gaming", "45m daily limit on games", Icons.Default.SportsEsports),
+                        Triple("Entertainment", "60m daily limit on video apps", Icons.Default.Movie)
+                    )
+
+                    templates.forEach { (title, subtitle, icon) ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .liquidGlass(shape = RoundedCornerShape(18.dp))
+                                .clickable {
+                                    viewModel.applyTemplate(title)
+                                    showTemplatesDialog = false
+                                }
+                                .padding(14.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                GlassIconBubble(icon = icon, size = 40.dp, iconSize = 20.dp, isHighlight = true)
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = title,
+                                        style = MaterialTheme.typography.titleSmall.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 15.sp
+                                        ),
+                                        color = Color.White
+                                    )
+                                    Text(
+                                        text = subtitle,
+                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.5.sp),
+                                        color = Color.White.copy(alpha = 0.65f)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                GlassButton(
+                    onClick = { showTemplatesDialog = false },
+                    text = "Close",
+                    style = GlassButtonStyle.SECONDARY
+                )
+            }
+        )
+    }
+
+    // --- CONFIGURE TIME LIMIT DIALOG ---
     if (appToConfigure != null) {
         val app = appToConfigure!!
         CustomTimeLimitDialog(
@@ -446,7 +476,6 @@ fun AppsScreen(
             onSaveLimit = { customMinutes, sessionMinutes ->
                 appToConfigure = null
                 if (app.isHighImpact && !app.isLimited) {
-                    // Trigger confirmation dialog for high-impact app before adding
                     highImpactAppPending = Triple(app, customMinutes, sessionMinutes)
                 } else {
                     viewModel.setCustomLimit(app, customMinutes, sessionMinutes, isEnabled = true)
@@ -459,62 +488,43 @@ fun AppsScreen(
         )
     }
 
-    // --- HIGH-IMPACT APP CONFIRMATION DIALOG ---
+    // --- HIGH-IMPACT CONFIRMATION DIALOG ---
     if (highImpactAppPending != null) {
         val (app, minutes, sessionMinutes) = highImpactAppPending!!
         AlertDialog(
             onDismissRequest = { highImpactAppPending = null },
-            modifier = Modifier.liquidGlass(shape = RoundedCornerShape(28.dp), isElevated = true),
+            modifier = Modifier.liquidGlass(shape = RoundedCornerShape(26.dp), isElevated = true),
             containerColor = Color.Transparent,
-            icon = {
-                Icon(
-                    imageVector = Icons.Default.Warning,
-                    contentDescription = "Warning",
-                    tint = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.size(36.dp)
-                )
-            },
             title = {
                 Text(
-                    text = "Confirm High-Impact Block",
-                    fontWeight = FontWeight.Bold
+                    text = "Confirm Restriction",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = Color.White
                 )
             },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(
-                        text = "You are about to add \"${app.appName}\" to your active blocklist.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = "This application has been identified as a high-impact distraction. Once added, access will be restricted according to your custom daily allowance of ${if (minutes == 0) "0 minutes (Always Blocked)" else "$minutes minutes/day"}${if (sessionMinutes != null) " (Session limit: ${sessionMinutes}m)" else ""} and active focus schedules.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "Are you sure you want to permanently add this high-impact app to your active blocklist?",
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
+                Text(
+                    text = "Add \"${app.appName}\" to active limits with ${if (minutes == 0) "strict block (0m)" else "$minutes min/day allowance"}?",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
+                    color = Color.White.copy(alpha = 0.8f)
+                )
             },
             confirmButton = {
-                Button(
+                GlassButton(
                     onClick = {
                         viewModel.setCustomLimit(app, minutes, sessionMinutes, isEnabled = true)
                         highImpactAppPending = null
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("Add to Blocklist")
-                }
+                    text = "Confirm",
+                    style = GlassButtonStyle.PRIMARY
+                )
             },
             dismissButton = {
-                TextButton(onClick = { highImpactAppPending = null }) {
-                    Text("Cancel")
-                }
+                GlassButton(
+                    onClick = { highImpactAppPending = null },
+                    text = "Cancel",
+                    style = GlassButtonStyle.SECONDARY
+                )
             }
         )
     }
@@ -524,38 +534,39 @@ fun AppsScreen(
 fun AppListItem(
     app: AppItem,
     onItemClick: () -> Unit,
-    onConfigureClick: () -> Unit,
     onCheckedChange: (Boolean) -> Unit
 ) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .liquidGlass(
-                shape = RoundedCornerShape(20.dp),
-                isHighlight = app.isHighImpact || app.isLimited
+                shape = RoundedCornerShape(22.dp),
+                isHighlight = app.isLimited
             )
             .clickable(onClick = onItemClick)
-            .padding(16.dp)
+            .padding(15.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // App Avatar / Initial with Glass gradient rim
             com.example.presentation.common.RealAppIcon(
                 packageName = app.packageName,
                 appName = app.appName,
-                size = 46.dp
+                size = 44.dp
             )
-            
-            Spacer(modifier = Modifier.width(14.dp))
-            
+
+            Spacer(modifier = Modifier.width(13.dp))
+
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = app.appName,
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onBackground,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
+                        ),
+                        color = Color.White,
                         modifier = Modifier.weight(1f, fill = false)
                     )
                     if (app.isHighImpact) {
@@ -563,17 +574,17 @@ fun AppListItem(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(MaterialTheme.colorScheme.error.copy(alpha = 0.2f))
-                                .border(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                                .background(Color(0x35EF4444))
+                                .border(1.dp, Color(0x60EF4444), RoundedCornerShape(8.dp))
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
-                                "High-Impact",
+                                "Distracting",
                                 style = MaterialTheme.typography.labelSmall.copy(
-                                    fontSize = 9.sp,
+                                    fontSize = 9.5.sp,
                                     fontWeight = FontWeight.Bold
                                 ),
-                                color = MaterialTheme.colorScheme.error
+                                color = Color(0xFFFF5252)
                             )
                         }
                     }
@@ -581,66 +592,36 @@ fun AppListItem(
 
                 Spacer(modifier = Modifier.height(3.dp))
 
-                if (app.activeUnlockMethod != null && app.activeUnlockRemainingMinutes != null) {
-                    Text(
-                        text = "Unlocked: ${app.activeUnlockRemainingMinutes}m left (${app.activeUnlockMethod})",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
-                } else if (app.isLimited) {
-                    val limitText = if (app.dailyLimitMinutes == 0) {
-                        "Always Blocked (0 min/day)"
-                    } else {
-                        val sessionInfo = if (app.sessionLimitMinutes != null) " • Session: ${app.sessionLimitMinutes}m" else ""
-                        val usageInfo = if (app.usedTodayMinutes > 0) " (Today: ${app.usedTodayMinutes}m)" else ""
-                        "Limit: ${app.dailyLimitMinutes} min/day$sessionInfo$usageInfo"
-                    }
-                    Text(
-                        text = limitText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                val subtitle = if (app.isLimited) {
+                    if (app.dailyLimitMinutes == 0) "Strict Block (0m)"
+                    else "Limit: ${app.dailyLimitMinutes}m/day (Used: ${app.usedTodayMinutes}m)"
                 } else {
-                    val usageInfo = if (app.usedTodayMinutes > 0) {
-                        if (app.usedTodayMinutes >= 60) {
-                            "Used today: ${app.usedTodayMinutes / 60}h ${app.usedTodayMinutes % 60}m"
-                        } else {
-                            "Used today: ${app.usedTodayMinutes}m"
-                        }
-                    } else {
-                        "Tap to set custom time limit"
-                    }
-                    Text(
-                        text = usageInfo,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (app.usedTodayMinutes > 0) Color(0xFF00E5FF).copy(alpha = 0.8f) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f)
-                    )
+                    if (app.usedTodayMinutes > 0) "Today: ${app.usedTodayMinutes}m"
+                    else "No limit configured"
                 }
-            }
-            
-            IconButton(onClick = onConfigureClick) {
-                Icon(
-                    imageVector = Icons.Default.Tune,
-                    contentDescription = "Configure custom limit",
-                    tint = if (app.isLimited) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.5.sp),
+                    color = if (app.isLimited) Color(0xFF24DFEC) else Color.White.copy(alpha = 0.65f)
                 )
             }
-            
+
             Switch(
                 checked = app.isLimited,
-                onCheckedChange = onCheckedChange
+                onCheckedChange = onCheckedChange,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color(0xFF061820),
+                    checkedTrackColor = Color(0xFF24DFEC),
+                    uncheckedThumbColor = Color.White.copy(alpha = 0.7f),
+                    uncheckedTrackColor = Color(0x303E4C5E),
+                    uncheckedBorderColor = Color.White.copy(alpha = 0.3f)
+                )
             )
         }
     }
 }
 
-/**
- * Custom Time Limit Dialog allowing users to configure any custom minutes
- * or choose from convenient presets.
- */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomTimeLimitDialog(
     app: AppItem,
@@ -651,28 +632,24 @@ fun CustomTimeLimitDialog(
     val initialMinutes = if (app.dailyLimitMinutes > 0) app.dailyLimitMinutes else 30
     var minutes by remember { mutableIntStateOf(initialMinutes) }
     var textInput by remember { mutableStateOf(initialMinutes.toString()) }
-    
-    var hasSessionLimit by remember { mutableStateOf(app.sessionLimitMinutes != null && app.sessionLimitMinutes > 0) }
-    var sessionMinutes by remember { mutableIntStateOf(app.sessionLimitMinutes ?: 15) }
-    var sessionTextInput by remember { mutableStateOf((app.sessionLimitMinutes ?: 15).toString()) }
 
-    val presetMinutes = listOf(15, 30, 45, 60, 90, 120)
+    val presetMinutes = listOf(0, 15, 30, 45, 60, 90)
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.liquidGlass(shape = RoundedCornerShape(28.dp), isElevated = true),
+        modifier = Modifier.liquidGlass(shape = RoundedCornerShape(26.dp), isElevated = true),
         containerColor = Color.Transparent,
         title = {
             Column {
                 Text(
-                    text = "Configure App Restriction",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
+                    text = "Set Limit",
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = Color.White
                 )
                 Text(
                     text = app.appName,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary
+                    color = Color(0xFF24DFEC)
                 )
             }
         },
@@ -681,119 +658,85 @@ fun CustomTimeLimitDialog(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                if (app.isHighImpact) {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f)),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Default.Whatshot, contentDescription = null, tint = MaterialTheme.colorScheme.error)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "High-impact distracting app. Setting a strict limit or full block helps reclaim your focus.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        }
-                    }
-                }
-
-                // Dedicated "Always Block" Card
-                Surface(
-                    onClick = {
-                        minutes = 0
-                        textInput = "0"
-                    },
-                    shape = RoundedCornerShape(12.dp),
-                    color = if (minutes == 0) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f)
-                            else MaterialTheme.colorScheme.surfaceVariant,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            Icons.Default.Block,
-                            contentDescription = null,
-                            tint = if (minutes == 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Always Block (0 min)",
-                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                                color = if (minutes == 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Blocks app immediately when opened",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        RadioButton(
-                            selected = minutes == 0,
-                            onClick = {
-                                minutes = 0
-                                textInput = "0"
-                            }
-                        )
-                    }
-                }
-
                 Text(
-                    text = "Or Set Daily Usage Allowance",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold
+                    text = "QUICK PRESETS",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = 1.sp
+                    ),
+                    color = Color.White.copy(alpha = 0.7f)
                 )
 
-                // Presets
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     presetMinutes.take(3).forEach { presetMin ->
-                        FilterChip(
-                            selected = (minutes == presetMin),
-                            onClick = {
-                                minutes = presetMin
-                                textInput = presetMin.toString()
-                            },
-                            label = { Text("${presetMin}m") },
-                            modifier = Modifier.weight(1f)
-                        )
+                        val isSelected = minutes == presetMin
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (isSelected) Color(0x3524DFEC) else Color(0x253E4C5E))
+                                .border(
+                                    1.dp,
+                                    if (isSelected) Color(0xFF24DFEC) else Color.White.copy(alpha = 0.25f),
+                                    RoundedCornerShape(12.dp)
+                                )
+                                .clickable {
+                                    minutes = presetMin
+                                    textInput = presetMin.toString()
+                                }
+                                .padding(vertical = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = if (presetMin == 0) "Block" else "${presetMin}m",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                color = if (isSelected) Color(0xFF24DFEC) else Color.White
+                            )
+                        }
                     }
                 }
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     presetMinutes.drop(3).forEach { presetMin ->
-                        FilterChip(
-                            selected = (minutes == presetMin),
-                            onClick = {
-                                minutes = presetMin
-                                textInput = presetMin.toString()
-                            },
-                            label = { Text(if (presetMin >= 60) "${presetMin / 60}h" else "${presetMin}m") },
-                            modifier = Modifier.weight(1f)
-                        )
+                        val isSelected = minutes == presetMin
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (isSelected) Color(0x3524DFEC) else Color(0x253E4C5E))
+                                .border(
+                                    1.dp,
+                                    if (isSelected) Color(0xFF24DFEC) else Color.White.copy(alpha = 0.25f),
+                                    RoundedCornerShape(12.dp)
+                                )
+                                .clickable {
+                                    minutes = presetMin
+                                    textInput = presetMin.toString()
+                                }
+                                .padding(vertical = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = if (presetMin >= 60) "${presetMin / 60}h" else "${presetMin}m",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                color = if (isSelected) Color(0xFF24DFEC) else Color.White
+                            )
+                        }
                     }
                 }
 
-                HorizontalDivider()
-
                 Text(
-                    text = "Custom Daily Minutes",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold
+                    text = "Daily Allowance: ${if (minutes == 0) "Strict Block (0m)" else "$minutes minutes"}",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = Color(0xFF24DFEC)
                 )
 
-                // Stepper + Custom Numeric Input
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -806,10 +749,12 @@ fun CustomTimeLimitDialog(
                             textInput = newMin.toString()
                         },
                         modifier = Modifier
-                            .size(44.dp)
-                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
+                            .size(42.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0x303E4C5E))
+                            .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
                     ) {
-                        Icon(Icons.Default.Remove, contentDescription = "Decrease 5 minutes")
+                        Icon(Icons.Default.Remove, contentDescription = "Decrease 5m", tint = Color.White)
                     }
 
                     OutlinedTextField(
@@ -821,10 +766,15 @@ fun CustomTimeLimitDialog(
                                 minutes = parsed
                             }
                         },
-                        label = { Text("Minutes / day") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.weight(1f),
-                        singleLine = true
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedBorderColor = Color(0xFF24DFEC),
+                            unfocusedBorderColor = Color.White.copy(alpha = 0.3f)
+                        )
                     )
 
                     IconButton(
@@ -834,119 +784,37 @@ fun CustomTimeLimitDialog(
                             textInput = newMin.toString()
                         },
                         modifier = Modifier
-                            .size(44.dp)
-                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
+                            .size(42.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0x303E4C5E))
+                            .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = "Increase 5 minutes")
-                    }
-                }
-
-                Text(
-                    text = if (minutes == 0) "Access will be completely blocked all day."
-                    else "Access will be restricted after $minutes minutes of foreground usage each day.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                HorizontalDivider()
-
-                // Session Limit (Continuous usage in single session)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Enforce Session Limit",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            text = "Limits uninterrupted continuous use per session",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Switch(
-                        checked = hasSessionLimit,
-                        onCheckedChange = { hasSessionLimit = it }
-                    )
-                }
-
-                if (hasSessionLimit) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        IconButton(
-                            onClick = {
-                                val newSession = (sessionMinutes - 5).coerceAtLeast(5)
-                                sessionMinutes = newSession
-                                sessionTextInput = newSession.toString()
-                            },
-                            modifier = Modifier
-                                .size(44.dp)
-                                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
-                        ) {
-                            Icon(Icons.Default.Remove, contentDescription = "Decrease session limit")
-                        }
-
-                        OutlinedTextField(
-                            value = sessionTextInput,
-                            onValueChange = { input ->
-                                sessionTextInput = input
-                                val parsed = input.toIntOrNull()
-                                if (parsed != null && parsed > 0) {
-                                    sessionMinutes = parsed
-                                }
-                            },
-                            label = { Text("Session Minutes") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
-                        )
-
-                        IconButton(
-                            onClick = {
-                                val newSession = sessionMinutes + 5
-                                sessionMinutes = newSession
-                                sessionTextInput = newSession.toString()
-                            },
-                            modifier = Modifier
-                                .size(44.dp)
-                                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
-                        ) {
-                            Icon(Icons.Default.Add, contentDescription = "Increase session limit")
-                        }
+                        Icon(Icons.Default.Add, contentDescription = "Increase 5m", tint = Color.White)
                     }
                 }
             }
         },
         confirmButton = {
-            Button(
-                onClick = {
-                    val finalSession = if (hasSessionLimit) sessionMinutes else null
-                    onSaveLimit(minutes, finalSession)
-                }
-            ) {
-                Text("Save Limit")
-            }
+            GlassButton(
+                onClick = { onSaveLimit(minutes, null) },
+                text = "Save",
+                style = GlassButtonStyle.PRIMARY
+            )
         },
         dismissButton = {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (app.isLimited) {
-                    TextButton(
+                    GlassButton(
                         onClick = onRemoveLimit,
-                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                    ) {
-                        Text("Remove")
-                    }
+                        text = "Remove",
+                        style = GlassButtonStyle.DESTRUCTIVE
+                    )
                 }
-                TextButton(onClick = onDismiss) {
-                    Text("Cancel")
-                }
+                GlassButton(
+                    onClick = onDismiss,
+                    text = "Cancel",
+                    style = GlassButtonStyle.SECONDARY
+                )
             }
         }
     )

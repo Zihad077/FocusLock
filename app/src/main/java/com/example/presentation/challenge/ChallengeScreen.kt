@@ -188,14 +188,14 @@ fun ChallengeGlassOptionCard(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     onClick: () -> Unit
 ) {
-    val primaryColor = com.example.ui.theme.SleekPrimaryDark
+    val primaryCyan = Color(0xFF24DFEC)
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .liquidGlass(shape = RoundedCornerShape(22.dp), isElevated = true)
+            .liquidGlass(shape = RoundedCornerShape(24.dp), isElevated = false)
             .clickable(onClick = onClick)
-            .padding(18.dp)
+            .padding(16.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -204,31 +204,35 @@ fun ChallengeGlassOptionCard(
             Box(
                 modifier = Modifier
                     .size(46.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(primaryColor.copy(alpha = 0.18f))
-                    .border(1.dp, primaryColor.copy(alpha = 0.35f), RoundedCornerShape(14.dp)),
+                    .clip(CircleShape)
+                    .background(Color(0x283E4C5E))
+                    .border(1.dp, Color.White.copy(alpha = 0.25f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(icon, contentDescription = null, tint = primaryColor, modifier = Modifier.size(24.dp))
+                Icon(icon, contentDescription = null, tint = primaryCyan, modifier = Modifier.size(22.dp))
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     title,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onBackground
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.5.sp
+                    ),
+                    color = Color.White
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f)
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.5.sp),
+                    color = Color.White.copy(alpha = 0.65f)
                 )
             }
             Icon(
                 Icons.Default.ChevronRight,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.35f)
+                tint = Color.White.copy(alpha = 0.4f),
+                modifier = Modifier.size(20.dp)
             )
         }
     }
@@ -396,8 +400,14 @@ fun FocusChallenge(durationSecs: Int, onComplete: () -> Unit, onCancel: () -> Un
 
 @Composable
 fun TypingChallenge(settings: UserSettings, onComplete: () -> Unit, onCancel: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val currentLang = remember(settings.language) {
+        val saved = com.example.util.LocaleHelper.getSavedLanguage(context)
+        if (saved.isNotBlank()) saved else settings.language
+    }
+
     var phrase by remember {
-        mutableStateOf(TypingChallengePhrases.getRandomPhrase(settings.language))
+        mutableStateOf(TypingChallengePhrases.getRandomPhrase(currentLang))
     }
     var input by remember { mutableStateOf("") }
     var error by remember { mutableStateOf(false) }
@@ -428,7 +438,14 @@ fun TypingChallenge(settings: UserSettings, onComplete: () -> Unit, onCancel: ()
                     )
                     IconButton(
                         onClick = {
-                            phrase = TypingChallengePhrases.getRandomPhrase(settings.language)
+                            var newPhrase = TypingChallengePhrases.getRandomPhrase(currentLang)
+                            // Pick a different sentence if possible
+                            var attempts = 0
+                            while (newPhrase == phrase && attempts < 5) {
+                                newPhrase = TypingChallengePhrases.getRandomPhrase(currentLang)
+                                attempts++
+                            }
+                            phrase = newPhrase
                             input = ""
                             error = false
                         }

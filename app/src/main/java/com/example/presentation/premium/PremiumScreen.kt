@@ -148,7 +148,7 @@ fun PremiumScreen(
     var showTutorial by remember { mutableStateOf(true) }
     var showCommonErrors by remember { mutableStateOf(false) }
 
-    val primaryCyan = Color(0xFF00E5FF)
+    val primaryCyan = Color(0xFF24DFEC)
     val secondaryGreen = Color(0xFF47C28C)
     val warningAmber = Color(0xFFFFB74D)
 
@@ -159,18 +159,29 @@ fun PremiumScreen(
                     title = {
                         Text(
                             "FocusLock Premium",
-                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                            style = MaterialTheme.typography.headlineSmall.copy(
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 24.sp
+                            ),
+                            color = Color.White
                         )
                     },
                     navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        IconButton(
+                            onClick = onBack,
+                            modifier = Modifier
+                                .padding(8.dp)
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.1f))
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = Color.Transparent,
-                        titleContentColor = MaterialTheme.colorScheme.onBackground,
-                        navigationIconContentColor = MaterialTheme.colorScheme.onBackground
+                        titleContentColor = Color.White,
+                        navigationIconContentColor = Color.White
                     )
                 )
             },
@@ -201,30 +212,35 @@ fun PremiumScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .liquidGlass(shape = RoundedCornerShape(20.dp), isElevated = true)
+                            .liquidGlass(shape = RoundedCornerShape(24.dp))
                             .padding(18.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 modifier = Modifier
-                                    .size(44.dp)
+                                    .size(46.dp)
                                     .clip(CircleShape)
-                                    .background(secondaryGreen.copy(alpha = 0.2f)),
+                                    .background(secondaryGreen.copy(alpha = 0.2f))
+                                    .border(1.dp, secondaryGreen.copy(alpha = 0.5f), CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(Icons.Default.Shield, contentDescription = null, tint = secondaryGreen)
+                                Icon(Icons.Default.Shield, contentDescription = null, tint = secondaryGreen, modifier = Modifier.size(24.dp))
                             }
                             Spacer(modifier = Modifier.width(14.dp))
                             Column {
                                 Text(
                                     "Premium Active",
-                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 16.sp
+                                    ),
                                     color = secondaryGreen
                                 )
+                                Spacer(modifier = Modifier.height(2.dp))
                                 Text(
                                     if (expiry > 0L) "Expires: $expiryFormatted ($daysRemaining days remaining)" else "Ad-Free Focus Experience Active",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                                    color = Color.White.copy(alpha = 0.7f)
                                 )
                             }
                         }
@@ -235,10 +251,10 @@ fun PremiumScreen(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(
                         modifier = Modifier
-                            .size(56.dp)
+                            .size(60.dp)
                             .clip(CircleShape)
-                            .background(primaryCyan.copy(alpha = 0.15f))
-                            .border(1.dp, primaryCyan.copy(alpha = 0.35f), CircleShape),
+                            .background(Color(0x283E4C5E))
+                            .border(1.dp, Color.White.copy(alpha = 0.25f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -251,15 +267,18 @@ fun PremiumScreen(
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
                         "Remove All Ads Forever",
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
-                        color = MaterialTheme.colorScheme.onBackground,
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 20.sp
+                        ),
+                        color = Color.White,
                         textAlign = TextAlign.Center
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        "Zero distractions • Direct Binance Verification • Instant On-Device Activation",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f),
+                        "Zero distractions • Direct Binance Verification • Instant Activation",
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                        color = Color.White.copy(alpha = 0.65f),
                         textAlign = TextAlign.Center
                     )
                 }
@@ -272,10 +291,8 @@ fun PremiumScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .liquidGlass(
-                                    shape = RoundedCornerShape(18.dp),
-                                    isElevated = isSelected,
-                                    isHighlight = isSelected,
-                                    borderWidth = if (isSelected) 1.5.dp else 0.8.dp
+                                    shape = RoundedCornerShape(24.dp),
+                                    isHighlight = isSelected
                                 )
                                 .clickable {
                                     selectedPlanId = plan.id
@@ -288,7 +305,10 @@ fun PremiumScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)
+                                ) {
                                     RadioButton(
                                         selected = isSelected,
                                         onClick = {
@@ -297,16 +317,19 @@ fun PremiumScreen(
                                         },
                                         colors = RadioButtonDefaults.colors(
                                             selectedColor = primaryCyan,
-                                            unselectedColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
+                                            unselectedColor = Color.White.copy(alpha = 0.35f)
                                         )
                                     )
-                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
                                     Column {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Text(
                                                 "${plan.emoji} ${plan.name}",
-                                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                                color = MaterialTheme.colorScheme.onBackground
+                                                style = MaterialTheme.typography.titleMedium.copy(
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 15.sp
+                                                ),
+                                                color = Color.White
                                             )
                                             if (plan.isRecommended) {
                                                 Spacer(modifier = Modifier.width(8.dp))
@@ -329,21 +352,24 @@ fun PremiumScreen(
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Text(
                                             "${plan.durationText} • ${plan.benefit}",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f)
+                                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                                            color = Color.White.copy(alpha = 0.65f)
                                         )
                                     }
                                 }
                                 Column(horizontalAlignment = Alignment.End) {
                                     Text(
                                         plan.priceDisplay,
-                                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
+                                        style = MaterialTheme.typography.titleLarge.copy(
+                                            fontWeight = FontWeight.ExtraBold,
+                                            fontSize = 20.sp
+                                        ),
                                         color = primaryCyan
                                     )
                                     Text(
                                         "USDT",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                        color = Color.White.copy(alpha = 0.5f)
                                     )
                                 }
                             }
@@ -355,7 +381,7 @@ fun PremiumScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .liquidGlass(shape = RoundedCornerShape(20.dp), isElevated = true)
+                        .liquidGlass(shape = RoundedCornerShape(26.dp))
                         .padding(18.dp)
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -368,7 +394,8 @@ fun PremiumScreen(
                                 "BINANCE PAY PAYMENT",
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontWeight = FontWeight.Bold,
-                                    letterSpacing = 1.sp
+                                    letterSpacing = 1.sp,
+                                    fontSize = 11.sp
                                 ),
                                 color = primaryCyan
                             )
@@ -383,9 +410,9 @@ fun PremiumScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0xFF0D1726))
-                                .border(0.8.dp, Color(0x4080D8FF), RoundedCornerShape(12.dp))
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Color(0x283E4C5E))
+                                .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
                                 .clickable {
                                     clipboardManager.setText(AnnotatedString(BinancePremiumManager.RECEIVER_PAY_ID))
                                     copyMessage = "Binance Pay ID copied: ${BinancePremiumManager.RECEIVER_PAY_ID}"
@@ -394,8 +421,8 @@ fun PremiumScreen(
                         ) {
                             Text(
                                 "Binance Pay UID / Pay ID (Tap to copy)",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                color = Color.White.copy(alpha = 0.6f)
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Row(
@@ -405,7 +432,10 @@ fun PremiumScreen(
                             ) {
                                 Text(
                                     BinancePremiumManager.RECEIVER_PAY_ID,
-                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 16.sp
+                                    ),
                                     color = primaryCyan
                                 )
                                 Row(
@@ -417,7 +447,7 @@ fun PremiumScreen(
                                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                                         color = primaryCyan
                                     )
-                                    Icon(Icons.Default.ContentCopy, contentDescription = "Copy", tint = primaryCyan, modifier = Modifier.size(16.dp))
+                                    Icon(Icons.Default.ContentCopy, contentDescription = "Copy", tint = primaryCyan, modifier = Modifier.size(15.dp))
                                 }
                             }
                         }
@@ -500,7 +530,7 @@ fun PremiumScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(52.dp),
-                            shape = RoundedCornerShape(14.dp),
+                            shape = RoundedCornerShape(16.dp),
                             enabled = verificationState !is VerificationState.Loading,
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = primaryCyan,
@@ -518,7 +548,10 @@ fun PremiumScreen(
                             } else {
                                 Text(
                                     "Verify Payment",
-                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 15.sp
+                                    )
                                 )
                             }
                         }
@@ -529,7 +562,7 @@ fun PremiumScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .liquidGlass(shape = RoundedCornerShape(20.dp))
+                        .liquidGlass(shape = RoundedCornerShape(24.dp))
                         .padding(18.dp)
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -545,8 +578,11 @@ fun PremiumScreen(
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     "Payment Tutorial & Guide",
-                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.onBackground
+                                    style = MaterialTheme.typography.titleSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.5.sp
+                                    ),
+                                    color = Color.White
                                 )
                             }
                             Icon(

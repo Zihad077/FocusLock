@@ -171,12 +171,11 @@ fun MainTabScreen() {
         }
     }
 
-    // 6 primary tabs with localized labels
+    // 5 primary tabs with localized labels (Goals & Insights integrated into Home/Stats)
     val items = listOf(
         BottomNavItem(androidx.compose.ui.res.stringResource(com.example.R.string.nav_home), Route.Home, Icons.Default.Home),
         BottomNavItem(androidx.compose.ui.res.stringResource(com.example.R.string.nav_apps), Route.Apps, Icons.Default.Lock),
         BottomNavItem(androidx.compose.ui.res.stringResource(com.example.R.string.nav_focus), Route.Focus, Icons.Default.Timer),
-        BottomNavItem(androidx.compose.ui.res.stringResource(com.example.R.string.nav_goals), Route.Goals, Icons.Default.EmojiEvents),
         BottomNavItem(androidx.compose.ui.res.stringResource(com.example.R.string.nav_stats), Route.Stats, Icons.Default.BarChart),
         BottomNavItem(androidx.compose.ui.res.stringResource(com.example.R.string.nav_settings), Route.Settings, Icons.Default.Settings)
     )
@@ -229,6 +228,27 @@ fun MainTabScreen() {
                                 launchSingleTop = true
                                 restoreState = true
                             }
+                        },
+                        onNavigateToFocus = {
+                            navController.navigate(Route.Focus) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        onNavigateToStats = {
+                            navController.navigate(Route.Stats) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        onNavigateToPermissions = {
+                            navController.navigate(Route.Permissions)
                         }
                     )
                 }
@@ -319,75 +339,60 @@ fun MainTabScreen() {
                 }
             }
 
-            // Floating High-Contrast Frosted Liquid Glass Bottom Navigation Bar
+            // Floating Frosted Liquid Glass Bottom Navigation Bar with Scrim
             if (showBottomBar) {
+                // Soft bottom gradient scrim to smoothly dim content scrolling underneath
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 10.dp)
-                        .navigationBarsPadding()
-                        .shadow(
-                            elevation = 20.dp,
-                            shape = RoundedCornerShape(26.dp),
-                            ambientColor = Color(0x99000000),
-                            spotColor = Color(0x5500E5FF)
-                        )
-                        .clip(RoundedCornerShape(26.dp))
+                        .height(130.dp)
                         .background(
                             brush = Brush.verticalGradient(
                                 colors = listOf(
-                                    Color(0xF40E1B2C), // Deep rich frosted glass (High opacity for perfect readability)
-                                    Color(0xFD070D18)
+                                    Color.Transparent,
+                                    Color(0x9008121C),
+                                    Color(0xEE060E16)
                                 )
                             )
                         )
-                        .drawBehind {
-                            val w = size.width
-                            val h = size.height
+                )
 
-                            // Upper specular gloss reflection
-                            drawRect(
-                                brush = Brush.linearGradient(
-                                    colors = listOf(
-                                        Color.White.copy(alpha = 0.16f),
-                                        Color(0xFF00E5FF).copy(alpha = 0.08f),
-                                        Color.Transparent
-                                    ),
-                                    start = Offset(0f, 0f),
-                                    end = Offset(w * 0.55f, h * 0.55f)
-                                ),
-                                size = Size(w, h)
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 10.dp)
+                        .navigationBarsPadding()
+                        .shadow(
+                            elevation = 16.dp,
+                            shape = RoundedCornerShape(28.dp),
+                            ambientColor = Color.Black,
+                            spotColor = Color.Black
+                        )
+                        .clip(RoundedCornerShape(28.dp))
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color(0xF618283B),
+                                    Color(0xF2101F2F),
+                                    Color(0xF90A1522)
+                                )
                             )
-
-                            // Top bevel highlight line
-                            drawLine(
-                                brush = Brush.horizontalGradient(
-                                    colors = listOf(
-                                        Color.Transparent,
-                                        Color.White.copy(alpha = 0.65f),
-                                        Color(0xFF00E5FF).copy(alpha = 0.50f),
-                                        Color.Transparent
-                                    )
-                                ),
-                                start = Offset(w * 0.06f, 1.dp.toPx()),
-                                end = Offset(w * 0.94f, 1.dp.toPx()),
-                                strokeWidth = 1.2.dp.toPx()
-                            )
-                        }
+                        )
                         .border(
                             width = 1.2.dp,
                             brush = Brush.linearGradient(
                                 colors = listOf(
-                                    Color.White.copy(alpha = 0.65f),
-                                    Color(0xFF00E5FF).copy(alpha = 0.45f),
-                                    Color.White.copy(alpha = 0.12f),
-                                    Color(0xFF0077D6).copy(alpha = 0.30f)
+                                    Color(0xFF24DFEC).copy(alpha = 0.65f),
+                                    Color.White.copy(alpha = 0.35f),
+                                    Color(0xFF24DFEC).copy(alpha = 0.25f),
+                                    Color.White.copy(alpha = 0.15f)
                                 ),
                                 start = Offset(0f, 0f),
-                                end = Offset(1000f, 1000f)
+                                end = Offset(600f, 600f)
                             ),
-                            shape = RoundedCornerShape(26.dp)
+                            shape = RoundedCornerShape(28.dp)
                         )
                 ) {
                     Row(
@@ -415,13 +420,13 @@ fun MainTabScreen() {
                             )
 
                             val iconTint by animateColorAsState(
-                                targetValue = if (isSelected) Color(0xFF00E5FF) else Color(0xFFB8CDE6),
+                                targetValue = if (isSelected) Color(0xFF24DFEC) else Color.White.copy(alpha = 0.65f),
                                 animationSpec = spring(),
                                 label = "nav_icon_tint"
                             )
 
                             val pillBg by animateColorAsState(
-                                targetValue = if (isSelected) Color(0x3D00E5FF) else Color.Transparent,
+                                targetValue = if (isSelected) Color(0x3524DFEC) else Color.Transparent,
                                 animationSpec = spring(),
                                 label = "nav_pill_bg"
                             )
@@ -468,13 +473,8 @@ fun MainTabScreen() {
                                         .then(
                                             if (isSelected) {
                                                 Modifier.border(
-                                                    1.5.dp,
-                                                    Brush.linearGradient(
-                                                        listOf(
-                                                            Color.White.copy(alpha = 0.85f),
-                                                            Color(0xFF00E5FF).copy(alpha = 0.75f)
-                                                        )
-                                                    ),
+                                                    1.2.dp,
+                                                    Color(0xFF24DFEC).copy(alpha = 0.70f),
                                                     RoundedCornerShape(14.dp)
                                                 )
                                             } else Modifier

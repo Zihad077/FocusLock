@@ -39,6 +39,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.ui.theme.GlassButton
+import com.example.ui.theme.GlassButtonStyle
+import com.example.ui.theme.GlassIconBubble
+import com.example.ui.theme.GlassStatusBadge
 import com.example.ui.theme.liquidGlass
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -61,8 +65,8 @@ fun FocusScreen(
         // Intentionally consumed: Focus Mode screen must remain the only accessible screen during active focus
     }
 
-    val primaryCyan = Color(0xFF00E5FF)
-    val accentBlue = Color(0xFF2979FF)
+    val primaryCyan = Color(0xFF24DFEC)
+    val accentBlue = Color(0xFF1EA7FD)
     val accentPurple = Color(0xFF9D4EDD)
     val accentError = Color(0xFFFF5252)
 
@@ -85,11 +89,25 @@ fun FocusScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = "Focus Mode",
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
+                    Column {
+                        Text(
+                            text = "Focus Mode",
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 22.sp
+                            ),
+                            color = Color.White
+                        )
+                        Text(
+                            text = if (isFocusActive) "SESSION ACTIVE" else "DEEP WORK FLOW",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp,
+                                fontSize = 10.5.sp
+                            ),
+                            color = primaryCyan
+                        )
+                    }
                 },
                 navigationIcon = {
                     if (!isFocusActive) {
@@ -107,35 +125,16 @@ fun FocusScreen(
                 },
                 actions = {
                     if (userSettings != null) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(primaryCyan.copy(alpha = 0.15f))
-                                .border(1.dp, primaryCyan.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
-                                .padding(horizontal = 10.dp, vertical = 6.dp)
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.Star,
-                                    contentDescription = null,
-                                    tint = primaryCyan,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Text(
-                                    text = "Lv. ${userSettings?.level ?: 1}",
-                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = primaryCyan
-                                )
-                            }
-                        }
+                        GlassStatusBadge(
+                            text = "Lv. ${userSettings?.level ?: 1}",
+                            isHighlight = true
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.Transparent,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground
+                    titleContentColor = Color.White
                 )
             )
         }
@@ -324,9 +323,12 @@ fun FocusScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(
-                        text = "Select Focus Time",
-                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onBackground
+                        text = "SELECT DURATION",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 1.sp
+                        ),
+                        color = Color.White.copy(alpha = 0.7f)
                     )
 
                     val durations = listOf(15, 25, 45, 60, 90, 120)
@@ -341,11 +343,11 @@ fun FocusScreen(
                                     .weight(1f)
                                     .clip(RoundedCornerShape(14.dp))
                                     .background(
-                                        if (isSelected) primaryCyan.copy(alpha = 0.3f) else Color(0x2022354E)
+                                        if (isSelected) Color(0x3524DFEC) else Color(0x253E4C5E)
                                     )
                                     .border(
-                                        width = if (isSelected) 1.5.dp else 1.dp,
-                                        color = if (isSelected) primaryCyan else Color.White.copy(alpha = 0.15f),
+                                        width = 1.dp,
+                                        color = if (isSelected) primaryCyan else Color.White.copy(alpha = 0.25f),
                                         shape = RoundedCornerShape(14.dp)
                                     )
                                     .clickable { viewModel.setDuration(duration) }
@@ -357,7 +359,7 @@ fun FocusScreen(
                                     style = MaterialTheme.typography.labelMedium.copy(
                                         fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold
                                     ),
-                                    color = if (isSelected) primaryCyan else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
+                                    color = if (isSelected) primaryCyan else Color.White.copy(alpha = 0.85f)
                                 )
                             }
                         }
@@ -366,147 +368,83 @@ fun FocusScreen(
             }
 
             // ==========================================
-            // MAIN ACTION BUTTON (PROMINENT, NEVER COVERED BY BOTTOM NAV BAR)
+            // MAIN ACTION BUTTON (PROMINENT, CLEAN GLASS CTA)
             // ==========================================
             val isCooldownLocked = isFocusActive && ((cooldownRemaining ?: 0) > 0)
             val cooldownMinutes = (cooldownRemaining ?: 0) / 60
             val cooldownSeconds = (cooldownRemaining ?: 0) % 60
             val cooldownFormatted = String.format("%d:%02d", cooldownMinutes, cooldownSeconds)
 
-            Box(
+            GlassButton(
+                onClick = {
+                    if (isFocusActive) {
+                        viewModel.endFocusSession(completed = false)
+                    } else {
+                        viewModel.startFocusSession()
+                    }
+                },
+                text = when {
+                    !isFocusActive -> "Start Focus Session (${selectedDuration}m)"
+                    isCooldownLocked -> "Cooldown Active ($cooldownFormatted)"
+                    else -> "End Focus Session"
+                },
+                icon = when {
+                    !isFocusActive -> Icons.Default.PlayArrow
+                    isCooldownLocked -> Icons.Default.Lock
+                    else -> Icons.Default.Stop
+                },
+                style = if (isFocusActive) GlassButtonStyle.DESTRUCTIVE else GlassButtonStyle.PRIMARY,
+                enabled = !isCooldownLocked,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(58.dp)
-                    .shadow(
-                        elevation = if (isCooldownLocked) 4.dp else 12.dp,
-                        shape = RoundedCornerShape(18.dp),
-                        spotColor = if (isFocusActive) (if (isCooldownLocked) Color(0x60FF5252) else accentError) else primaryCyan
-                    )
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(
-                        brush = Brush.horizontalGradient(
-                            colors = if (isFocusActive) {
-                                if (isCooldownLocked) {
-                                    listOf(Color(0xFF3E1E24), Color(0xFF2C1418))
-                                } else {
-                                    listOf(Color(0xFFFF5252), Color(0xFFD50000))
-                                }
-                            } else {
-                                listOf(Color(0xFF00E5FF), Color(0xFF0091EA))
-                            }
-                        )
-                    )
-                    .border(
-                        width = 1.dp,
-                        color = if (isCooldownLocked) Color(0x40FF5252) else Color.White.copy(alpha = 0.4f),
-                        shape = RoundedCornerShape(18.dp)
-                    )
-                    .clickable(enabled = !isCooldownLocked) {
-                        if (isFocusActive) {
-                            viewModel.endFocusSession(completed = false)
-                        } else {
-                            viewModel.startFocusSession()
-                        }
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Icon(
-                        imageVector = when {
-                            !isFocusActive -> Icons.Default.PlayArrow
-                            isCooldownLocked -> Icons.Default.Lock
-                            else -> Icons.Default.Stop
-                        },
-                        contentDescription = null,
-                        tint = if (isCooldownLocked) Color(0xFFFF8A80) else Color.White,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Text(
-                        text = when {
-                            !isFocusActive -> "Start Focus Session (${selectedDuration}m)"
-                            isCooldownLocked -> "Cooldown Active ($cooldownFormatted)"
-                            else -> "End Focus Session"
-                        },
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = if (isCooldownLocked) Color(0xFFFF8A80) else Color.White
-                    )
-                }
-            }
+                    .testTag("focus_action_button")
+            )
 
             // Return to Home Dashboard button (Available when not in active focus session)
             if (!isFocusActive) {
-                OutlinedButton(
+                GlassButton(
                     onClick = onNavigateToHome,
+                    text = "Return to Home Dashboard",
+                    icon = Icons.Default.Home,
+                    style = GlassButtonStyle.SECONDARY,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(50.dp)
-                        .testTag("return_to_home_button"),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = Color.White.copy(alpha = 0.05f),
-                        contentColor = primaryCyan
-                    ),
-                    border = androidx.compose.foundation.BorderStroke(
-                        1.dp,
-                        primaryCyan.copy(alpha = 0.35f)
-                    )
-                ) {
-                    Icon(
-                        Icons.Default.Home,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        tint = primaryCyan
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        "Return to Home Dashboard",
-                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                        color = Color.White
-                    )
-                }
+                        .testTag("return_to_home_button")
+                )
             }
 
             // Info & Protection Card
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .liquidGlass(shape = RoundedCornerShape(20.dp), isElevated = false)
+                    .liquidGlass(shape = RoundedCornerShape(22.dp), isElevated = false)
                     .padding(16.dp)
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .clip(CircleShape)
-                            .background(primaryCyan.copy(alpha = 0.15f))
-                            .border(1.dp, primaryCyan.copy(alpha = 0.35f), CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Shield,
-                            contentDescription = null,
-                            tint = primaryCyan,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
+                    GlassIconBubble(
+                        icon = Icons.Default.Shield,
+                        size = 44.dp,
+                        iconSize = 22.dp,
+                        isHighlight = isFocusActive
+                    )
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = if (isFocusActive) "Distraction Shield Active" else "Strict Focus Protection",
-                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp
+                            ),
                             color = Color.White
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = if (isFocusActive) "Restricted apps are blocked until your session concludes." else "Includes 2:30 cooling down pause to prevent impulsive unlocking.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.7f)
+                            text = if (isFocusActive) "Restricted apps are blocked until your session concludes." else "Includes cooling-down protection to prevent impulsive unlocking.",
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.5.sp),
+                            color = Color.White.copy(alpha = 0.72f)
                         )
                     }
                 }
@@ -522,21 +460,21 @@ fun FocusScreen(
                 viewModel.dismissJournalDialog()
                 onNavigateToHome()
             },
-            modifier = Modifier.liquidGlass(shape = RoundedCornerShape(28.dp), isElevated = true),
+            modifier = Modifier.liquidGlass(shape = RoundedCornerShape(26.dp), isElevated = true),
             containerColor = Color.Transparent,
             title = {
                 Text(
-                    "Focus Session Complete! 🎉",
+                    text = "Focus Session Complete! 🎉",
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onBackground
+                    color = Color.White
                 )
             },
             text = {
                 Column {
                     Text(
-                        "Great job staying in the zone! What did you accomplish?",
+                        text = "Great job staying in the zone! What did you accomplish?",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
+                        color = Color.White.copy(alpha = 0.8f)
                     )
                     Spacer(modifier = Modifier.height(14.dp))
                     OutlinedTextField(
@@ -545,38 +483,36 @@ fun FocusScreen(
                         modifier = Modifier.fillMaxWidth(),
                         minLines = 3,
                         shape = RoundedCornerShape(16.dp),
-                        placeholder = { Text("Notes, insights, accomplishments...") }
+                        placeholder = { Text("Notes, insights, accomplishments...") },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedBorderColor = primaryCyan,
+                            unfocusedBorderColor = Color.White.copy(alpha = 0.3f)
+                        )
                     )
                 }
             },
             confirmButton = {
-                TextButton(
+                GlassButton(
                     onClick = {
                         viewModel.saveJournalEntry(journalEntry)
                         onNavigateToHome()
                     },
+                    text = "Save & View Dashboard",
+                    style = GlassButtonStyle.PRIMARY,
                     enabled = journalEntry.isNotBlank()
-                ) {
-                    Text(
-                        "Save & View Dashboard",
-                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                        color = primaryCyan
-                    )
-                }
+                )
             },
             dismissButton = {
-                TextButton(
+                GlassButton(
                     onClick = {
                         viewModel.dismissJournalDialog()
                         onNavigateToHome()
-                    }
-                ) {
-                    Text(
-                        "Skip to Home",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
-                    )
-                }
+                    },
+                    text = "Skip to Home",
+                    style = GlassButtonStyle.SECONDARY
+                )
             }
         )
     }

@@ -63,27 +63,27 @@ import kotlin.math.sin
  * 6. Dynamic atmospheric background with smooth undulating luminous orbs
  */
 object LiquidGlass {
-    // Glass Surface Tints (Translucent optical shades, never opaque)
-    val GlassTintDark = Color(0x24182E4B)          // Deep translucent sapphire-cyan tint
-    val GlassSurfaceDark = Color(0x2E142338)       // Base card surface
-    val GlassSurfaceElevatedDark = Color(0x3E1C3352) // Floating card surface
+    // Glass Surface Tints (Frosted translucent optical shades, never opaque)
+    val GlassTintDark = Color(0x20FFFFFF)          // Translucent frosted glass tint
+    val GlassSurfaceDark = Color(0x22FFFFFF)       // Base card frosted surface
+    val GlassSurfaceElevatedDark = Color(0x2EFFFFFF) // Elevated frosted surface
     val GlassHighlightCyan = Color(0xFF00E5FF)     // Specular electric cyan
     val GlassHighlightPurple = Color(0xFF9D4EDD)   // Specular violet accent
     val GlassHighlightBlue = Color(0xFF2979FF)     // Specular azure accent
 
     // Border and Refraction Rims
-    val GlassBorderLuminous = Color(0x6000E5FF)
-    val GlassBorderSpecularWhite = Color(0x70FFFFFF)
-    val GlassBorderSubtleDark = Color(0x18FFFFFF)
+    val GlassBorderLuminous = Color(0x8000E5FF)
+    val GlassBorderSpecularWhite = Color(0x60FFFFFF)
+    val GlassBorderSubtleDark = Color(0x30FFFFFF)
 
     @Composable
     fun cardColor(isElevated: Boolean = false): Color {
-        return if (isElevated) Color(0x321E3250) else Color(0x22132338)
+        return if (isElevated) Color(0x28FFFFFF) else Color(0x1CFFFFFF)
     }
 
     @Composable
     fun borderColor(isHighlight: Boolean = false): Color {
-        return if (isHighlight) Color(0x6000E5FF) else Color(0x2EFFFFFF)
+        return if (isHighlight) Color(0x8000E5FF) else Color(0x45FFFFFF)
     }
 
     @Composable
@@ -91,10 +91,10 @@ object LiquidGlass {
         return if (isHighlight) {
             Brush.linearGradient(
                 colors = listOf(
-                    Color.White.copy(alpha = 0.75f),
-                    Color(0xFF00E5FF).copy(alpha = 0.65f),
+                    Color.White.copy(alpha = 0.85f),
+                    Color(0xFF00E5FF).copy(alpha = 0.70f),
                     Color(0xFF2979FF).copy(alpha = 0.40f),
-                    Color.White.copy(alpha = 0.15f)
+                    Color.White.copy(alpha = 0.25f)
                 ),
                 start = Offset(0f, 0f),
                 end = Offset(800f, 800f)
@@ -102,10 +102,10 @@ object LiquidGlass {
         } else {
             Brush.linearGradient(
                 colors = listOf(
-                    Color.White.copy(alpha = 0.45f),
-                    Color(0xFF00E5FF).copy(alpha = 0.25f),
+                    Color.White.copy(alpha = 0.55f),
+                    Color.White.copy(alpha = 0.25f),
                     Color.White.copy(alpha = 0.08f),
-                    Color(0xFF0066CC).copy(alpha = 0.20f)
+                    Color.White.copy(alpha = 0.35f)
                 ),
                 start = Offset(0f, 0f),
                 end = Offset(800f, 800f)
@@ -116,92 +116,75 @@ object LiquidGlass {
 
 /**
  * Modifier that applies the signature Liquid Glass appearance:
- * - Soft ambient colored floating glow (replaces harsh black shadow)
- * - Deep optical translucent glass substrate
- * - Specular reflection sheen across the upper diagonal plane
- * - Edge refraction dual-tone border
- * - Inner top bevel highlight
+ * - Smoky frosted optical acrylic glass substrate letting background wallpaper illuminate through
+ * - Crisp smooth silvery-white refraction border
+ * - Specular reflection sheen across the surface
  */
 fun Modifier.liquidGlass(
-    shape: Shape = RoundedCornerShape(24.dp),
+    shape: Shape = RoundedCornerShape(26.dp),
     isElevated: Boolean = false,
     isHighlight: Boolean = false,
     alphaMultiplier: Float = 1.0f,
-    borderWidth: Dp = 1.dp
+    borderWidth: Dp = 1.2.dp
 ): Modifier = this
-    // 1. Soft Floating Ambient Glow (Zero harsh solid black shadow)
+    // 1. Soft lightweight ambient shadow for floating glass depth
     .shadow(
-        elevation = if (isElevated) 14.dp else 6.dp,
+        elevation = if (isElevated) 8.dp else 2.dp,
         shape = shape,
-        ambientColor = Color(0x30001025),
-        spotColor = if (isHighlight) Color(0x4000E5FF) else Color(0x2000E5FF)
+        ambientColor = Color(0x20000000),
+        spotColor = if (isHighlight) Color(0x3000E5FF) else Color(0x10000000)
     )
     .clip(shape)
-    // 2. Optical Glass Substrate (Deep Translucent, letting background light filter through)
+    // 2. Frosted Liquid Glass smoky translucent acrylic substrate
     .background(
         brush = Brush.verticalGradient(
-            colors = listOf(
-                (if (isElevated) Color(0x381E3452) else Color(0x2A15263C)).copy(alpha = alphaMultiplier),
-                (if (isElevated) Color(0x25142438) else Color(0x180E1A29)).copy(alpha = alphaMultiplier)
-            )
-        )
-    )
-    // 3. Specular Reflection Sheen & Inner Bevel Highlight (Hardware accelerated draw behind)
-    .drawBehind {
-        val w = size.width
-        val h = size.height
-
-        // Upper-left diagonal glass specular gloss reflection
-        drawRect(
-            brush = Brush.linearGradient(
-                colors = listOf(
-                    Color.White.copy(alpha = if (isHighlight) 0.16f else 0.08f),
-                    Color(0xFF00E5FF).copy(alpha = if (isHighlight) 0.08f else 0.03f),
-                    Color.Transparent
-                ),
-                start = Offset(0f, 0f),
-                end = Offset(w * 0.7f, h * 0.5f)
-            ),
-            size = Size(w, h)
-        )
-
-        // Subtle top bevel highlight line for physical glass thickness
-        drawLine(
-            brush = Brush.horizontalGradient(
-                colors = listOf(
-                    Color.Transparent,
-                    Color.White.copy(alpha = if (isHighlight) 0.45f else 0.25f),
-                    Color(0xFF00E5FF).copy(alpha = if (isHighlight) 0.35f else 0.15f),
-                    Color.Transparent
-                )
-            ),
-            start = Offset(w * 0.1f, 1.dp.toPx()),
-            end = Offset(w * 0.9f, 1.dp.toPx()),
-            strokeWidth = 1.dp.toPx()
-        )
-    }
-    // 4. Edge Refraction Dual-Tone Border (Crisp luminous top-left, soft refraction bottom-right)
-    .border(
-        width = borderWidth,
-        brush = Brush.linearGradient(
             colors = if (isHighlight) {
                 listOf(
-                    Color.White.copy(alpha = 0.75f),
-                    Color(0xFF00E5FF).copy(alpha = 0.60f),
-                    Color.White.copy(alpha = 0.12f),
-                    Color(0xFF2979FF).copy(alpha = 0.40f)
+                    Color(0x403A4D62).copy(alpha = alphaMultiplier),
+                    Color(0x28203850).copy(alpha = alphaMultiplier),
+                    Color(0x20182C40).copy(alpha = alphaMultiplier)
+                )
+            } else if (isElevated) {
+                listOf(
+                    Color(0x443E4E62).copy(alpha = alphaMultiplier),
+                    Color(0x322A3A4D).copy(alpha = alphaMultiplier),
+                    Color(0x251E2B3A).copy(alpha = alphaMultiplier)
                 )
             } else {
                 listOf(
-                    Color.White.copy(alpha = 0.45f),
-                    Color(0xFF00E5FF).copy(alpha = 0.25f),
-                    Color.White.copy(alpha = 0.07f),
-                    Color(0xFF0066CC).copy(alpha = 0.18f)
+                    Color(0x3D38485B).copy(alpha = alphaMultiplier),
+                    Color(0x2C263445).copy(alpha = alphaMultiplier),
+                    Color(0x1E1A2533).copy(alpha = alphaMultiplier)
                 )
-            },
-            start = Offset(0f, 0f),
-            end = Offset(800f, 800f)
-        ),
+            }
+        )
+    )
+    // 3. Crisp smooth silvery-white glass border rim
+    .border(
+        width = borderWidth,
+        brush = if (isHighlight) {
+            Brush.linearGradient(
+                colors = listOf(
+                    Color.White.copy(alpha = 0.85f),
+                    Color(0xFF00E5FF).copy(alpha = 0.65f),
+                    Color.White.copy(alpha = 0.25f),
+                    Color(0xFF00E5FF).copy(alpha = 0.45f)
+                ),
+                start = Offset(0f, 0f),
+                end = Offset(400f, 400f)
+            )
+        } else {
+            Brush.linearGradient(
+                colors = listOf(
+                    Color.White.copy(alpha = 0.60f),
+                    Color(0xFFD4E0EE).copy(alpha = 0.40f),
+                    Color.White.copy(alpha = 0.18f),
+                    Color(0xFFBACBDA).copy(alpha = 0.45f)
+                ),
+                start = Offset(0f, 0f),
+                end = Offset(400f, 400f)
+            )
+        },
         shape = shape
     )
 
@@ -259,7 +242,7 @@ fun Modifier.liquidGlassPressable(
 @Composable
 fun LiquidGlassCard(
     modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(24.dp),
+    shape: Shape = RoundedCornerShape(26.dp),
     isElevated: Boolean = false,
     isHighlight: Boolean = false,
     onClick: (() -> Unit)? = null,
@@ -289,8 +272,105 @@ fun LiquidGlassCard(
 }
 
 /**
- * Dedicated Liquid Glass Interactive Button with tactile spring compression,
- * luminous gradient background, and crisp specular rim.
+ * Button styles supported by the global Glass Design System.
+ */
+enum class GlassButtonStyle {
+    PRIMARY,     // Bright cyan/turquoise solid fill with dark text
+    SECONDARY,   // Translucent frosted glass with thin silvery border and white text
+    WARNING,     // Warm amber frosted glass
+    DESTRUCTIVE  // Red frosted glass for irreversible actions
+}
+
+/**
+ * Unified Glass Button matching 1790213352222.png.
+ */
+@Composable
+fun GlassButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    text: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    style: GlassButtonStyle = GlassButtonStyle.PRIMARY,
+    shape: Shape = RoundedCornerShape(16.dp),
+    enabled: Boolean = true
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed && enabled) 0.96f else 1.0f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "glass_button_scale"
+    )
+
+    val bgModifier = when (style) {
+        GlassButtonStyle.PRIMARY -> Modifier
+            .background(if (enabled) Color(0xFF24DFEC) else Color(0x6024DFEC))
+        GlassButtonStyle.SECONDARY -> Modifier
+            .background(Color(0x403E4C5E))
+            .border(1.dp, Color.White.copy(alpha = 0.40f), shape)
+        GlassButtonStyle.WARNING -> Modifier
+            .background(Color(0x455A371B))
+            .border(1.dp, Color(0x80FFA726), shape)
+        GlassButtonStyle.DESTRUCTIVE -> Modifier
+            .background(Color(0x40551822))
+            .border(1.dp, Color(0x80EF4444), shape)
+    }
+
+    val textColor = when (style) {
+        GlassButtonStyle.PRIMARY -> Color(0xFF061820)
+        GlassButtonStyle.SECONDARY -> Color.White
+        GlassButtonStyle.WARNING -> Color(0xFFFFA726)
+        GlassButtonStyle.DESTRUCTIVE -> Color(0xFFFF5252)
+    }
+
+    Box(
+        modifier = modifier
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .clip(shape)
+            .then(bgModifier)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                enabled = enabled,
+                onClick = onClick
+            )
+            .padding(horizontal = 18.dp, vertical = 10.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = textColor,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+            }
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.5.sp
+                ),
+                color = textColor
+            )
+        }
+    }
+}
+
+/**
+ * Dedicated Liquid Glass Interactive Button (Backwards compatible).
  */
 @Composable
 fun LiquidGlassButton(
@@ -298,7 +378,7 @@ fun LiquidGlassButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     isPrimary: Boolean = true,
-    shape: Shape = RoundedCornerShape(18.dp),
+    shape: Shape = RoundedCornerShape(16.dp),
     content: @Composable RowScope.() -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -313,55 +393,21 @@ fun LiquidGlassButton(
         label = "button_scale"
     )
 
-    val primaryBrush = Brush.horizontalGradient(
-        colors = listOf(
-            Color(0xFF00E5FF),
-            Color(0xFF0091EA),
-            Color(0xFF2979FF)
-        )
-    )
-
-    val secondaryBrush = Brush.verticalGradient(
-        colors = listOf(
-            Color(0x381E3555),
-            Color(0x22132338)
-        )
-    )
-
     Box(
         modifier = modifier
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
             }
-            .shadow(
-                elevation = if (isPrimary) (if (isPressed) 6.dp else 12.dp) else 4.dp,
-                shape = shape,
-                ambientColor = Color(0x30000E20),
-                spotColor = if (isPrimary) Color(0x5500E5FF) else Color(0x2000E5FF)
-            )
             .clip(shape)
-            .background(if (isPrimary) primaryBrush else secondaryBrush)
-            .border(
-                width = 1.dp,
-                brush = if (isPrimary) {
-                    Brush.linearGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = 0.80f),
-                            Color(0xFF00E5FF).copy(alpha = 0.60f),
-                            Color.White.copy(alpha = 0.20f)
-                        )
-                    )
+            .then(
+                if (isPrimary) {
+                    Modifier.background(if (enabled) Color(0xFF24DFEC) else Color(0x6024DFEC))
                 } else {
-                    Brush.linearGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = 0.50f),
-                            Color(0xFF00E5FF).copy(alpha = 0.35f),
-                            Color.White.copy(alpha = 0.10f)
-                        )
-                    )
-                },
-                shape = shape
+                    Modifier
+                        .background(Color(0x403E4C5E))
+                        .border(1.dp, Color.White.copy(alpha = 0.40f), shape)
+                }
             )
             .clickable(
                 interactionSource = interactionSource,
@@ -369,7 +415,7 @@ fun LiquidGlassButton(
                 enabled = enabled,
                 onClick = onClick
             )
-            .padding(horizontal = 20.dp, vertical = 14.dp),
+            .padding(horizontal = 18.dp, vertical = 10.dp),
         contentAlignment = Alignment.Center
     ) {
         Row(
@@ -377,6 +423,193 @@ fun LiquidGlassButton(
             horizontalArrangement = Arrangement.Center,
             content = content
         )
+    }
+}
+
+/**
+ * Frosted Glass Circular Icon Bubble (48-50dp).
+ */
+@Composable
+fun GlassIconBubble(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    modifier: Modifier = Modifier,
+    size: Dp = 50.dp,
+    iconSize: Dp = 26.dp,
+    isHighlight: Boolean = false,
+    contentDescription: String? = null
+) {
+    Box(
+        modifier = modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(
+                if (isHighlight) Color(0x3500E5FF)
+                else Color(0x303E4F63)
+            )
+            .border(
+                1.dp,
+                if (isHighlight) Color(0x8000E5FF)
+                else Color.White.copy(alpha = 0.35f),
+                CircleShape
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = if (isHighlight) Color(0xFF00E5FF) else Color.White,
+            modifier = Modifier.size(iconSize)
+        )
+    }
+}
+
+/**
+ * Section Header with cyan/white dot indicator.
+ */
+@Composable
+fun GlassSectionHeader(
+    title: String,
+    subtitle: String? = null,
+    isCritical: Boolean = false,
+    modifier: Modifier = Modifier
+) {
+    val primaryCyan = Color(0xFF00E5FF)
+
+    Column(modifier = modifier.padding(vertical = 4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(7.dp)
+                    .clip(CircleShape)
+                    .background(if (isCritical) primaryCyan else Color(0xFFE2E8F0))
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = title.uppercase(),
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 1.2.sp
+                ),
+                color = if (isCritical) primaryCyan else Color(0xFFE2E8F0)
+            )
+        }
+        if (subtitle != null) {
+            Spacer(modifier = Modifier.height(3.dp))
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall.copy(
+                    color = Color.White.copy(alpha = 0.72f),
+                    fontSize = 12.5.sp
+                )
+            )
+        }
+    }
+}
+
+/**
+ * Status Badge matching SETUP NEEDED / PROTECTED from 1790213352222.png.
+ */
+@Composable
+fun GlassStatusBadge(
+    text: String,
+    isWarning: Boolean = false,
+    isHighlight: Boolean = false,
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(
+                if (isWarning) Color(0x40551822)
+                else Color(0x3000E5FF)
+            )
+            .border(
+                1.dp,
+                if (isWarning) Color(0x80EF4444)
+                else Color(0x8000E5FF),
+                RoundedCornerShape(16.dp)
+            )
+            .padding(horizontal = 12.dp, vertical = 7.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = if (isWarning) Color(0xFFFF5252) else Color(0xFF00E5FF),
+                    modifier = Modifier.size(14.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+            }
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 10.5.sp,
+                    letterSpacing = 0.5.sp
+                ),
+                color = if (isWarning) Color(0xFFFF5252) else Color(0xFF00E5FF)
+            )
+        }
+    }
+}
+
+/**
+ * Clean glass empty state component.
+ */
+@Composable
+fun GlassEmptyState(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    subtitle: String,
+    actionText: String? = null,
+    onAction: (() -> Unit)? = null,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .liquidGlass(shape = RoundedCornerShape(26.dp))
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            GlassIconBubble(
+                icon = icon,
+                size = 54.dp,
+                iconSize = 28.dp
+            )
+            Spacer(modifier = Modifier.height(14.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 17.sp
+                ),
+                color = Color.White
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall.copy(
+                    color = Color.White.copy(alpha = 0.72f),
+                    fontSize = 13.sp
+                ),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+            if (actionText != null && onAction != null) {
+                Spacer(modifier = Modifier.height(16.dp))
+                GlassButton(
+                    onClick = onAction,
+                    text = actionText,
+                    style = GlassButtonStyle.PRIMARY
+                )
+            }
+        }
     }
 }
 
@@ -768,15 +1001,15 @@ fun AnimatedThemeCanvas(
                     brush = Brush.verticalGradient(
                         colors = if (isThumbnail) {
                             listOf(
-                                Color(0x3305070D),
-                                Color(0x55080E18),
-                                Color(0x7705070D)
+                                Color(0x2005070D),
+                                Color(0x38080E18),
+                                Color(0x5505070D)
                             )
                         } else {
                             listOf(
-                                Color(0x6605070D),
-                                Color(0x7A080E18),
-                                Color(0xAA05070D)
+                                Color(0x2205070D),
+                                Color(0x35080E18),
+                                Color(0x5505070D)
                             )
                         }
                     )

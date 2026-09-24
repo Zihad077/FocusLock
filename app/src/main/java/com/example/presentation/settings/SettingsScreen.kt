@@ -88,18 +88,22 @@ fun SettingsScreen(
     }
 
     Scaffold(
-        containerColor = androidx.compose.ui.graphics.Color.Transparent,
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
                 title = { 
                     Text(
                         text = stringResource(R.string.settings_title),
-                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold)
+                        style = MaterialTheme.typography.headlineSmall.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 24.sp
+                        ),
+                        color = Color.White
                     )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = androidx.compose.ui.graphics.Color.Transparent,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground
+                    containerColor = Color.Transparent,
+                    titleContentColor = Color.White
                 )
             )
         }
@@ -109,7 +113,7 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(top = 4.dp, bottom = 100.dp),
+            contentPadding = PaddingValues(top = 4.dp, bottom = 150.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
@@ -416,16 +420,19 @@ fun SettingsScreen(
 
     // 3. Notification Dialog
     if (showNotificationDialog) {
+        val primaryCyan = Color(0xFF24DFEC)
         var notificationSentMessage by remember { mutableStateOf<String?>(null) }
 
         AlertDialog(
             onDismissRequest = { showNotificationDialog = false },
-            title = { Text("Notification Settings", fontWeight = FontWeight.Bold) },
+            containerColor = Color(0xFF162534),
+            title = { Text("Notification Settings", fontWeight = FontWeight.Bold, color = Color.White) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     Text(
                         "FocusLock uses notifications to alert you when daily limits are approached or when deep focus sessions complete.",
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.8f)
                     )
 
                     Button(
@@ -433,11 +440,16 @@ fun SettingsScreen(
                             viewModel.sendTestNotification()
                             notificationSentMessage = "Test notification dispatched!"
                         },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = primaryCyan,
+                            contentColor = Color(0xFF0C1929)
+                        )
                     ) {
                         Icon(Icons.Default.NotificationsActive, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Send Test Notification")
+                        Text("Send Test Notification", fontWeight = FontWeight.Bold)
                     }
 
                     OutlinedButton(
@@ -447,7 +459,10 @@ fun SettingsScreen(
                             }
                             context.startActivity(intent)
                         },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.25f))
                     ) {
                         Icon(Icons.Default.Settings, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
@@ -457,7 +472,7 @@ fun SettingsScreen(
                     if (notificationSentMessage != null) {
                         Text(
                             text = notificationSentMessage!!,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = primaryCyan,
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Bold
                         )
@@ -466,7 +481,7 @@ fun SettingsScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showNotificationDialog = false }) {
-                    Text("Done")
+                    Text("Done", color = primaryCyan, fontWeight = FontWeight.Bold)
                 }
             }
         )
@@ -474,39 +489,43 @@ fun SettingsScreen(
 
     // 4. Emergency Unlock Dialog
     if (showEmergencyDialog) {
+        val primaryCyan = Color(0xFF24DFEC)
         var successNotice by remember { mutableStateOf<String?>(null) }
 
         AlertDialog(
             onDismissRequest = { showEmergencyDialog = false },
-            title = { Text("Emergency Unlock", fontWeight = FontWeight.Bold) },
+            containerColor = Color(0xFF162534),
+            title = { Text("Emergency Unlock", fontWeight = FontWeight.Bold, color = Color.White) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     Text(
                         "Emergency unlocks provide immediate 5-minute access to a blocked app without completing a challenge. Daily allowances prevent habit regression.",
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.8f)
                     )
 
                     Card(
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                        colors = CardDefaults.cardColors(containerColor = Color(0x283E4C5E)),
                         shape = RoundedCornerShape(16.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(
                                 "Today's Unlocks Remaining",
                                 style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = Color.White.copy(alpha = 0.65f)
                             )
                             Text(
                                 "${settings.emergencyUnlocksRemaining} / ${settings.maxEmergencyUnlocks}",
                                 style = MaterialTheme.typography.headlineMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
+                                color = primaryCyan
                             )
                         }
                     }
 
-                    Text("Max Unlocks Per Day:", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                    Text("Max Unlocks Per Day:", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = Color.White)
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -517,7 +536,12 @@ fun SettingsScreen(
                             FilterChip(
                                 selected = isSelected,
                                 onClick = { viewModel.updateMaxEmergencyUnlocks(count) },
-                                label = { Text("$count / day") }
+                                label = { Text("$count / day") },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = primaryCyan.copy(alpha = 0.25f),
+                                    selectedLabelColor = primaryCyan,
+                                    labelColor = Color.White.copy(alpha = 0.75f)
+                                )
                             )
                         }
                     }
@@ -527,17 +551,22 @@ fun SettingsScreen(
                             viewModel.resetEmergencyUnlocksToday()
                             successNotice = "Unlocks replenished for today!"
                         },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = primaryCyan,
+                            contentColor = Color(0xFF0C1929)
+                        )
                     ) {
                         Icon(Icons.Default.Refresh, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Replenish Today's Unlocks")
+                        Text("Replenish Today's Unlocks", fontWeight = FontWeight.Bold)
                     }
 
                     if (successNotice != null) {
                         Text(
                             text = successNotice!!,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = primaryCyan,
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Bold
                         )
@@ -546,7 +575,7 @@ fun SettingsScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showEmergencyDialog = false }) {
-                    Text("Close")
+                    Text("Close", color = primaryCyan, fontWeight = FontWeight.Bold)
                 }
             }
         )
@@ -576,11 +605,13 @@ fun SettingsScreen(
 
     // 5. Profile & Gamification Dialog
     if (showProfileDialog) {
+        val primaryCyan = Color(0xFF24DFEC)
         var showResetConfirm by remember { mutableStateOf(false) }
 
         AlertDialog(
             onDismissRequest = { showProfileDialog = false },
-            title = { Text("Profile & Progress", fontWeight = FontWeight.Bold) },
+            containerColor = Color(0xFF162534),
+            title = { Text("Profile & Progress", fontWeight = FontWeight.Bold, color = Color.White) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -588,13 +619,14 @@ fun SettingsScreen(
                             modifier = Modifier
                                 .size(56.dp)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primaryContainer),
+                                .background(primaryCyan.copy(alpha = 0.2f))
+                                .border(1.dp, primaryCyan.copy(alpha = 0.4f), CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Stars,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
+                                tint = primaryCyan,
                                 modifier = Modifier.size(32.dp)
                             )
                         }
@@ -603,12 +635,13 @@ fun SettingsScreen(
                             Text(
                                 "Level ${settings.level} Achiever",
                                 style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
                             )
                             Text(
                                 "${settings.currentStreak} day streak 🔥",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.primary
+                                color = primaryCyan
                             )
                         }
                     }
@@ -618,8 +651,8 @@ fun SettingsScreen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("Experience (XP)", style = MaterialTheme.typography.bodySmall)
-                            Text("${settings.xp} / ${settings.level * 100} XP", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                            Text("Experience (XP)", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.7f))
+                            Text("${settings.xp} / ${settings.level * 100} XP", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = Color.White)
                         }
                         val progress = (settings.xp.toFloat() / (settings.level * 100).toFloat()).coerceIn(0f, 1f)
                         LinearProgressIndicator(
@@ -627,24 +660,25 @@ fun SettingsScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(8.dp)
-                                .clip(RoundedCornerShape(4.dp))
+                                .clip(RoundedCornerShape(4.dp)),
+                            color = primaryCyan,
+                            trackColor = Color(0x303E4F63)
                         )
                     }
 
-                    HorizontalDivider()
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.12f))
 
                     Text(
                         "Data Backup & Transfer",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
+                        color = Color.White
                     )
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // Exactly one Export button
                         Button(
                             onClick = {
                                 scope.launch {
@@ -656,19 +690,26 @@ fun SettingsScreen(
                                     }
                                 }
                             },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = primaryCyan,
+                                contentColor = Color(0xFF0C1929)
+                            )
                         ) {
                             Icon(Icons.Default.FileDownload, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Export")
+                            Text("Export", fontWeight = FontWeight.Bold)
                         }
 
-                        // Exactly one Import button
                         OutlinedButton(
                             onClick = {
                                 profileImportLauncher.launch("application/json")
                             },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.25f))
                         ) {
                             Icon(Icons.Default.FileUpload, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
@@ -676,12 +717,14 @@ fun SettingsScreen(
                         }
                     }
 
-                    HorizontalDivider()
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.12f))
 
                     if (!showResetConfirm) {
                         OutlinedButton(
                             onClick = { showResetConfirm = true },
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF5252)),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFF5252).copy(alpha = 0.4f)),
+                            shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Icon(Icons.Default.DeleteForever, contentDescription = null)
@@ -690,14 +733,16 @@ fun SettingsScreen(
                         }
                     } else {
                         Card(
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                            colors = CardDefaults.cardColors(containerColor = Color(0x35551822)),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x80EF4444)),
+                            shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text(
                                     "Reset all XP, streak, and level to 1?",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                    color = Color.White,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -706,12 +751,12 @@ fun SettingsScreen(
                                             viewModel.resetProgress()
                                             showResetConfirm = false
                                         },
-                                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF5252))
                                     ) {
                                         Text("Confirm Reset")
                                     }
                                     TextButton(onClick = { showResetConfirm = false }) {
-                                        Text("Cancel")
+                                        Text("Cancel", color = Color.White)
                                     }
                                 }
                             }
@@ -721,7 +766,7 @@ fun SettingsScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showProfileDialog = false }) {
-                    Text("Close")
+                    Text("Close", color = primaryCyan, fontWeight = FontWeight.Bold)
                 }
             }
         )
@@ -729,47 +774,66 @@ fun SettingsScreen(
 
     // 6. Verification Settings Dialog
     if (showChallengeDialog) {
+        val primaryCyan = Color(0xFF24DFEC)
+
         AlertDialog(
             onDismissRequest = { showChallengeDialog = false },
-            title = { Text("Verification Settings", fontWeight = FontWeight.Bold) },
+            containerColor = Color(0xFF162534),
+            title = { Text("Verification Settings", fontWeight = FontWeight.Bold, color = Color.White) },
             text = {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     item {
-                        Text("Enable verification methods for temporary unlocks.", style = MaterialTheme.typography.bodySmall)
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("Enable verification methods for temporary unlocks.", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.75f))
+                        Spacer(modifier = Modifier.height(8.dp))
                     }
                     
                     item {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                            Text("Quick Mind Challenge", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
-                            Switch(checked = settings.mindChallengeEnabled, onCheckedChange = { viewModel.updateSettings(settings.copy(mindChallengeEnabled = it)) })
+                            Text("Quick Mind Challenge", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), color = Color.White)
+                            Switch(
+                                checked = settings.mindChallengeEnabled,
+                                onCheckedChange = { viewModel.updateSettings(settings.copy(mindChallengeEnabled = it)) },
+                                colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFF0C1929), checkedTrackColor = primaryCyan)
+                            )
                         }
-                        Text("Math and logic questions.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                        Text("Math and logic questions.", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.65f))
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color.White.copy(alpha = 0.12f))
                     }
                     
                     item {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                            Text("Focus Challenge", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
-                            Switch(checked = settings.focusChallengeEnabled, onCheckedChange = { viewModel.updateSettings(settings.copy(focusChallengeEnabled = it)) })
+                            Text("Focus Challenge", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), color = Color.White)
+                            Switch(
+                                checked = settings.focusChallengeEnabled,
+                                onCheckedChange = { viewModel.updateSettings(settings.copy(focusChallengeEnabled = it)) },
+                                colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFF0C1929), checkedTrackColor = primaryCyan)
+                            )
                         }
-                        Text("Wait on screen for a countdown.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                        Text("Wait on screen for a countdown.", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.65f))
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color.White.copy(alpha = 0.12f))
                     }
                     
                     item {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                            Text("Typing Challenge", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
-                            Switch(checked = settings.typingChallengeEnabled, onCheckedChange = { viewModel.updateSettings(settings.copy(typingChallengeEnabled = it)) })
+                            Text("Typing Challenge", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), color = Color.White)
+                            Switch(
+                                checked = settings.typingChallengeEnabled,
+                                onCheckedChange = { viewModel.updateSettings(settings.copy(typingChallengeEnabled = it)) },
+                                colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFF0C1929), checkedTrackColor = primaryCyan)
+                            )
                         }
-                        Text("Type a phrase correctly.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                        Text("Type a phrase correctly.", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.65f))
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color.White.copy(alpha = 0.12f))
                     }
                     
                     item {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                            Text("PIN Unlock", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
-                            Switch(checked = settings.pinUnlockEnabled, onCheckedChange = { viewModel.updateSettings(settings.copy(pinUnlockEnabled = it)) })
+                            Text("PIN Unlock", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), color = Color.White)
+                            Switch(
+                                checked = settings.pinUnlockEnabled,
+                                onCheckedChange = { viewModel.updateSettings(settings.copy(pinUnlockEnabled = it)) },
+                                colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFF0C1929), checkedTrackColor = primaryCyan)
+                            )
                         }
                         if (settings.pinUnlockEnabled) {
                             var pinInput by remember { mutableStateOf(settings.pinHash) }
@@ -780,16 +844,22 @@ fun SettingsScreen(
                                     pinInput = it
                                     viewModel.updateSettings(settings.copy(pinHash = it))
                                 },
-                                label = { Text("Set PIN") },
+                                label = { Text("Set PIN", color = Color.White.copy(alpha = 0.7f)) },
                                 singleLine = true,
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor = Color.White,
+                                    unfocusedTextColor = Color.White,
+                                    focusedBorderColor = primaryCyan,
+                                    unfocusedBorderColor = Color.White.copy(alpha = 0.3f)
+                                ),
                                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword)
                             )
                         }
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color.White.copy(alpha = 0.12f))
                     }
                     
                     item {
-                        Text("Challenge Difficulty", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
+                        Text("Challenge Difficulty", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), color = Color.White)
                         Spacer(modifier = Modifier.height(8.dp))
                         val difficulties = listOf("EASY", "NORMAL", "HARD")
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -797,15 +867,20 @@ fun SettingsScreen(
                                 FilterChip(
                                     selected = settings.difficulty == diff,
                                     onClick = { viewModel.updateSettings(settings.copy(difficulty = diff)) },
-                                    label = { Text(diff) }
+                                    label = { Text(diff) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = primaryCyan.copy(alpha = 0.25f),
+                                        selectedLabelColor = primaryCyan,
+                                        labelColor = Color.White.copy(alpha = 0.75f)
+                                    )
                                 )
                             }
                         }
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color.White.copy(alpha = 0.12f))
                     }
                     
                     item {
-                        Text("Temporary Unlock Duration (Minutes)", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
+                        Text("Temporary Unlock Duration (Minutes)", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), color = Color.White)
                         Spacer(modifier = Modifier.height(8.dp))
                         val durations = listOf(5, 10, 15)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -813,7 +888,12 @@ fun SettingsScreen(
                                 FilterChip(
                                     selected = settings.tempUnlockDurationMinutes == duration,
                                     onClick = { viewModel.updateSettings(settings.copy(tempUnlockDurationMinutes = duration)) },
-                                    label = { Text("$duration") }
+                                    label = { Text("$duration") },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = primaryCyan.copy(alpha = 0.25f),
+                                        selectedLabelColor = primaryCyan,
+                                        labelColor = Color.White.copy(alpha = 0.75f)
+                                    )
                                 )
                             }
                         }
@@ -822,7 +902,7 @@ fun SettingsScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showChallengeDialog = false }) {
-                    Text("Close")
+                    Text("Close", color = primaryCyan, fontWeight = FontWeight.Bold)
                 }
             }
         )
@@ -830,32 +910,39 @@ fun SettingsScreen(
 
     // 7. Privacy Dialog
     if (showPrivacyDialog) {
+        val primaryCyan = Color(0xFF24DFEC)
+
         AlertDialog(
             onDismissRequest = { showPrivacyDialog = false },
-            title = { Text("Privacy & Data Safety", fontWeight = FontWeight.Bold) },
+            containerColor = Color(0xFF162534),
+            title = { Text("Privacy & Data Safety", fontWeight = FontWeight.Bold, color = Color.White) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
                         "• 100% Offline & Private: FocusLock does not collect or upload personal usage data, keystrokes, or screen contents to remote servers.",
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.8f)
                     )
                     Text(
                         "• Local Storage: All time limits, schedules, and usage statistics are stored strictly on-device in a secure SQLite/Room database.",
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.8f)
                     )
                     Text(
                         "• Accessibility Service: Used exclusively to identify the current foreground application package in order to display the block screen when limits are exceeded.",
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.8f)
                     )
                     Text(
                         "• Zero telemetry or third-party ad tracking.",
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.8f)
                     )
                 }
             },
             confirmButton = {
                 TextButton(onClick = { showPrivacyDialog = false }) {
-                    Text("I Understand")
+                    Text("I Understand", color = primaryCyan, fontWeight = FontWeight.Bold)
                 }
             }
         )
@@ -863,9 +950,12 @@ fun SettingsScreen(
 
     // 8. About Dialog
     if (showAboutDialog) {
+        val primaryCyan = Color(0xFF24DFEC)
+
         AlertDialog(
             onDismissRequest = { showAboutDialog = false },
-            title = { Text("About FocusLock", fontWeight = FontWeight.Bold) },
+            containerColor = Color(0xFF162534),
+            title = { Text("About FocusLock", fontWeight = FontWeight.Bold, color = Color.White) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -873,35 +963,42 @@ fun SettingsScreen(
                             modifier = Modifier
                                 .size(48.dp)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(MaterialTheme.colorScheme.primary),
+                                .background(primaryCyan.copy(alpha = 0.2f))
+                                .border(1.dp, primaryCyan.copy(alpha = 0.4f), RoundedCornerShape(12.dp)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Default.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary)
+                            Icon(Icons.Default.Lock, contentDescription = null, tint = primaryCyan)
                         }
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
-                            Text("FocusLock", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            Text("Version 1.0.0 (Build 1)", style = MaterialTheme.typography.bodySmall)
+                            Text("FocusLock", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
+                            Text("Version 1.0.0 (Build 1)", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.65f))
                         }
                     }
 
                     Text(
                         "A privacy-first digital wellbeing companion built to help you overcome doomscrolling, build healthy digital boundaries, and protect deep focus.",
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.8f)
                     )
 
-                    HorizontalDivider()
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.12f))
 
                     Button(
                         onClick = {
                             val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
                             context.startActivity(intent)
                         },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = primaryCyan,
+                            contentColor = Color(0xFF0C1929)
+                        )
                     ) {
                         Icon(Icons.Default.Accessibility, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Accessibility Settings")
+                        Text("Accessibility Settings", fontWeight = FontWeight.Bold)
                     }
 
                     OutlinedButton(
@@ -909,7 +1006,10 @@ fun SettingsScreen(
                             val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
                             context.startActivity(intent)
                         },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.25f))
                     ) {
                         Icon(Icons.Default.QueryStats, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
@@ -919,7 +1019,7 @@ fun SettingsScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showAboutDialog = false }) {
-                    Text("Close")
+                    Text("Close", color = primaryCyan, fontWeight = FontWeight.Bold)
                 }
             }
         )
@@ -927,35 +1027,43 @@ fun SettingsScreen(
 
     // 9. System Permissions Manager Dialog
     if (showPermissionsDialog) {
+        val primaryCyan = Color(0xFF24DFEC)
         val hasUsage = com.example.util.PermissionHelper.hasUsageAccess(context)
         val hasOverlay = com.example.util.PermissionHelper.hasOverlayPermission(context)
         val hasAccessibility = com.example.util.PermissionHelper.hasAccessibilityPermission(context)
 
         AlertDialog(
             onDismissRequest = { showPermissionsDialog = false },
+            containerColor = Color(0xFF162534),
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         Icons.Default.AdminPanelSettings,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = primaryCyan
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Permissions Manager", fontWeight = FontWeight.Bold)
+                    Text("Permissions Manager", fontWeight = FontWeight.Bold, color = Color.White)
                 }
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
                         "FocusLock requires these system permissions to enforce mindful boundaries and protect deep work.",
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.8f)
                     )
 
                     // 1. Overlay
                     Card(
                         colors = CardDefaults.cardColors(
-                            containerColor = if (hasOverlay) MaterialTheme.colorScheme.surfaceVariant
-                            else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
+                            containerColor = if (hasOverlay) Color(0x283E4C5E)
+                            else Color(0x35551822)
+                        ),
+                        shape = RoundedCornerShape(14.dp),
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            if (hasOverlay) Color.White.copy(alpha = 0.15f) else Color(0x80EF4444)
                         ),
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -967,11 +1075,11 @@ fun SettingsScreen(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text("Display Over Other Apps", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
+                                Text("Display Over Other Apps", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium, color = Color.White)
                                 Text(
                                     if (hasOverlay) "Active & Granted" else "Required for lock screen overlay",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = if (hasOverlay) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                                    color = if (hasOverlay) primaryCyan else Color(0xFFFF5252)
                                 )
                             }
                             if (!hasOverlay) {
@@ -984,10 +1092,10 @@ fun SettingsScreen(
                                         context.startActivity(intent)
                                     }
                                 ) {
-                                    Text("Grant")
+                                    Text("Grant", color = primaryCyan, fontWeight = FontWeight.Bold)
                                 }
                             } else {
-                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = primaryCyan)
                             }
                         }
                     }
@@ -995,8 +1103,13 @@ fun SettingsScreen(
                     // 2. Usage Access
                     Card(
                         colors = CardDefaults.cardColors(
-                            containerColor = if (hasUsage) MaterialTheme.colorScheme.surfaceVariant
-                            else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
+                            containerColor = if (hasUsage) Color(0x283E4C5E)
+                            else Color(0x35551822)
+                        ),
+                        shape = RoundedCornerShape(14.dp),
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            if (hasUsage) Color.White.copy(alpha = 0.15f) else Color(0x80EF4444)
                         ),
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -1008,11 +1121,11 @@ fun SettingsScreen(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text("Usage Access", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
+                                Text("Usage Access", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium, color = Color.White)
                                 Text(
                                     if (hasUsage) "Active & Granted" else "Required to calculate screen time",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = if (hasUsage) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                                    color = if (hasUsage) primaryCyan else Color(0xFFFF5252)
                                 )
                             }
                             if (!hasUsage) {
@@ -1022,10 +1135,10 @@ fun SettingsScreen(
                                         context.startActivity(intent)
                                     }
                                 ) {
-                                    Text("Grant")
+                                    Text("Grant", color = primaryCyan, fontWeight = FontWeight.Bold)
                                 }
                             } else {
-                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = primaryCyan)
                             }
                         }
                     }
@@ -1033,8 +1146,13 @@ fun SettingsScreen(
                     // 3. Accessibility Service
                     Card(
                         colors = CardDefaults.cardColors(
-                            containerColor = if (hasAccessibility) MaterialTheme.colorScheme.surfaceVariant
-                            else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
+                            containerColor = if (hasAccessibility) Color(0x283E4C5E)
+                            else Color(0x35551822)
+                        ),
+                        shape = RoundedCornerShape(14.dp),
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            if (hasAccessibility) Color.White.copy(alpha = 0.15f) else Color(0x80EF4444)
                         ),
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -1046,11 +1164,11 @@ fun SettingsScreen(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text("Accessibility Service", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
+                                Text("Accessibility Service", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium, color = Color.White)
                                 Text(
                                     if (hasAccessibility) "Active & Enforcing" else "Zero-latency instant app detection",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = if (hasAccessibility) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                                    color = if (hasAccessibility) primaryCyan else Color(0xFFFF5252)
                                 )
                             }
                             if (!hasAccessibility) {
@@ -1060,10 +1178,10 @@ fun SettingsScreen(
                                         context.startActivity(intent)
                                     }
                                 ) {
-                                    Text("Enable")
+                                    Text("Enable", color = primaryCyan, fontWeight = FontWeight.Bold)
                                 }
                             } else {
-                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = primaryCyan)
                             }
                         }
                     }
@@ -1071,7 +1189,7 @@ fun SettingsScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showPermissionsDialog = false }) {
-                    Text("Done")
+                    Text("Done", color = primaryCyan, fontWeight = FontWeight.Bold)
                 }
             }
         )
@@ -1084,21 +1202,34 @@ private fun applyLocale(context: Context, languageCode: String) {
 
 @Composable
 fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) {
+    val primaryCyan = Color(0xFF24DFEC)
     Column {
-        Text(
-            text = title.uppercase(),
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = 1.2.sp
-            ),
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(start = 12.dp, bottom = 8.dp)
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(start = 6.dp, bottom = 8.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(6.dp)
+                    .clip(CircleShape)
+                    .background(primaryCyan)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = title.uppercase(),
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 1.2.sp,
+                    fontSize = 11.sp
+                ),
+                color = primaryCyan
+            )
+        }
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .liquidGlass(
-                    shape = RoundedCornerShape(24.dp),
+                    shape = RoundedCornerShape(26.dp),
                     isElevated = false
                 )
         ) {
@@ -1118,46 +1249,51 @@ fun SettingsRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(16.dp),
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
-                .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f), RoundedCornerShape(12.dp)),
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(Color(0x283E4C5E))
+                .border(1.dp, Color.White.copy(alpha = 0.25f), CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp)
+                tint = Color(0xFF24DFEC),
+                modifier = Modifier.size(22.dp)
             )
         }
         
-        Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(14.dp))
         
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                color = MaterialTheme.colorScheme.onBackground
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.5.sp
+                ),
+                color = Color.White
             )
             if (subtitle != null) {
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f)
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.5.sp),
+                    color = Color.White.copy(alpha = 0.65f)
                 )
             }
         }
         
         Icon(
             imageVector = Icons.Default.ChevronRight,
-            contentDescription = "Next",
-            tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.35f)
+            contentDescription = "Navigate",
+            tint = Color.White.copy(alpha = 0.4f),
+            modifier = Modifier.size(20.dp)
         )
     }
 }

@@ -154,52 +154,56 @@ fun PermissionsScreen(
                     Text(
                         text = "Permission Center",
                         style = MaterialTheme.typography.headlineMedium.copy(
-                            fontWeight = FontWeight.ExtraBold,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 26.sp,
                             letterSpacing = (-0.5).sp
                         ),
-                        color = MaterialTheme.colorScheme.onBackground
+                        color = Color.White
                     )
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = if (allRequiredGranted) "All required system guards active"
                         else "$requiredCount of $totalRequired required permissions enabled",
                         style = MaterialTheme.typography.bodySmall.copy(
-                            color = if (allRequiredGranted) primaryCyan else MaterialTheme.colorScheme.error,
-                            fontWeight = FontWeight.SemiBold
+                            color = if (allRequiredGranted) Color(0xFF00E5FF) else Color(0xFFE55353),
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 13.sp
                         )
                     )
                 }
 
-                // Status Badge in Liquid Glass
+                // Status Badge in Liquid Glass (as shown in 1790213352222.png)
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(14.dp))
+                        .clip(RoundedCornerShape(16.dp))
                         .background(
-                            if (allRequiredGranted) primaryCyan.copy(alpha = 0.15f)
-                            else MaterialTheme.colorScheme.error.copy(alpha = 0.15f)
+                            if (allRequiredGranted) Color(0x3000E5FF)
+                            else Color(0x40551822)
                         )
                         .border(
                             1.dp,
-                            if (allRequiredGranted) primaryCyan.copy(alpha = 0.4f)
-                            else MaterialTheme.colorScheme.error.copy(alpha = 0.4f),
-                            RoundedCornerShape(14.dp)
+                            if (allRequiredGranted) Color(0x8000E5FF)
+                            else Color(0x80EF4444),
+                            RoundedCornerShape(16.dp)
                         )
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                        .padding(horizontal = 12.dp, vertical = 7.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             if (allRequiredGranted) Icons.Default.CheckCircle else Icons.Default.Warning,
                             contentDescription = null,
-                            tint = if (allRequiredGranted) primaryCyan else MaterialTheme.colorScheme.error,
+                            tint = if (allRequiredGranted) Color(0xFF00E5FF) else Color(0xFFFF5252),
                             modifier = Modifier.size(14.dp)
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = if (allRequiredGranted) "PROTECTED" else "SETUP NEEDED",
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 10.sp
+                                fontSize = 10.5.sp,
+                                letterSpacing = 0.5.sp
                             ),
-                            color = if (allRequiredGranted) primaryCyan else MaterialTheme.colorScheme.error
+                            color = if (allRequiredGranted) Color(0xFF00E5FF) else Color(0xFFFF5252)
                         )
                     }
                 }
@@ -284,7 +288,7 @@ fun PermissionsScreen(
                             id = "usage",
                             title = "Usage Data Access",
                             category = PermissionType.REQUIRED,
-                            icon = Icons.Default.QueryStats,
+                            icon = Icons.Default.ShowChart,
                             shortPurpose = "Calculates daily screen time and tracks streaks accurately.",
                             detailedPurpose = "Reads Android OS package usage statistics locally to tally daily screen-time minutes, track goal progress, and alert you before limits are hit.",
                             isGranted = hasUsage,
@@ -422,62 +426,96 @@ fun PermissionsScreen(
                 }
             }
 
-            // Bottom Primary Action Button
+            // Bottom Primary Action Button with Specular Diamond Star Sparkle
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp)
+                    .height(60.dp)
                     .shadow(
-                        elevation = if (allRequiredGranted) 12.dp else 2.dp,
-                        shape = RoundedCornerShape(20.dp),
-                        spotColor = primaryCyan
+                        elevation = if (allRequiredGranted) 14.dp else 6.dp,
+                        shape = RoundedCornerShape(32.dp),
+                        spotColor = if (allRequiredGranted) primaryCyan else Color(0x20000000)
                     )
-                    .clip(RoundedCornerShape(20.dp))
+                    .clip(RoundedCornerShape(32.dp))
                     .background(
                         if (allRequiredGranted) {
                             Brush.horizontalGradient(
                                 listOf(Color(0xFF00E5FF), Color(0xFF0091EA))
                             )
                         } else {
-                            Brush.horizontalGradient(
-                                listOf(Color(0xFF42556B), Color(0xFF334354))
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color(0x4239495B),
+                                    Color(0x2E2A3644),
+                                    Color(0x201E2632)
+                                )
                             )
                         }
                     )
-                    .border(1.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(20.dp)),
+                    .border(
+                        1.5.dp,
+                        if (allRequiredGranted) Color.White.copy(alpha = 0.90f) else Color.White.copy(alpha = 0.55f),
+                        RoundedCornerShape(32.dp)
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Button(
                     onClick = onPermissionsGranted,
-                    enabled = allRequiredGranted,
                     modifier = Modifier.fillMaxSize(),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color.Transparent,
                         disabledContainerColor = Color.Transparent
                     ),
-                    shape = RoundedCornerShape(20.dp)
+                    shape = RoundedCornerShape(32.dp)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
                         Icon(
-                            if (allRequiredGranted) Icons.Default.CheckCircle else Icons.Default.Lock,
+                            if (allRequiredGranted) Icons.Default.CheckCircle else Icons.Default.ArrowForward,
                             contentDescription = null,
                             tint = Color.White,
                             modifier = Modifier.size(20.dp)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
                         Text(
                             text = if (isFromSettings) {
-                                if (allRequiredGranted) "All Required Active • Return" else "Enable Remaining Required"
+                                if (allRequiredGranted) "All Required Active • Return" else "Save & Return"
                             } else {
-                                if (allRequiredGranted) "Complete Setup & Enter FocusLock" else "Enable All 3 Required to Continue"
+                                if (allRequiredGranted) "Complete Setup & Enter FocusLock" else "Enter FocusLock (Preview Mode)"
                             },
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.5.sp
+                            ),
                             color = Color.White
                         )
                     }
+                }
+
+                // Decorative Diamond Star Sparkle Flare on Top-Right Edge (matches 1790213352222.png)
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .offset(x = (-40).dp, y = (-8).dp)
+                        .size(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    // Soft halo glow
+                    Box(
+                        modifier = Modifier
+                            .size(18.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.35f))
+                    )
+                    // 4-point diamond star
+                    Text(
+                        text = "✦",
+                        color = Color.White.copy(alpha = 0.95f),
+                        fontSize = 26.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
                 }
             }
 
@@ -500,16 +538,15 @@ private fun SectionHeader(
     subtitle: String,
     isCritical: Boolean
 ) {
-    val isDark = isSystemInDarkTheme()
-    val primaryCyan = if (isDark) Color(0xFF00E5FF) else Color(0xFF0077D6)
+    val primaryCyan = Color(0xFF00E5FF)
 
     Column(modifier = Modifier.padding(vertical = 4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 modifier = Modifier
-                    .size(8.dp)
+                    .size(7.dp)
                     .clip(CircleShape)
-                    .background(if (isCritical) primaryCyan else Color(0xFF9E9E9E))
+                    .background(if (isCritical) primaryCyan else Color(0xFFE2E8F0))
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
@@ -518,15 +555,15 @@ private fun SectionHeader(
                     fontWeight = FontWeight.ExtraBold,
                     letterSpacing = 1.2.sp
                 ),
-                color = if (isCritical) primaryCyan else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                color = if (isCritical) primaryCyan else Color(0xFFE2E8F0)
             )
         }
-        Spacer(modifier = Modifier.height(2.dp))
+        Spacer(modifier = Modifier.height(3.dp))
         Text(
             text = subtitle,
             style = MaterialTheme.typography.bodySmall.copy(
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f),
-                fontSize = 11.5.sp
+                color = Color.White.copy(alpha = 0.72f),
+                fontSize = 12.5.sp
             )
         )
     }
@@ -538,32 +575,32 @@ private fun PermissionGlassCard(
     onEnable: () -> Unit,
     onHelpClick: (PermissionItemData) -> Unit
 ) {
-    val primaryCyan = Color(0xFF00E5FF)
+    val primaryCyan = Color(0xFF24DFEC)
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .liquidGlass(shape = RoundedCornerShape(20.dp), isHighlight = data.isGranted)
-            .padding(16.dp)
+            .liquidGlass(shape = RoundedCornerShape(26.dp), isHighlight = data.isGranted)
+            .padding(horizontal = 18.dp, vertical = 16.dp)
     ) {
         Column {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // Icon Bubble
+                // Frosted Circular Glass Icon Background
                 Box(
                     modifier = Modifier
-                        .size(42.dp)
+                        .size(50.dp)
                         .clip(CircleShape)
                         .background(
-                            if (data.isGranted) primaryCyan.copy(alpha = 0.18f)
-                            else Color.White.copy(alpha = 0.08f)
+                            if (data.isGranted) Color(0x3500E5FF)
+                            else Color(0x303E4F63)
                         )
                         .border(
                             1.dp,
-                            if (data.isGranted) primaryCyan.copy(alpha = 0.4f)
-                            else Color.White.copy(alpha = 0.2f),
+                            if (data.isGranted) Color(0x8000E5FF)
+                            else Color.White.copy(alpha = 0.35f),
                             CircleShape
                         ),
                     contentAlignment = Alignment.Center
@@ -571,59 +608,65 @@ private fun PermissionGlassCard(
                     Icon(
                         imageVector = data.icon,
                         contentDescription = null,
-                        tint = if (data.isGranted) primaryCyan else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
-                        modifier = Modifier.size(22.dp)
+                        tint = if (data.isGranted) Color(0xFF00E5FF) else Color.White,
+                        modifier = Modifier.size(26.dp)
                     )
                 }
 
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(14.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = data.title,
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = MaterialTheme.colorScheme.onBackground
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.5.sp
+                            ),
+                            color = Color.White
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         IconButton(
                             onClick = { onHelpClick(data) },
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(22.dp)
                         ) {
                             Icon(
                                 Icons.AutoMirrored.Filled.HelpOutline,
                                 contentDescription = "Explain ${data.title}",
-                                tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                                tint = Color.White.copy(alpha = 0.55f),
                                 modifier = Modifier.size(16.dp)
                             )
                         }
                     }
 
+                    Spacer(modifier = Modifier.height(2.dp))
+
                     Text(
                         text = data.shortPurpose,
                         style = MaterialTheme.typography.bodySmall.copy(
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f),
+                            color = Color.White.copy(alpha = 0.75f),
+                            fontSize = 12.5.sp,
                             lineHeight = 16.sp
                         )
                     )
                 }
 
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(10.dp))
 
-                // Grant Button or Active Badge
+                // Action Button / Active Badge
                 if (data.isGranted) {
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(primaryCyan.copy(alpha = 0.15f))
-                            .border(1.dp, primaryCyan.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color(0x3000E5FF))
+                            .border(1.dp, Color(0x8000E5FF), RoundedCornerShape(16.dp))
+                            .padding(horizontal = 14.dp, vertical = 8.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 Icons.Default.Check,
                                 contentDescription = null,
-                                tint = primaryCyan,
+                                tint = Color(0xFF00E5FF),
                                 modifier = Modifier.size(14.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
@@ -633,26 +676,51 @@ private fun PermissionGlassCard(
                                     fontWeight = FontWeight.ExtraBold,
                                     fontSize = 11.sp
                                 ),
-                                color = primaryCyan
+                                color = Color(0xFF00E5FF)
                             )
                         }
                     }
-                } else {
-                    Button(
-                        onClick = onEnable,
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (data.category == PermissionType.REQUIRED) primaryCyan
-                            else MaterialTheme.colorScheme.surfaceVariant
-                        ),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
-                        modifier = Modifier.height(36.dp)
+                } else if (data.category == PermissionType.REQUIRED) {
+                    // Required Solid Turquoise Cyan Button
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color(0xFF24DFEC))
+                            .clickable(onClick = onEnable)
+                            .padding(horizontal = 18.dp, vertical = 10.dp),
+                        contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = data.actionText,
-                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                            color = if (data.category == PermissionType.REQUIRED) Color(0xFF001F2B)
-                            else MaterialTheme.colorScheme.onSurfaceVariant
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            ),
+                            color = Color(0xFF061820)
+                        )
+                    }
+                } else {
+                    // Optional Frosted Glass Button
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color(0x403E4C5E))
+                            .border(
+                                1.dp,
+                                Color.White.copy(alpha = 0.40f),
+                                RoundedCornerShape(16.dp)
+                            )
+                            .clickable(onClick = onEnable)
+                            .padding(horizontal = 18.dp, vertical = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = data.actionText,
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 13.5.sp
+                            ),
+                            color = Color.White
                         )
                     }
                 }
@@ -660,30 +728,31 @@ private fun PermissionGlassCard(
 
             // Android 13+ Restricted Settings warning if present
             if (data.restrictedSettingsGuide != null) {
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0x25FF9800))
-                        .border(1.dp, Color(0x60FF9800), RoundedCornerShape(12.dp))
-                        .padding(10.dp)
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(Color(0x455A371B))
+                        .border(1.dp, Color(0x80FFA726), RoundedCornerShape(18.dp))
+                        .padding(12.dp)
                 ) {
                     Row(verticalAlignment = Alignment.Top) {
                         Icon(
                             Icons.Default.Info,
                             contentDescription = null,
-                            tint = Color(0xFFFFB74D),
+                            tint = Color(0xFFFFA726),
                             modifier = Modifier
-                                .size(16.dp)
-                                .padding(top = 2.dp)
+                                .size(17.dp)
+                                .padding(top = 1.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = data.restrictedSettingsGuide,
                             style = MaterialTheme.typography.labelSmall.copy(
-                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.9f),
-                                lineHeight = 15.sp
+                                color = Color(0xFFFDE68A),
+                                fontSize = 12.5.sp,
+                                lineHeight = 16.5.sp
                             )
                         )
                     }

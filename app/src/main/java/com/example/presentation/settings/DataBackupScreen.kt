@@ -5,6 +5,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
@@ -27,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ui.theme.liquidGlass
 import com.example.util.DataBackupManager
@@ -66,21 +68,37 @@ fun DataBackupScreen(
         }
     }
 
-    val primaryColor = MaterialTheme.colorScheme.primary
+    val primaryCyan = Color(0xFF24DFEC)
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Data & Backup") },
+                title = { 
+                    Text(
+                        "Data & Backup",
+                        style = MaterialTheme.typography.headlineSmall.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 24.sp
+                        ),
+                        color = Color.White
+                    ) 
+                },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    IconButton(
+                        onClick = onBackClick,
+                        modifier = Modifier
+                            .padding(8.dp)
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.1f))
+                    ) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.Transparent,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onBackground
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White
                 )
             )
         },
@@ -91,21 +109,21 @@ fun DataBackupScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(scrollState)
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Intro text
             Text(
                 "Secure your FocusLock data. Export a complete backup or restore from a previously saved file.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
+                color = Color.White.copy(alpha = 0.7f)
             )
 
             // Export Section
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .liquidGlass(shape = RoundedCornerShape(20.dp))
+                    .liquidGlass(shape = RoundedCornerShape(26.dp))
                     .clickable(enabled = !isExporting) {
                         isExporting = true
                         scope.launch {
@@ -126,37 +144,42 @@ fun DataBackupScreen(
                 ) {
                     Box(
                         modifier = Modifier
+                            .size(50.dp)
                             .clip(CircleShape)
-                            .background(primaryColor.copy(alpha = 0.15f))
-                            .padding(12.dp)
+                            .background(Color(0x283E4C5E))
+                            .border(1.dp, Color.White.copy(alpha = 0.25f), CircleShape),
+                        contentAlignment = Alignment.Center
                     ) {
                         if (isExporting) {
                             CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                color = primaryColor,
+                                modifier = Modifier.size(22.dp),
+                                color = primaryCyan,
                                 strokeWidth = 2.dp
                             )
                         } else {
                             Icon(
                                 Icons.Default.Download,
                                 contentDescription = null,
-                                tint = primaryColor,
+                                tint = primaryCyan,
                                 modifier = Modifier.size(24.dp)
                             )
                         }
                     }
                     Spacer(modifier = Modifier.width(16.dp))
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             "Export Data",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = MaterialTheme.colorScheme.onBackground
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp
+                            ),
+                            color = Color.White
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(3.dp))
                         Text(
                             "Save a complete backup of all your FocusLock data, settings, and progress.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f)
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.5.sp),
+                            color = Color.White.copy(alpha = 0.65f)
                         )
                     }
                 }
@@ -166,7 +189,7 @@ fun DataBackupScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .liquidGlass(shape = RoundedCornerShape(20.dp))
+                    .liquidGlass(shape = RoundedCornerShape(26.dp))
                     .clickable(enabled = !isImporting) {
                         importLauncher.launch("application/json")
                     }
@@ -177,37 +200,42 @@ fun DataBackupScreen(
                 ) {
                     Box(
                         modifier = Modifier
+                            .size(50.dp)
                             .clip(CircleShape)
-                            .background(primaryColor.copy(alpha = 0.15f))
-                            .padding(12.dp)
+                            .background(Color(0x283E4C5E))
+                            .border(1.dp, Color.White.copy(alpha = 0.25f), CircleShape),
+                        contentAlignment = Alignment.Center
                     ) {
                         if (isImporting) {
                             CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                color = primaryColor,
+                                modifier = Modifier.size(22.dp),
+                                color = primaryCyan,
                                 strokeWidth = 2.dp
                             )
                         } else {
                             Icon(
                                 Icons.Default.UploadFile,
                                 contentDescription = null,
-                                tint = primaryColor,
+                                tint = primaryCyan,
                                 modifier = Modifier.size(24.dp)
                             )
                         }
                     }
                     Spacer(modifier = Modifier.width(16.dp))
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             "Restore Data",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = MaterialTheme.colorScheme.onBackground
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp
+                            ),
+                            color = Color.White
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(3.dp))
                         Text(
                             "Restore from a previously exported FocusLock JSON backup file.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f)
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.5.sp),
+                            color = Color.White.copy(alpha = 0.65f)
                         )
                     }
                 }
@@ -218,20 +246,20 @@ fun DataBackupScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .liquidGlass(shape = RoundedCornerShape(12.dp))
+                        .liquidGlass(shape = RoundedCornerShape(18.dp))
                         .padding(16.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = if (restoreMessage?.contains("Failed", ignoreCase = true) == true) Icons.Default.ErrorOutline else Icons.Default.CheckCircle,
                             contentDescription = null,
-                            tint = if (restoreMessage?.contains("Failed", ignoreCase = true) == true) MaterialTheme.colorScheme.error else primaryColor
+                            tint = if (restoreMessage?.contains("Failed", ignoreCase = true) == true) Color(0xFFFF5252) else primaryCyan
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             text = restoreMessage ?: "",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onBackground
+                            color = Color.White
                         )
                     }
                 }

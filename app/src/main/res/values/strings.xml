@@ -94,6 +94,30 @@
     <string name="insufficient_data">Insufficient data to determine.</string>
     <string name="this_week">THIS WEEK</string>
     <string name="total_usage">Total usage: %1$dh %2$dm.</string>
+    <string name="tab_analytics">Analytics</string>
+    <string name="tab_insights">Insights</string>
+    <string name="tab_goals">Goals</string>
+    <string name="screen_time_title">Screen Time &amp; Stats</string>
+    <string name="screen_time_subtitle">Track usage trends &amp; build mindful focus</string>
+    <string name="today_label">Today</string>
+    <string name="yesterday_label">Yesterday</string>
+    <string name="this_week_label">This Week</string>
+    <string name="past_30_days_label">Past 30 Days</string>
+    <string name="productivity_intelligence">Productivity Intelligence</string>
+    <string name="smart_recommendations">Smart Recommendations</string>
+    <string name="focus_goals_milestones">Focus Goals &amp; Milestones</string>
+    <string name="active_commitments">Active Commitments</string>
+    <string name="achievements_badges">Achievements &amp; Badges</string>
+    <string name="add_goal">Add Goal</string>
+    <string name="no_goals_set">No active goals yet</string>
+    <string name="no_goals_desc">Set a daily goal to stay consistent and level up faster.</string>
+    <string name="no_insights_desc">Continue using your device mindfully to generate smart productivity insights.</string>
+    <string name="search_apps">Search apps…</string>
+    <string name="all_monitored_apps">All Monitored Apps</string>
+    <string name="set_limit">Set Limit</string>
+    <string name="permission_required">Usage Permission Required</string>
+    <string name="grant_permission_desc">FocusLock needs usage access to compute accurate screen time and stats.</string>
+    <string name="grant_permission_btn">Grant Permission</string>
     
     <!-- Settings & Permissions -->
     <string name="settings_title">Settings</string>

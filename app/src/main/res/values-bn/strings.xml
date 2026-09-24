@@ -94,6 +94,30 @@
     <string name="insufficient_data">নির্ধারণ করার জন্য অপর্যাপ্ত ডেটা।</string>
     <string name="this_week">এই সপ্তাহে</string>
     <string name="total_usage">মোট ব্যবহার: %1$dঘন্টা %2$dমিনিট।</string>
+    <string name="tab_analytics">পরিসংখ্যান</string>
+    <string name="tab_insights">ইনসাইটস</string>
+    <string name="tab_goals">লক্ষ্য ও মাইলস্টোন</string>
+    <string name="screen_time_title">স্ক্রিন টাইম ও পরিসংখ্যান</string>
+    <string name="screen_time_subtitle">ব্যবহারের প্রবণতা ট্র্যাক করুন ও মনোযোগ বৃদ্ধি করুন</string>
+    <string name="today_label">আজ</string>
+    <string name="yesterday_label">গতকাল</string>
+    <string name="this_week_label">এই সপ্তাহ</string>
+    <string name="past_30_days_label">গত ৩০ দিন</string>
+    <string name="productivity_intelligence">প্রোডাক্টিভিটি ইন্টেলিজেন্স</string>
+    <string name="smart_recommendations">স্মার্ট সুপারিশ</string>
+    <string name="focus_goals_milestones">ফোকাস লক্ষ্য ও মাইলস্টোন</string>
+    <string name="active_commitments">সক্রিয় লক্ষ্যসমূহ</string>
+    <string name="achievements_badges">অর্জন ও ব্যাজ</string>
+    <string name="add_goal">নতুন লক্ষ্য</string>
+    <string name="no_goals_set">এখনও কোনো লক্ষ্য সেট করা হয়নি</string>
+    <string name="no_goals_desc">ধারাবাহিক থাকতে এবং দ্রুত লেভেল আপ করতে একটি দৈনিক লক্ষ্য নির্ধারণ করুন।</string>
+    <string name="no_insights_desc">স্মার্ট প্রোডাক্টিভিটি ইনসাইট তৈরি করতে সচেতনভাবে ডিভাইস ব্যবহার চালিয়ে যান।</string>
+    <string name="search_apps">অ্যাপ অনুসন্ধান করুন…</string>
+    <string name="all_monitored_apps">নজরদারিতে থাকা অ্যাপস</string>
+    <string name="set_limit">লিমিট সেট করুন</string>
+    <string name="permission_required">ব্যবহারের অনুমতি প্রয়োজন</string>
+    <string name="grant_permission_desc">সঠিক স্ক্রিন টাইম ও পরিসংখ্যান গণনার জন্য ফোকাসলকের ব্যবহারের ডেটা অ্যাক্সেস প্রয়োজন।</string>
+    <string name="grant_permission_btn">অনুমতি দিন</string>
     <string name="unknown_app">অজানা অ্যাপ</string>
     
     <!-- Settings & Permissions -->
