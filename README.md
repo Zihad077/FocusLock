@@ -4,10 +4,14 @@
 
 ### Focus. Without distractions.
 
-A modern Android app designed to help you control distracting apps  
+A modern Android app designed to help you control distracting apps
 and take back control of your screen time.
 
 <br>
+
+[![📲 Download APK](https://img.shields.io/badge/📲_Download_APK-FocusLock-black?style=for-the-badge)](https://github.com/Zihad077/FocusLock/raw/refs/heads/main/APK_DOWNLOAD/app-debug.apk)
+
+<br><br>
 
 **⏱️ Set limits** · **🔒 Stay focused** · **🎯 Build better habits**
 
@@ -46,7 +50,7 @@ Keep your FocusLock data backed up.
 
 <br>
 
-⭐ **[Star FocusLock on GitHub](https://github.com/Zihad077/FocusLock)**
+⭐ [Star FocusLock on GitHub](https://github.com/Zihad077/FocusLock)
 
 **Made with ❤️ by Zihad**
 
