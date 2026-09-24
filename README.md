@@ -93,11 +93,23 @@ A clean interface designed for everyday use.
 
 **Kotlin** · **Jetpack Compose** · **Android SDK**
 
-<br><br>
+<br>
 
 > **Make distraction harder. Make focus easier.**
 
 <br>
+
+### Ready to take back control?
+
+Download FocusLock and start building a more focused digital routine.
+
+<br>
+
+<a href="https://github.com/Zihad077/FocusLock/raw/refs/heads/main/APK_DOWNLOAD/FocusLock.apk">
+<img src="https://img.shields.io/badge/DOWNLOAD_FOCUSLOCK-111111?style=for-the-badge&logo=android&logoColor=white&labelColor=111111" height="58">
+</a>
+
+<br><br>
 
 **Made by Zihad**
 
