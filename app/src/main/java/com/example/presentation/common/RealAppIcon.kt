@@ -35,11 +35,11 @@ import kotlinx.coroutines.withContext
  */
 private object AppIconCache {
     private val maxMemory = (Runtime.getRuntime().maxMemory() / 1024).toInt()
-    private val cacheSize = maxMemory / 8 // Use 1/8th of the available memory for this memory cache.
+    private val cacheSize = maxOf(1024, maxMemory / 8) // At least 1MB memory cache
 
     val cache = object : LruCache<String, ImageBitmap>(cacheSize) {
         override fun sizeOf(key: String, value: ImageBitmap): Int {
-            return (value.width * value.height * 4) / 1024
+            return maxOf(1, (value.width * value.height * 4) / 1024)
         }
     }
 }

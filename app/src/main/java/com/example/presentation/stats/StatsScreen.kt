@@ -41,8 +41,12 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.R
+import com.example.ads.AdsterraSocialBar
+import com.example.ads.LiquidGlassAdaptiveBanner
+import com.example.ads.LiquidGlassNativeAdCard
 import com.example.database.Achievement
 import com.example.database.Goal
+import com.example.database.isPremiumActive
 import com.example.presentation.goals.GoalsViewModel
 import com.example.presentation.insights.InsightsViewModel
 import com.example.ui.theme.liquidGlass
@@ -190,6 +194,13 @@ fun StatsScreen(
             contentPadding = PaddingValues(top = 8.dp, bottom = 150.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Top 320x50 Banner Ad (Visible immediately from the start)
+            item {
+                LiquidGlassAdaptiveBanner(
+                    isPremium = userSettings?.isPremiumActive ?: false
+                )
+            }
+
             when (selectedTabIndex) {
                 0 -> {
                     // TAB 0: ANALYTICS & SCREEN TIME
@@ -655,6 +666,27 @@ fun StatsScreen(
                         AchievementGlassCard(achievement = ach)
                     }
                 }
+            }
+
+            // Native Ad Card
+            item {
+                LiquidGlassNativeAdCard(
+                    isPremium = userSettings?.isPremiumActive ?: false
+                )
+            }
+
+            // Bottom 320x50 Banner & Social Bar
+            item {
+                LiquidGlassAdaptiveBanner(
+                    isPremium = userSettings?.isPremiumActive ?: false
+                )
+            }
+
+            item {
+                AdsterraSocialBar(
+                    isPremium = userSettings?.isPremiumActive ?: false,
+                    isFocusActive = userSettings?.isFocusModeActive ?: false
+                )
             }
         }
     }

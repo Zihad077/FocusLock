@@ -6,6 +6,7 @@ import android.content.Intent
 import android.graphics.Color as AndroidColor
 import android.net.Uri
 import android.net.http.SslError
+import android.os.Message
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
@@ -13,12 +14,11 @@ import android.webkit.ConsoleMessage
 import android.webkit.CookieManager
 import android.webkit.SslErrorHandler
 import android.webkit.WebChromeClient
-import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
-import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -38,11 +38,11 @@ import com.example.ui.theme.liquidGlass
 /**
  * Liquid Glass 320x50 Fixed Mobile Banner Container for FocusLock.
  *
- * Implements Adsterra's 320x50 Banner in a sleek glass container:
- * - Subtle sponsored header tag
- * - Clean safe WebView lifecycle retaining ad creative across recompositions
- * - External link handling for genuine user clicks
- * - Hides completely for Premium users (`isPremium == true`)
+ * Implements publisher's authentic Adsterra 320x50 Banner:
+ * - Direct execution of official Adsterra invoke tag (Key: ce907ceee43c8f2cbf521675591e593e)
+ * - Zero dummy ads or fallback posters
+ * - 1:1 CSS pixel viewport (320x50) so the iframe never shrinks or clips
+ * - Subframe-safe WebViewClient & multi-window click handler so ad iframes load cleanly
  */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
@@ -58,8 +58,14 @@ fun LiquidGlassAdaptiveBanner(
     // Retain WebView instance to prevent recompositions from reloading or destroying ad creative
     val webView = remember(context) {
         WebView(context).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
             setBackgroundColor(AndroidColor.TRANSPARENT)
             setLayerType(View.LAYER_TYPE_HARDWARE, null)
+            isVerticalScrollBarEnabled = false
+            isHorizontalScrollBarEnabled = false
 
             settings.apply {
                 javaScriptEnabled = true
@@ -67,19 +73,19 @@ fun LiquidGlassAdaptiveBanner(
                 databaseEnabled = true
                 allowFileAccess = true
                 allowContentAccess = true
-                loadWithOverviewMode = true
-                useWideViewPort = true
+                // Keep 1:1 mobile dp viewport so 320x50 banner is never zoomed out to 980px
+                loadWithOverviewMode = false
+                useWideViewPort = false
                 cacheMode = WebSettings.LOAD_DEFAULT
                 mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                 mediaPlaybackRequiresUserGesture = false
                 javaScriptCanOpenWindowsAutomatically = true
                 safeBrowsingEnabled = false
-                setSupportMultipleWindows(false)
+                setSupportMultipleWindows(true)
+                userAgentString = userAgentString
+                    .replace("; wv", "")
+                    .replace("Version/4.0 ", "")
             }
-
-            // Mobile Chrome user-agent ensures ad network scripts execute properly
-            val defaultUa = settings.userAgentString
-            settings.userAgentString = defaultUa.replace("; wv", "").replace("Version/4.0 ", "")
 
             val cookieManager = CookieManager.getInstance()
             cookieManager.setAcceptCookie(true)
@@ -89,66 +95,76 @@ fun LiquidGlassAdaptiveBanner(
                 override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                     val url = request?.url?.toString() ?: return false
                     val isMainFrame = request.isForMainFrame
-                    val hasUserGesture = request.hasGesture()
-                    Log.d("AdsterraAdaptive", "[Navigation] isMainFrame=$isMainFrame, hasGesture=$hasUserGesture, url=$url")
+                    val hasGesture = request.hasGesture()
+                    Log.d("AdsterraAdaptive", "[Navigation] main=$isMainFrame gesture=$hasGesture url=$url")
 
-                    // Subframes/iframes must load freely inside WebView
-                    if (!isMainFrame) {
+                    // Direct launch for Play Store and market links
+                    if (url.startsWith("market://") || url.startsWith("intent://") || url.contains("play.google.com/store")) {
+                        return launchExternalUrl(context, url)
+                    }
+
+                    // CRITICAL: Allow all ad iframes and automatic RTB/DSP subframe redirects to load inside WebView
+                    if (!isMainFrame && !hasGesture) {
                         return false
                     }
 
-                    // Internal navigation / ad network domains should proceed inside WebView
+                    // Internal ad network scripts and base URLs must load internally
                     if (url == "about:blank" || url.startsWith("data:") || url.startsWith("javascript:") ||
                         url.contains("highrevenueformat.com") || url.contains("profitableratecpmnetwork.com") ||
                         url.contains("effectivegatecontent.com") || url.contains("adsterra.com")) {
                         return false
                     }
 
-                    // Special schemas (market://, intent://) must be opened externally
-                    if (url.startsWith("market://") || url.startsWith("intent://")) {
+                    // Genuine user tap on the ad opens external destination while preserving banner
+                    if (hasGesture && (url.startsWith("http://") || url.startsWith("https://"))) {
+                        Log.i("AdsterraAdaptive", "[User Click] Launching ad destination: $url")
                         return launchExternalUrl(context, url)
                     }
 
-                    // For HTTP/HTTPS: ONLY handle as external navigation if initiated by a genuine user tap/gesture
-                    if (hasUserGesture) {
-                        Log.i("AdsterraAdaptive", "[User Click] Opening external ad destination: $url")
-                        return launchExternalUrl(context, url)
-                    }
-
-                    // Automated redirects and script navigations remain in WebView
                     return false
                 }
 
-                override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
-                    super.onPageStarted(view, url, favicon)
-                    Log.i("AdsterraAdaptive", "[Page Started] url=$url")
-                }
-
-                override fun onPageFinished(view: WebView?, url: String?) {
-                    super.onPageFinished(view, url)
-                    Log.i("AdsterraAdaptive", "[Page Finished] url=$url")
-                }
-
-                override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
-                    Log.e("AdsterraAdaptive", "[Resource Error] code=${error?.errorCode}: ${error?.description} for ${request?.url} (mainFrame=${request?.isForMainFrame})")
-                    super.onReceivedError(view, request, error)
-                }
-
-                override fun onReceivedHttpError(view: WebView?, request: WebResourceRequest?, errorResponse: WebResourceResponse?) {
-                    Log.w("AdsterraAdaptive", "[HTTP Error] ${errorResponse?.statusCode} [${errorResponse?.reasonPhrase}] for ${request?.url}")
-                    super.onReceivedHttpError(view, request, errorResponse)
-                }
-
                 override fun onReceivedSslError(view: WebView?, handler: SslErrorHandler?, error: SslError?) {
-                    Log.w("AdsterraAdaptive", "[SSL Warning] $error for ${error?.url}")
+                    Log.w("AdsterraAdaptive", "[SSL Warning] $error")
                     handler?.proceed()
                 }
             }
 
             webChromeClient = object : WebChromeClient() {
+                override fun onCreateWindow(
+                    view: WebView?,
+                    isDialog: Boolean,
+                    isUserGesture: Boolean,
+                    resultMsg: Message?
+                ): Boolean {
+                    if (view == null || resultMsg == null) return false
+                    val hitTestResult = view.hitTestResult
+                    val extraUrl = hitTestResult.extra
+                    if (!extraUrl.isNullOrBlank() && (extraUrl.startsWith("http://") || extraUrl.startsWith("https://") || extraUrl.startsWith("market://") || extraUrl.startsWith("intent://"))) {
+                        launchExternalUrl(context, extraUrl)
+                        return false
+                    }
+                    val tempWebView = WebView(view.context).apply {
+                        webViewClient = object : WebViewClient() {
+                            override fun shouldOverrideUrlLoading(v: WebView?, req: WebResourceRequest?): Boolean {
+                                val targetUrl = req?.url?.toString()
+                                if (!targetUrl.isNullOrBlank()) {
+                                    launchExternalUrl(context, targetUrl)
+                                }
+                                v?.destroy()
+                                return true
+                            }
+                        }
+                    }
+                    val transport = resultMsg.obj as? WebView.WebViewTransport
+                    transport?.webView = tempWebView
+                    resultMsg.sendToTarget()
+                    return true
+                }
+
                 override fun onConsoleMessage(consoleMessage: ConsoleMessage?): Boolean {
                     val level = consoleMessage?.messageLevel()
-                    val msg = "[JS $level] ${consoleMessage?.message()} (${consoleMessage?.sourceId()}:${consoleMessage?.lineNumber()})"
+                    val msg = "[JS $level] ${consoleMessage?.message()}"
                     when (level) {
                         ConsoleMessage.MessageLevel.ERROR -> Log.e("AdsterraAdaptive", msg)
                         ConsoleMessage.MessageLevel.WARNING -> Log.w("AdsterraAdaptive", msg)
@@ -158,52 +174,53 @@ fun LiquidGlassAdaptiveBanner(
                 }
             }
 
-            val html = AdsterraManager.getBanner320x50Html(isDark)
+            val html = AdsterraManager.getBanner320x50Html()
             loadDataWithBaseURL(AdsterraManager.BANNER_320_50_BASE_URL, html, "text/html", "UTF-8", null)
         }
     }
 
     DisposableEffect(webView) {
+        webView.onResume()
         onDispose {
-            webView.onPause()
+            // Keep WebView alive across scroll/recomposition
         }
     }
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .padding(vertical = 4.dp)
             .liquidGlass(
-                shape = RoundedCornerShape(18.dp),
+                shape = RoundedCornerShape(16.dp),
                 isElevated = false,
-                borderWidth = 0.6.dp
+                borderWidth = 0.7.dp
             )
-            .padding(horizontal = 8.dp, vertical = 6.dp),
+            .padding(horizontal = 6.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            // Subtle attribution tag
             Text(
-                text = "SPONSORED ADVERTISEMENT",
+                text = "SPONSORED • 320×50 AD",
                 fontSize = 8.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 0.8.sp,
-                color = if (isDark) Color(0x8000E5FF) else Color(0x800077D6),
-                modifier = Modifier.padding(bottom = 4.dp)
+                color = if (isDark) Color(0x9900E5FF) else Color(0x990077D6),
+                modifier = Modifier.padding(bottom = 3.dp)
             )
 
             AndroidView(
                 modifier = Modifier
                     .width(320.dp)
-                    .height(52.dp)
-                    .clip(RoundedCornerShape(8.dp)),
+                    .height(50.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(Color(0x18101E2E)),
                 factory = {
                     (webView.parent as? ViewGroup)?.removeView(webView)
                     webView.onResume()
                     webView
                 },
-                update = {
-                    // Retain existing ad view without reloading on recomposition
+                update = { view ->
+                    view.onResume()
                 }
             )
         }

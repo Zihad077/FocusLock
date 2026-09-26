@@ -22,8 +22,8 @@ class UsageTracker(
     suspend fun updateUsageForPackage(packageName: String): Long = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
         val cached = cache[packageName]
-        // Cache for 60 seconds to prevent battery drain from constant polling
-        if (cached != null && (now - cached.first) < 60000) {
+        // Cache for 5 seconds to provide responsive real-time limit enforcement without high CPU
+        if (cached != null && (now - cached.first) < 5000) {
             return@withContext cached.second
         }
 
@@ -41,7 +41,7 @@ class UsageTracker(
         val stats = usageStatsManager.queryAndAggregateUsageStats(startTime, now)
         val appStats = stats[packageName]
         val usedTimeMillis = appStats?.totalTimeInForeground ?: 0L
-        val usedMinutes = (usedTimeMillis / (1000 * 60)).toInt()
+        val usedMinutes = if (usedTimeMillis >= 30000L) maxOf(1, ((usedTimeMillis + 30000L) / (1000 * 60)).toInt()) else (usedTimeMillis / (1000 * 60)).toInt()
         
         cache[packageName] = Pair(now, usedTimeMillis)
 

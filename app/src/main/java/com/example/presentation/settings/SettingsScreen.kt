@@ -116,6 +116,11 @@ fun SettingsScreen(
             contentPadding = PaddingValues(top = 4.dp, bottom = 150.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Top 320x50 Banner (Visible immediately from the start)
+            item {
+                LiquidGlassAdaptiveBanner(isPremium = settings.isPremiumActive)
+            }
+
             item {
                 SettingsSection(stringResource(R.string.account_section)) {
                     SettingsRow(
@@ -950,77 +955,11 @@ fun SettingsScreen(
 
     // 8. About Dialog
     if (showAboutDialog) {
-        val primaryCyan = Color(0xFF24DFEC)
-
-        AlertDialog(
-            onDismissRequest = { showAboutDialog = false },
-            containerColor = Color(0xFF162534),
-            title = { Text("About FocusLock", fontWeight = FontWeight.Bold, color = Color.White) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(primaryCyan.copy(alpha = 0.2f))
-                                .border(1.dp, primaryCyan.copy(alpha = 0.4f), RoundedCornerShape(12.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.Lock, contentDescription = null, tint = primaryCyan)
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text("FocusLock", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
-                            Text("Version 1.0.0 (Build 1)", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.65f))
-                        }
-                    }
-
-                    Text(
-                        "A privacy-first digital wellbeing companion built to help you overcome doomscrolling, build healthy digital boundaries, and protect deep focus.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.8f)
-                    )
-
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.12f))
-
-                    Button(
-                        onClick = {
-                            val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                            context.startActivity(intent)
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = primaryCyan,
-                            contentColor = Color(0xFF0C1929)
-                        )
-                    ) {
-                        Icon(Icons.Default.Accessibility, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Accessibility Settings", fontWeight = FontWeight.Bold)
-                    }
-
-                    OutlinedButton(
-                        onClick = {
-                            val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
-                            context.startActivity(intent)
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.25f))
-                    ) {
-                        Icon(Icons.Default.QueryStats, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Usage Access Settings")
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showAboutDialog = false }) {
-                    Text("Close", color = primaryCyan, fontWeight = FontWeight.Bold)
-                }
+        FocusLockAboutDialog(
+            onDismiss = { showAboutDialog = false },
+            onOpenPrivacyPolicy = {
+                showAboutDialog = false
+                showPrivacyDialog = true
             }
         )
     }

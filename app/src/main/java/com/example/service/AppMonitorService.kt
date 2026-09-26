@@ -295,22 +295,23 @@ class AppMonitorService : Service() {
                     appName = decision.appName,
                     packageName = decision.packageName,
                     usedMinutes = decision.usedMinutes,
-                    limitMinutes = decision.limitMinutes
+                    limitMinutes = decision.limitMinutes,
+                    blockReason = decision.reason.name
                 )
             }
         }
     }
 
-    private fun triggerBlock(appName: String, packageName: String, usedMinutes: Int, limitMinutes: Int) {
+    private fun triggerBlock(appName: String, packageName: String, usedMinutes: Int, limitMinutes: Int, blockReason: String = "") {
         lastBlockedPackage = packageName
         lastBlockTimestamp = System.currentTimeMillis()
 
-        Log.d(TAG, "Triggering block for $appName ($packageName)")
+        Log.d(TAG, "Triggering block for $appName ($packageName) reason: $blockReason")
 
         // 1. Show immediate system window overlay directly over the restricted app
         try {
             BlockOverlayManager.getInstance(applicationContext)
-                .showOverlay(appName, packageName, usedMinutes, limitMinutes)
+                .showOverlay(appName, packageName, usedMinutes, limitMinutes, blockReason)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to display block overlay: ${e.message}")
         }
@@ -321,6 +322,7 @@ class AppMonitorService : Service() {
             putExtra("PACKAGE_NAME", packageName)
             putExtra("USED_MINUTES", usedMinutes)
             putExtra("LIMIT_MINUTES", limitMinutes)
+            putExtra("BLOCK_REASON", blockReason)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
                     Intent.FLAG_ACTIVITY_CLEAR_TOP or 
                     Intent.FLAG_ACTIVITY_SINGLE_TOP or

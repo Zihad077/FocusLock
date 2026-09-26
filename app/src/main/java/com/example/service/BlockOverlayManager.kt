@@ -108,6 +108,7 @@ class BlockOverlayManager private constructor(private val context: Context) : Li
     private val packageNameState = mutableStateOf("")
     private val usedMinutesState = mutableIntStateOf(0)
     private val limitMinutesState = mutableIntStateOf(0)
+    private val blockReasonState = mutableStateOf("")
     private val emergencyRemainingState = mutableIntStateOf(1)
 
     override val lifecycle: Lifecycle
@@ -134,7 +135,7 @@ class BlockOverlayManager private constructor(private val context: Context) : Li
     /**
      * Shows full-screen blocking overlay over the target distracting app
      */
-    fun showOverlay(appName: String, packageName: String, usedMinutes: Int, limitMinutes: Int) {
+    fun showOverlay(appName: String, packageName: String, usedMinutes: Int, limitMinutes: Int, blockReason: String = "") {
         if (!Settings.canDrawOverlays(context)) {
             Log.d(TAG, "Cannot show overlay: SYSTEM_ALERT_WINDOW permission not granted")
             return
@@ -159,6 +160,7 @@ class BlockOverlayManager private constructor(private val context: Context) : Li
                 packageNameState.value = packageName
                 usedMinutesState.intValue = usedMinutes
                 limitMinutesState.intValue = limitMinutes
+                blockReasonState.value = blockReason
 
                 if (isOverlayShowing && rootOverlayLayout != null) {
                     return@post
@@ -240,6 +242,7 @@ class BlockOverlayManager private constructor(private val context: Context) : Li
                     val currentPackage by packageNameState
                     val currentUsed by usedMinutesState
                     val currentLimit by limitMinutesState
+                    val currentReason by blockReasonState
                     val currentEmergencyRemaining by emergencyRemainingState
                     
                     var settings by remember { mutableStateOf(UserSettings()) }
@@ -276,6 +279,7 @@ class BlockOverlayManager private constructor(private val context: Context) : Li
                             appName = currentAppName,
                             usedMinutes = currentUsed,
                             limitMinutes = currentLimit,
+                            blockReason = currentReason,
                             emergencyRemaining = currentEmergencyRemaining,
                             onWaitClick = {
                                 // Explicit user action: close to launcher
@@ -338,14 +342,22 @@ class BlockOverlayManager private constructor(private val context: Context) : Li
         mainHandler.post {
             try {
                 if (isOverlayShowing && rootOverlayLayout != null) {
-                    windowManager.removeView(rootOverlayLayout)
-                    rootOverlayLayout = null
-                    isOverlayShowing = false
-                    lifecycleRegistry.currentState = Lifecycle.State.CREATED
+                    val view = rootOverlayLayout
+                    if (view != null && (Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT || view.isAttachedToWindow)) {
+                        windowManager.removeView(view)
+                    }
                     Log.d(TAG, "System overlay dismissed successfully")
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error removing system overlay: ${e.message}", e)
+            } finally {
+                rootOverlayLayout = null
+                isOverlayShowing = false
+                try {
+                    lifecycleRegistry.currentState = Lifecycle.State.CREATED
+                } catch (e: Exception) {
+                    // Ignore lifecycle transition error if already created
+                }
             }
         }
     }

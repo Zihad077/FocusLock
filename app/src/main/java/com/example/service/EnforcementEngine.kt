@@ -31,13 +31,16 @@ class EnforcementEngine(
                 // Allow our own app, launcher, systemui, and essential phone dialer
                 if (packageName != context.packageName && !isEssentialSystemApp(packageName)) {
                     val appName = repository.getLimit(packageName)?.appName ?: getAppNameFromPackage(packageName)
+                    val currentUsedMillis = usageTracker.updateUsageForPackage(packageName)
+                    val realUsedMinutes = ((currentUsedMillis + sessionElapsedMillis) / (1000 * 60)).toInt()
+                    val limitMinutes = repository.getLimit(packageName)?.dailyLimitMinutes ?: 0
                     Log.d(TAG, "Strict focus mode active. Blocking $packageName ($appName).")
                     return EnforcementDecision.Block(
                         reason = BlockReason.FOCUS_MODE_ACTIVE,
                         appName = appName,
                         packageName = packageName,
-                        usedMinutes = 0,
-                        limitMinutes = 0
+                        usedMinutes = realUsedMinutes,
+                        limitMinutes = limitMinutes
                     )
                 }
             } else {
@@ -86,12 +89,14 @@ class EnforcementEngine(
                 currentMinuteOfDay >= settings.bedtimeStartMinuteOfDay || currentMinuteOfDay <= settings.bedtimeEndMinuteOfDay
             }
             if (isBedtime) {
+                val currentUsedMillis = usageTracker.updateUsageForPackage(packageName)
+                val realUsedMinutes = ((currentUsedMillis + sessionElapsedMillis) / (1000 * 60)).toInt()
                 Log.d(TAG, "Bedtime protection active. Blocking $packageName.")
                 return EnforcementDecision.Block(
                     reason = BlockReason.BEDTIME_ACTIVE,
                     appName = limit.appName,
                     packageName = packageName,
-                    usedMinutes = 0,
+                    usedMinutes = realUsedMinutes,
                     limitMinutes = limit.dailyLimitMinutes
                 )
             }
@@ -122,12 +127,14 @@ class EnforcementEngine(
 
         for (schedule in schedules) {
             if (isScheduleActive(schedule, currentMinuteOfDay, calendar)) {
+                val currentUsedMillis = usageTracker.updateUsageForPackage(packageName)
+                val realUsedMinutes = ((currentUsedMillis + sessionElapsedMillis) / (1000 * 60)).toInt()
                 Log.d(TAG, "Active schedule matched for $packageName. Blocking.")
                 return EnforcementDecision.Block(
                     reason = BlockReason.SCHEDULE_ACTIVE,
                     appName = limit.appName,
                     packageName = packageName,
-                    usedMinutes = 0,
+                    usedMinutes = realUsedMinutes,
                     limitMinutes = limit.dailyLimitMinutes
                 )
             }

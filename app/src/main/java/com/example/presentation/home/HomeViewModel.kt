@@ -10,16 +10,21 @@ import com.example.FocusLockApplication
 import com.example.data.AppRepository
 import com.example.database.AppLimit
 import com.example.database.DailyUsage
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModel(
     application: Application,
     private val repository: AppRepository
@@ -27,15 +32,28 @@ class HomeViewModel(
 
     private val packageManager: PackageManager = application.packageManager
     
-    private val currentDateString = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+    private fun getTodayDateString(): String = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+
+    private val _currentDateFlow = MutableStateFlow(getTodayDateString())
+    private val _realtimeTotalMinutes = MutableStateFlow<Int?>(null)
 
     init {
         syncUsageData()
     }
 
     fun syncUsageData() {
+        _currentDateFlow.value = getTodayDateString()
         viewModelScope.launch {
-            com.example.util.UsageStatsHelper.syncHistoricalUsageToDatabase(getApplication(), repository, 7)
+            try {
+                // 1. Sync historical data to database
+                com.example.util.UsageStatsHelper.syncHistoricalUsageToDatabase(getApplication(), repository, 7)
+                // 2. Query today's live screen time summary directly so Home and Stats are in exact alignment
+                val limits = repository.allLimits.first()
+                val summary = com.example.util.UsageStatsHelper.getScreenTimeSummary(getApplication(), com.example.util.UsageTimeRange.TODAY, limits)
+                _realtimeTotalMinutes.value = summary.totalScreenTimeMinutes
+            } catch (e: Exception) {
+                // Ignore
+            }
         }
     }
 
@@ -45,44 +63,50 @@ class HomeViewModel(
         initialValue = null
     )
     
-    val limitsWithUsage = combine(
-        repository.allLimits,
-        repository.getUsageForDate(currentDateString)
-    ) { limits, usageList ->
-        limits.map { limit ->
-            val usage = usageList.find { it.packageName == limit.packageName }?.usedMinutes ?: 0
-            
-            // Always retrieve real original device app name directly from PackageManager
-            val appName = try {
-                val appInfo = packageManager.getApplicationInfo(limit.packageName, 0)
-                packageManager.getApplicationLabel(appInfo).toString()
-            } catch (e: Exception) {
-                if (limit.appName.isNotEmpty()) limit.appName else limit.packageName
-            }
-            
-            AppLimitUIModel(
-                packageName = limit.packageName,
-                appName = appName,
-                dailyLimitMinutes = limit.dailyLimitMinutes,
-                usedMinutes = usage,
-                isEnabled = limit.isEnabled
-            )
-        }.sortedByDescending { it.usedMinutes }
+    val limitsWithUsage = _currentDateFlow.flatMapLatest { today ->
+        combine(
+            repository.allLimits,
+            repository.getUsageForDate(today)
+        ) { limits, usageList ->
+            limits.map { limit ->
+                val usage = usageList.find { it.packageName == limit.packageName }?.usedMinutes ?: 0
+                
+                // Always retrieve real original device app name directly from PackageManager
+                val appName = try {
+                    val appInfo = packageManager.getApplicationInfo(limit.packageName, 0)
+                    packageManager.getApplicationLabel(appInfo).toString()
+                } catch (e: Exception) {
+                    if (limit.appName.isNotEmpty()) limit.appName else limit.packageName
+                }
+                
+                AppLimitUIModel(
+                    packageName = limit.packageName,
+                    appName = appName,
+                    dailyLimitMinutes = limit.dailyLimitMinutes,
+                    usedMinutes = usage,
+                    isEnabled = limit.isEnabled
+                )
+            }.sortedByDescending { it.usedMinutes }
+        }
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
 
-    val statsSummary = combine(
-        limitsWithUsage,
-        repository.getUsageForDate(currentDateString)
-    ) { limits, allTodayUsage ->
-        val totalTodayScreenTime = allTodayUsage.sumOf { it.usedMinutes }
-        val totalLimit = limits.sumOf { it.dailyLimitMinutes }
-        val totalUsedOnLimitedApps = limits.sumOf { it.usedMinutes }
-        val timeSaved = if (totalLimit > 0) maxOf(0, totalLimit - totalUsedOnLimitedApps) else 0
-        StatsSummary(if (totalTodayScreenTime > 0) totalTodayScreenTime else totalUsedOnLimitedApps, timeSaved)
+    val statsSummary = _currentDateFlow.flatMapLatest { today ->
+        combine(
+            limitsWithUsage,
+            repository.getUsageForDate(today),
+            _realtimeTotalMinutes
+        ) { limits, allTodayUsage, liveTotalMinutes ->
+            val dbTotalToday = allTodayUsage.sumOf { it.usedMinutes }
+            val totalTodayScreenTime = liveTotalMinutes ?: dbTotalToday
+            val totalLimit = limits.sumOf { it.dailyLimitMinutes }
+            val totalUsedOnLimitedApps = limits.sumOf { it.usedMinutes }
+            val timeSaved = if (totalLimit > 0) maxOf(0, totalLimit - totalUsedOnLimitedApps) else 0
+            StatsSummary(if (totalTodayScreenTime > 0) totalTodayScreenTime else totalUsedOnLimitedApps, timeSaved)
+        }
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),

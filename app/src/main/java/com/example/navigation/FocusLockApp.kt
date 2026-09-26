@@ -63,7 +63,7 @@ import com.example.ui.theme.LiquidBackground
 import com.example.util.PermissionHelper
 
 private const val PREFS_NAME = "focuslock_onboarding_prefs"
-private const val KEY_ONBOARDING_COMPLETED = "key_onboarding_completed"
+private const val KEY_ONBOARDING_COMPLETED = "key_onboarding_v2_completed"
 
 @Composable
 fun FocusLockApp() {
@@ -80,7 +80,7 @@ fun FocusLockApp() {
     }
 
     // Determine initial route:
-    // First launch -> Welcome. Completed -> MainTab.
+    // First launch -> Welcome. Subsequent launches -> MainTab (or Permissions if not yet granted).
     val initialDestination: Route = remember {
         if (!isOnboardingCompleted) Route.Welcome else Route.MainTab
     }
@@ -101,9 +101,19 @@ fun FocusLockApp() {
     NavHost(navController = navController, startDestination = initialDestination) {
         composable<Route.Welcome> {
             WelcomeScreen(
-                onNavigateToPermissions = { 
-                    navController.navigate(Route.Permissions) {
-                        popUpTo(Route.Welcome) { inclusive = true }
+                onNavigateToPermissions = {
+                    // Mark first-launch welcome experience as completed so it doesn't replay on every launch
+                    sharedPrefs.edit().putBoolean(KEY_ONBOARDING_COMPLETED, true).apply()
+                    isOnboardingCompleted = true
+
+                    if (PermissionHelper.areAllRequiredPermissionsGranted(context)) {
+                        navController.navigate(Route.MainTab) {
+                            popUpTo(Route.Welcome) { inclusive = true }
+                        }
+                    } else {
+                        navController.navigate(Route.Permissions) {
+                            popUpTo(Route.Welcome) { inclusive = true }
+                        }
                     }
                 }
             )
@@ -249,6 +259,15 @@ fun MainTabScreen() {
                         },
                         onNavigateToPermissions = {
                             navController.navigate(Route.Permissions)
+                        },
+                        onNavigateToSettings = {
+                            navController.navigate(Route.Settings) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
                         }
                     )
                 }

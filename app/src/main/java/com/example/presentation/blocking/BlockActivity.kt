@@ -36,6 +36,7 @@ class BlockActivity : ComponentActivity() {
     private var packageNameState = mutableStateOf<String?>(null)
     private var usedMinutesState = mutableIntStateOf(0)
     private var limitMinutesState = mutableIntStateOf(0)
+    private var blockReasonState = mutableStateOf("")
     private var emergencyRemainingState = mutableIntStateOf(1)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -80,6 +81,7 @@ class BlockActivity : ComponentActivity() {
             val packageName by packageNameState
             val usedMinutes by usedMinutesState
             val limitMinutes by limitMinutesState
+            val blockReason by blockReasonState
             val emergencyRemaining by emergencyRemainingState
             
             var settings by remember { mutableStateOf(UserSettings()) }
@@ -118,6 +120,7 @@ class BlockActivity : ComponentActivity() {
                             appName = appName,
                             usedMinutes = usedMinutes,
                             limitMinutes = limitMinutes,
+                            blockReason = blockReason,
                             emergencyRemaining = emergencyRemaining,
                             onWaitClick = {
                                 exitToHome()
@@ -170,6 +173,7 @@ class BlockActivity : ComponentActivity() {
         val pkg = intent.getStringExtra("PACKAGE_NAME")
         val used = intent.getIntExtra("USED_MINUTES", 0)
         val limit = intent.getIntExtra("LIMIT_MINUTES", 0)
+        val reason = intent.getStringExtra("BLOCK_REASON") ?: ""
 
         val realName = try {
             if (pkg != null) {
@@ -184,6 +188,7 @@ class BlockActivity : ComponentActivity() {
         packageNameState.value = pkg
         usedMinutesState.intValue = used
         limitMinutesState.intValue = limit
+        blockReasonState.value = reason
     }
 
     private fun exitToHome() {

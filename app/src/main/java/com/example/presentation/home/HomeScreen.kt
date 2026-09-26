@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.WarningAmber
@@ -65,7 +66,8 @@ fun HomeScreen(
     onNavigateToApps: (() -> Unit)? = null,
     onNavigateToFocus: (() -> Unit)? = null,
     onNavigateToStats: (() -> Unit)? = null,
-    onNavigateToPermissions: (() -> Unit)? = null
+    onNavigateToPermissions: (() -> Unit)? = null,
+    onNavigateToSettings: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -105,7 +107,14 @@ fun HomeScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            HeaderSection(settings = settings)
+            HeaderSection(settings = settings, onNavigateToSettings = onNavigateToSettings)
+        }
+
+        // 320x50 Fixed Mobile Banner (Prominently placed at top from the beginning)
+        item {
+            LiquidGlassAdaptiveBanner(
+                isPremium = settings?.isPremiumActive ?: false
+            )
         }
 
         // Primary Hero Action: Quick Focus Session
@@ -121,7 +130,8 @@ fun HomeScreen(
                 settings = settings,
                 stats = stats,
                 limits = limits,
-                onNavigateToStats = onNavigateToStats
+                onNavigateToStats = onNavigateToStats,
+                onNavigateToApps = onNavigateToApps
             )
         }
 
@@ -194,14 +204,13 @@ fun HomeScreen(
             }
         }
 
-        // Adaptive Banner Ad (Zero for premium)
+        // Bottom 320x50 Banner & Social Bar (Zero for premium)
         item {
             LiquidGlassAdaptiveBanner(
                 isPremium = settings?.isPremiumActive ?: false
             )
         }
 
-        // Social Bar (Zero for premium)
         item {
             AdsterraSocialBar(
                 isPremium = settings?.isPremiumActive ?: false,
@@ -223,7 +232,10 @@ fun HomeScreen(
 }
 
 @Composable
-private fun HeaderSection(settings: UserSettings?) {
+private fun HeaderSection(
+    settings: UserSettings?,
+    onNavigateToSettings: (() -> Unit)? = null
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -290,20 +302,21 @@ private fun HeaderSection(settings: UserSettings?) {
                 }
             }
 
-            // User Level Avatar (Frosted glass circle)
-            Box(
-                modifier = Modifier
-                    .size(42.dp)
-                    .clip(CircleShape)
-                    .background(Color(0x3524DFEC))
-                    .border(1.2.dp, Color(0xFF24DFEC).copy(alpha = 0.8f), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "L${settings?.level ?: 1}",
-                    color = Color.White,
-                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.ExtraBold)
-                )
+            if (onNavigateToSettings != null) {
+                IconButton(
+                    onClick = onNavigateToSettings,
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .background(Color(0x25FFFFFF))
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "Settings",
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     }
@@ -374,7 +387,8 @@ private fun CoreMetricsSection(
     settings: UserSettings?,
     stats: StatsSummary,
     limits: List<AppLimitUIModel>,
-    onNavigateToStats: (() -> Unit)? = null
+    onNavigateToStats: (() -> Unit)? = null,
+    onNavigateToApps: (() -> Unit)? = null
 ) {
     // 4 Clean Core Metrics
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -477,33 +491,49 @@ private fun CoreMetricsSection(
                 }
             }
 
-            // Metric 4: Active Limits
+            // Metric 4: Active Limits & Real Blocked Apps
+            val activeLimits = limits.filter { it.isEnabled }
+            val blockedCount = activeLimits.count { it.remainingMinutes <= 0 }
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .liquidGlass(shape = RoundedCornerShape(22.dp))
-                    .clickable { onNavigateToStats?.invoke() }
+                    .liquidGlass(shape = RoundedCornerShape(22.dp), isHighlight = blockedCount > 0)
+                    .clickable { onNavigateToApps?.invoke() }
                     .padding(16.dp)
             ) {
                 Column {
                     Text(
-                        text = stringResource(R.string.blocked_apps).uppercase(),
+                        text = if (blockedCount > 0) "BLOCKED NOW" else "ACTIVE LIMITS",
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 0.8.sp
                         ),
-                        color = Color.White.copy(alpha = 0.65f)
+                        color = if (blockedCount > 0) Color(0xFFFF5252) else Color.White.copy(alpha = 0.65f)
                     )
                     Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "${limits.size}",
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 22.sp
-                        ),
-                        color = Color.White
-                    )
+                    Row(
+                        verticalAlignment = Alignment.Bottom,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = if (blockedCount > 0) "$blockedCount" else "${activeLimits.size}",
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 22.sp
+                            ),
+                            color = if (blockedCount > 0) Color(0xFFFF5252) else Color.White
+                        )
+                        Text(
+                            text = if (blockedCount > 0) "of ${activeLimits.size}" else "monitored",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium
+                            ),
+                            color = Color.White.copy(alpha = 0.55f),
+                            modifier = Modifier.padding(bottom = 2.dp)
+                        )
+                    }
                 }
             }
         }

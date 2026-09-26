@@ -38,6 +38,7 @@ fun BlockScreen(
     appName: String,
     usedMinutes: Int,
     limitMinutes: Int,
+    blockReason: String = "",
     emergencyRemaining: Int = 1,
     onWaitClick: () -> Unit,
     onChallengeClick: () -> Unit,
@@ -45,8 +46,49 @@ fun BlockScreen(
 ) {
     val primaryCyan = Color(0xFF24DFEC)
     val accentRed = Color(0xFFFF5252)
-    val isRestricted = limitMinutes == 0
-    val activeColor = if (isRestricted) accentRed else primaryCyan
+    val amberGold = Color(0xFFFFAB00)
+
+    val isFocusSession = blockReason == "FOCUS_MODE_ACTIVE"
+    val isBedtime = blockReason == "BEDTIME_ACTIVE"
+    val isSchedule = blockReason == "SCHEDULE_ACTIVE"
+    val isSession = blockReason == "SESSION_LIMIT_EXCEEDED"
+    val isStrictLockdown = blockReason == "ALWAYS_BLOCKED" || limitMinutes == 0
+
+    val activeColor = when {
+        isStrictLockdown -> accentRed
+        isFocusSession -> primaryCyan
+        isBedtime -> Color(0xFF7C4DFF)
+        isSchedule -> amberGold
+        else -> primaryCyan
+    }
+
+    val statusBadgeText = when {
+        isFocusSession -> "DEEP FOCUS MODE ACTIVE"
+        isBedtime -> "BEDTIME LOCKDOWN ACTIVE"
+        isSchedule -> "SCHEDULED FOCUS WINDOW"
+        isSession -> "SESSION LIMIT REACHED"
+        isStrictLockdown -> "STRICT LOCKDOWN ACTIVE"
+        else -> "DAILY LIMIT REACHED"
+    }
+
+    val headlineText = when {
+        isFocusSession -> "Focus Mode Active"
+        isBedtime -> "Bedtime Lockdown"
+        isSchedule -> "Scheduled Focus"
+        isSession -> "Time For A Break"
+        isStrictLockdown -> stringResource(R.string.app_restricted)
+        else -> stringResource(R.string.times_up)
+    }
+
+    val descriptionText = when {
+        isFocusSession -> "All distracting apps are locked during your active focus sprint. Stay in your flow state!"
+        isBedtime -> "FocusLock bedtime protection is active to help you unwind and rest."
+        isSchedule -> "This app is restricted during your scheduled focus hours."
+        isSession -> "You've reached your continuous session limit for \"$appName\". Step back, breathe, and reset."
+        isStrictLockdown -> stringResource(R.string.restricted_reason, appName)
+        else -> stringResource(R.string.quota_reached_reason, appName)
+    }
+
     val scrollState = rememberScrollState()
 
     LiquidBackground {
@@ -94,7 +136,7 @@ fun BlockScreen(
                                 .background(activeColor)
                         )
                         Text(
-                            text = if (isRestricted) "STRICT LOCKDOWN ACTIVE" else "FOCUS INTERCEPTION",
+                            text = statusBadgeText,
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontWeight = FontWeight.ExtraBold,
                                 letterSpacing = 1.2.sp,
@@ -114,7 +156,7 @@ fun BlockScreen(
                         .liquidGlass(
                             shape = RoundedCornerShape(28.dp),
                             isElevated = true,
-                            isHighlight = isRestricted
+                            isHighlight = isStrictLockdown || isFocusSession
                         )
                         .padding(horizontal = 22.dp, vertical = 24.dp)
                 ) {
@@ -140,7 +182,7 @@ fun BlockScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = if (isRestricted) Icons.Default.Shield else Icons.Default.Lock,
+                                imageVector = if (isStrictLockdown) Icons.Default.Shield else Icons.Default.Lock,
                                 contentDescription = "Lock Status",
                                 tint = activeColor,
                                 modifier = Modifier.size(42.dp)
@@ -151,11 +193,7 @@ fun BlockScreen(
 
                         // Headline
                         Text(
-                            text = if (isRestricted) {
-                                stringResource(R.string.app_restricted)
-                            } else {
-                                stringResource(R.string.times_up)
-                            },
+                            text = headlineText,
                             style = MaterialTheme.typography.headlineMedium.copy(
                                 fontWeight = FontWeight.ExtraBold,
                                 fontSize = 24.sp,
@@ -204,11 +242,7 @@ fun BlockScreen(
 
                         // Motivating Description text
                         Text(
-                            text = if (isRestricted) {
-                                stringResource(R.string.restricted_reason, appName)
-                            } else {
-                                stringResource(R.string.quota_reached_reason, appName)
-                            },
+                            text = descriptionText,
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 fontSize = 14.sp,
                                 lineHeight = 20.sp
@@ -227,7 +261,7 @@ fun BlockScreen(
                             color = Color(0x35101E2E),
                             border = androidx.compose.foundation.BorderStroke(
                                 1.dp,
-                                if (isRestricted) accentRed.copy(alpha = 0.35f) else primaryCyan.copy(alpha = 0.30f)
+                                if (isStrictLockdown) accentRed.copy(alpha = 0.35f) else primaryCyan.copy(alpha = 0.30f)
                             )
                         ) {
                             Column(
@@ -247,10 +281,10 @@ fun BlockScreen(
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = if (isRestricted) {
-                                        stringResource(R.string.strict_block_0m)
-                                    } else {
+                                    text = if (limitMinutes > 0) {
                                         stringResource(R.string.used_format, usedMinutes, limitMinutes)
+                                    } else {
+                                        "${usedMinutes}m used today (0m limit)"
                                     },
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         fontWeight = FontWeight.ExtraBold,
@@ -259,7 +293,7 @@ fun BlockScreen(
                                     color = activeColor
                                 )
 
-                                if (!isRestricted && limitMinutes > 0) {
+                                if (limitMinutes > 0) {
                                     Spacer(modifier = Modifier.height(8.dp))
                                     val progress = (usedMinutes.toFloat() / limitMinutes.toFloat()).coerceIn(0f, 1f)
                                     val animProgress by animateFloatAsState(

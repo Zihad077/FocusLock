@@ -211,8 +211,8 @@ object UsageStatsHelper {
                 continue
             }
 
-            val usedMinutes = (totalTime / 60000L).toInt()
-            if (usedMinutes <= 0 && totalTime < 30000L) {
+            val usedMinutes = if (totalTime >= 30000L) maxOf(1, ((totalTime + 30000L) / 60000L).toInt()) else (totalTime / 60000L).toInt()
+            if (usedMinutes <= 0 && totalTime < 15000L) {
                 continue
             }
 
@@ -399,7 +399,7 @@ object UsageStatsHelper {
                 val dailyUsages = mutableListOf<DailyUsage>()
                 for ((pkg, stats) in statsMap) {
                     val foregroundMillis = stats.totalTimeInForeground
-                    val minutes = (foregroundMillis / 60000L).toInt()
+                    val minutes = if (foregroundMillis >= 30000L) maxOf(1, ((foregroundMillis + 30000L) / 60000L).toInt()) else (foregroundMillis / 60000L).toInt()
                     if (minutes > 0 && pkg != selfPkg && pkg != "com.android.systemui") {
                         dailyUsages.add(
                             DailyUsage(

@@ -86,6 +86,7 @@ fun AppsScreen(
                     app.packageName.contains(searchQuery, ignoreCase = true)
             val matchesFilter = when (selectedFilter) {
                 "LIMITED" -> app.isLimited
+                "BLOCKED" -> app.isLimited && (app.dailyLimitMinutes == 0 || (app.dailyLimitMinutes > 0 && app.usedTodayMinutes >= app.dailyLimitMinutes))
                 else -> true
             }
             matchesSearch && matchesFilter
@@ -208,6 +209,13 @@ fun AppsScreen(
                 }
             }
 
+            // Top 320x50 Banner Ad (Visible immediately from the start)
+            item {
+                LiquidGlassAdaptiveBanner(
+                    isPremium = userSettings?.isPremiumActive ?: false
+                )
+            }
+
             // Search Bar & Filter Chips
             item {
                 OutlinedTextField(
@@ -257,13 +265,15 @@ fun AppsScreen(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Prioritized Filters: All vs Limited
+                // Prioritized Filters: All vs Limited vs Blocked
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     val allSelected = selectedFilter == "ALL"
                     val limitedSelected = selectedFilter == "LIMITED"
+                    val blockedSelected = selectedFilter == "BLOCKED"
+                    val blockedCount = appsList.count { it.isLimited && (it.dailyLimitMinutes == 0 || (it.dailyLimitMinutes > 0 && it.usedTodayMinutes >= it.dailyLimitMinutes)) }
 
                     Box(
                         modifier = Modifier
@@ -280,10 +290,10 @@ fun AppsScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "All Apps (${appsList.size})",
+                            text = "All (${appsList.size})",
                             style = MaterialTheme.typography.labelMedium.copy(
                                 fontWeight = if (allSelected) FontWeight.Bold else FontWeight.Medium,
-                                fontSize = 13.sp
+                                fontSize = 12.5.sp
                             ),
                             color = if (allSelected) Color(0xFF24DFEC) else Color.White.copy(alpha = 0.8f)
                         )
@@ -308,20 +318,53 @@ fun AppsScreen(
                                 Icons.Default.Lock,
                                 contentDescription = null,
                                 tint = if (limitedSelected) Color(0xFF24DFEC) else Color.White.copy(alpha = 0.8f),
-                                modifier = Modifier.size(14.dp)
+                                modifier = Modifier.size(13.dp)
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "Limited (${appsList.count { it.isLimited }})",
+                                text = "Limits (${appsList.count { it.isLimited }})",
                                 style = MaterialTheme.typography.labelMedium.copy(
-                                fontWeight = if (limitedSelected) FontWeight.Bold else FontWeight.Medium,
-                                fontSize = 13.sp
-                            ),
-                            color = if (limitedSelected) Color(0xFF24DFEC) else Color.White.copy(alpha = 0.8f)
-                        )
+                                    fontWeight = if (limitedSelected) FontWeight.Bold else FontWeight.Medium,
+                                    fontSize = 12.5.sp
+                                ),
+                                color = if (limitedSelected) Color(0xFF24DFEC) else Color.White.copy(alpha = 0.8f)
+                            )
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(if (blockedSelected) Color(0x35FF5252) else Color(0x303E4C5E))
+                            .border(
+                                1.dp,
+                                if (blockedSelected) Color(0xFFFF5252) else Color.White.copy(alpha = 0.30f),
+                                RoundedCornerShape(16.dp)
+                            )
+                            .clickable { selectedFilter = "BLOCKED" }
+                            .padding(vertical = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(7.dp)
+                                    .clip(CircleShape)
+                                    .background(if (blockedCount > 0) Color(0xFFFF5252) else Color.White.copy(alpha = 0.5f))
+                            )
+                            Spacer(modifier = Modifier.width(5.dp))
+                            Text(
+                                text = "Blocked ($blockedCount)",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = if (blockedSelected) FontWeight.Bold else FontWeight.Medium,
+                                    fontSize = 12.5.sp
+                                ),
+                                color = if (blockedSelected) Color(0xFFFF5252) else Color.White.copy(alpha = 0.8f)
+                            )
+                        }
                     }
                 }
-            }
         }
 
             // App List

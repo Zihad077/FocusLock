@@ -595,11 +595,25 @@ fun PinChallenge(settings: UserSettings, onComplete: () -> Unit, onCancel: () ->
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                if (error) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Incorrect PIN. Please try again.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
                 
                 Spacer(modifier = Modifier.height(24.dp))
                 Button(
                     onClick = {
-                        if (settings.pinHash.isNotEmpty() && input == settings.pinHash) onComplete() else error = true
+                        if (settings.pinHash.isNotEmpty() && input == settings.pinHash) {
+                            onComplete()
+                        } else {
+                            error = true
+                            input = ""
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()

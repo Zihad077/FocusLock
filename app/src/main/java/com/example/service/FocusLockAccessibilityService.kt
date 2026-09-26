@@ -173,22 +173,23 @@ class FocusLockAccessibilityService : AccessibilityService() {
                     appName = decision.appName,
                     packageName = decision.packageName,
                     usedMinutes = decision.usedMinutes,
-                    limitMinutes = decision.limitMinutes
+                    limitMinutes = decision.limitMinutes,
+                    blockReason = decision.reason.name
                 )
                 return true
             }
         }
     }
 
-    private fun blockApp(appName: String, packageName: String, usedMinutes: Int, limitMinutes: Int) {
-        Log.d("FocusLock", "Enforcing block on $appName ($packageName)")
+    private fun blockApp(appName: String, packageName: String, usedMinutes: Int, limitMinutes: Int, blockReason: String = "") {
+        Log.d("FocusLock", "Enforcing block on $appName ($packageName) reason: $blockReason")
         lastBlockedPackage = packageName
         lastBlockTimestamp = System.currentTimeMillis()
 
         // 1. Show immediate system window overlay directly over the restricted app
         try {
             BlockOverlayManager.getInstance(applicationContext)
-                .showOverlay(appName, packageName, usedMinutes, limitMinutes)
+                .showOverlay(appName, packageName, usedMinutes, limitMinutes, blockReason)
         } catch (e: Exception) {
             Log.e("FocusLock", "Error displaying overlay: ${e.message}")
         }
@@ -199,6 +200,7 @@ class FocusLockAccessibilityService : AccessibilityService() {
             putExtra("PACKAGE_NAME", packageName)
             putExtra("USED_MINUTES", usedMinutes)
             putExtra("LIMIT_MINUTES", limitMinutes)
+            putExtra("BLOCK_REASON", blockReason)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
                     Intent.FLAG_ACTIVITY_CLEAR_TOP or 
                     Intent.FLAG_ACTIVITY_SINGLE_TOP or

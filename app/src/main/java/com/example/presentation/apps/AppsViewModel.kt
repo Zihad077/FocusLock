@@ -12,7 +12,9 @@ import com.example.database.AppLimit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -28,44 +30,48 @@ class AppsViewModel(
 
     private val _installedApps = MutableStateFlow<List<AppItem>>(emptyList())
     
-    private val currentDateString = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+    private fun getTodayDateString(): String = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+    private val _currentDateFlow = MutableStateFlow(getTodayDateString())
 
-    val appsList = combine(
-        _installedApps,
-        repository.allLimits,
-        repository.allTemporaryUnlocks,
-        repository.getUsageForDate(currentDateString)
-    ) { installed, limits, tempUnlocks, todayUsages ->
-        val limitMap = limits.associateBy { it.packageName }
-        val usageMap = todayUsages.associate { it.packageName to it.usedMinutes }
-        val currentMillis = System.currentTimeMillis()
-        val tempUnlockMap = tempUnlocks
-            .filter { it.startTime + (it.durationMinutes * 60 * 1000L) > currentMillis }
-            .associateBy { it.packageName }
-            
-        installed.map { app ->
-            val limit = limitMap[app.packageName]
-            val isHigh = isHighImpactApp(app.packageName, app.appName)
-            val unlock = tempUnlockMap[app.packageName]
-            val usedMins = usageMap[app.packageName] ?: 0
-            app.copy(
-                isLimited = limit != null && limit.isEnabled,
-                dailyLimitMinutes = limit?.dailyLimitMinutes ?: 0,
-                sessionLimitMinutes = limit?.sessionLimitMinutes,
-                usedTodayMinutes = usedMins,
-                isHighImpact = isHigh,
-                activeUnlockMethod = unlock?.type,
-                activeUnlockRemainingMinutes = if (unlock != null) {
-                    ((unlock.startTime + (unlock.durationMinutes * 60 * 1000L) - currentMillis) / (60 * 1000L)).toInt().coerceAtLeast(1)
-                } else null
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val appsList: StateFlow<List<AppItem>> = _currentDateFlow.flatMapLatest { today ->
+        combine(
+            _installedApps,
+            repository.allLimits,
+            repository.allTemporaryUnlocks,
+            repository.getUsageForDate(today)
+        ) { installed, limits, tempUnlocks, todayUsages ->
+            val limitMap = limits.associateBy { it.packageName }
+            val usageMap = todayUsages.associate { it.packageName to it.usedMinutes }
+            val currentMillis = System.currentTimeMillis()
+            val tempUnlockMap = tempUnlocks
+                .filter { it.startTime + (it.durationMinutes * 60 * 1000L) > currentMillis }
+                .associateBy { it.packageName }
+                
+            installed.map { app ->
+                val limit = limitMap[app.packageName]
+                val isHigh = isHighImpactApp(app.packageName, app.appName)
+                val unlock = tempUnlockMap[app.packageName]
+                val usedMins = usageMap[app.packageName] ?: 0
+                app.copy(
+                    isLimited = limit != null && limit.isEnabled,
+                    dailyLimitMinutes = limit?.dailyLimitMinutes ?: 0,
+                    sessionLimitMinutes = limit?.sessionLimitMinutes,
+                    usedTodayMinutes = usedMins,
+                    isHighImpact = isHigh,
+                    activeUnlockMethod = unlock?.type,
+                    activeUnlockRemainingMinutes = if (unlock != null) {
+                        ((unlock.startTime + (unlock.durationMinutes * 60 * 1000L) - currentMillis) / (60 * 1000L)).toInt().coerceAtLeast(1)
+                    } else null
+                )
+            }.sortedWith(
+                compareByDescending<AppItem> { it.activeUnlockMethod != null }
+                    .thenByDescending { it.isLimited }
+                    .thenByDescending { it.usedTodayMinutes }
+                    .thenByDescending { it.isHighImpact }
+                    .thenBy { it.appName.lowercase() }
             )
-        }.sortedWith(
-            compareByDescending<AppItem> { it.activeUnlockMethod != null }
-                .thenByDescending { it.isLimited }
-                .thenByDescending { it.usedTodayMinutes }
-                .thenByDescending { it.isHighImpact }
-                .thenBy { it.appName.lowercase() }
-        )
+        }
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -77,6 +83,7 @@ class AppsViewModel(
     }
 
     fun syncAndLoad() {
+        _currentDateFlow.value = getTodayDateString()
         viewModelScope.launch {
             com.example.util.UsageStatsHelper.syncHistoricalUsageToDatabase(getApplication(), repository, 7)
             loadInstalledApps()
