@@ -59,7 +59,6 @@ fun AdsterraSocialBar(
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
             setBackgroundColor(AndroidColor.TRANSPARENT)
-            setLayerType(View.LAYER_TYPE_HARDWARE, null)
             isVerticalScrollBarEnabled = false
             isHorizontalScrollBarEnabled = false
 

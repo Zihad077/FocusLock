@@ -250,8 +250,8 @@ fun SettingsScreen(
     if (showThemeDialog) {
         AlertDialog(
             onDismissRequest = { showThemeDialog = false },
-            modifier = Modifier.liquidGlass(shape = RoundedCornerShape(28.dp), isElevated = true),
-            containerColor = Color.Transparent,
+            shape = RoundedCornerShape(24.dp),
+            containerColor = Color(0xFF101C2E),
             title = {
                 Column {
                     Row(
@@ -316,8 +316,8 @@ fun SettingsScreen(
     if (showLanguageDialog) {
         AlertDialog(
             onDismissRequest = { showLanguageDialog = false },
-            modifier = Modifier.liquidGlass(shape = RoundedCornerShape(28.dp), isElevated = true),
-            containerColor = Color.Transparent,
+            shape = RoundedCornerShape(24.dp),
+            containerColor = Color(0xFF101C2E),
             title = {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -365,7 +365,7 @@ fun SettingsScreen(
                                 showLanguageDialog = false
                             },
                             shape = RoundedCornerShape(16.dp),
-                            color = if (isSelected) Color(0x3300E5FF) else Color(0x22132338),
+                            color = if (isSelected) Color(0x2E00E5FF) else Color(0xFF16263D),
                             border = if (isSelected) {
                                 androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFF00E5FF))
                             } else {
@@ -1195,8 +1195,8 @@ fun SettingsRow(
             modifier = Modifier
                 .size(44.dp)
                 .clip(CircleShape)
-                .background(Color(0x283E4C5E))
-                .border(1.dp, Color.White.copy(alpha = 0.25f), CircleShape),
+                .background(Color(0xFF16263D))
+                .border(1.dp, Color(0xFF24DFEC).copy(alpha = 0.3f), CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(

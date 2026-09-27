@@ -62,8 +62,7 @@ fun LiquidGlassAdaptiveBanner(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
-            setBackgroundColor(AndroidColor.TRANSPARENT)
-            setLayerType(View.LAYER_TYPE_HARDWARE, null)
+            setBackgroundColor(AndroidColor.parseColor("#0E1829"))
             isVerticalScrollBarEnabled = false
             isHorizontalScrollBarEnabled = false
 
@@ -191,29 +190,28 @@ fun LiquidGlassAdaptiveBanner(
             .fillMaxWidth()
             .padding(vertical = 4.dp)
             .liquidGlass(
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(18.dp),
                 isElevated = false,
-                borderWidth = 0.7.dp
+                borderWidth = 1.dp
             )
-            .padding(horizontal = 6.dp, vertical = 6.dp),
+            .padding(horizontal = 10.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = "SPONSORED • 320×50 AD",
-                fontSize = 8.sp,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = 0.8.sp,
-                color = if (isDark) Color(0x9900E5FF) else Color(0x990077D6),
-                modifier = Modifier.padding(bottom = 3.dp)
+                text = "SPONSORED",
+                fontSize = 8.5.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.9.sp,
+                color = Color(0xFF7E92AA),
+                modifier = Modifier.padding(bottom = 4.dp)
             )
 
             AndroidView(
                 modifier = Modifier
                     .width(320.dp)
                     .height(50.dp)
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(Color(0x18101E2E)),
+                    .clip(RoundedCornerShape(8.dp)),
                 factory = {
                     (webView.parent as? ViewGroup)?.removeView(webView)
                     webView.onResume()

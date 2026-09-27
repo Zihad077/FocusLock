@@ -54,7 +54,8 @@ object AdsterraManager {
                 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
                 <style>
                     html, body {
-                        background-color: transparent;
+                        background-color: #0E1829;
+                        color: #E2E8F0;
                         margin: 0;
                         padding: 0;
                         width: 320px;
@@ -69,6 +70,7 @@ object AdsterraManager {
                         padding: 0;
                         overflow: hidden;
                         text-align: center;
+                        background-color: #0E1829;
                     }
                     iframe {
                         width: 320px !important;
@@ -110,17 +112,20 @@ object AdsterraManager {
                 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
                 <style>
                     html, body {
-                        background-color: transparent;
+                        background-color: #0E1829;
+                        color: #E2E8F0;
+                        font-family: sans-serif;
                         margin: 0;
                         padding: 0;
                         width: 100%;
-                        min-height: 250px;
+                        min-height: 140px;
                         overflow-x: hidden;
                     }
                     #container-$NATIVE_BANNER_KEY {
                         width: 100%;
-                        min-height: 250px;
+                        min-height: 140px;
                         margin: 0 auto;
+                        background-color: #0E1829;
                     }
                 </style>
             </head>

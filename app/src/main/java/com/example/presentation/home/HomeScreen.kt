@@ -280,8 +280,8 @@ private fun HeaderSection(
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(16.dp))
-                    .background(Color(0x35FFAB00))
-                    .border(1.dp, Color(0x80FFAB00), RoundedCornerShape(16.dp))
+                    .background(Color(0xE6281C0E))
+                    .border(1.dp, Color(0x88FFAB00), RoundedCornerShape(16.dp))
                     .padding(horizontal = 12.dp, vertical = 6.dp)
             ) {
                 Row(
@@ -306,14 +306,15 @@ private fun HeaderSection(
                 IconButton(
                     onClick = onNavigateToSettings,
                     modifier = Modifier
-                        .size(38.dp)
+                        .size(40.dp)
                         .clip(CircleShape)
-                        .background(Color(0x25FFFFFF))
+                        .background(Color(0xE6142238))
+                        .border(1.dp, Color.White.copy(alpha = 0.16f), CircleShape)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Settings,
                         contentDescription = "Settings",
-                        tint = Color.White,
+                        tint = Color(0xFFF8FAFC),
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -645,13 +646,14 @@ private fun AppLimitCard(
                 }
             }
 
-            // Clean thin progress bar
+            // Clean recessed progress bar
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(6.dp)
+                    .height(7.dp)
                     .clip(CircleShape)
-                    .background(Color(0x30FFFFFF))
+                    .background(Color(0xFF09111E))
+                    .border(0.5.dp, Color.White.copy(alpha = 0.12f), CircleShape)
             ) {
                 Box(
                     modifier = Modifier
@@ -675,8 +677,9 @@ private fun EditLimitDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.liquidGlass(shape = RoundedCornerShape(26.dp), isElevated = true),
-        containerColor = Color.Transparent,
+        shape = RoundedCornerShape(24.dp),
+        containerColor = Color(0xFF101C2E),
+        modifier = Modifier.border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(24.dp)),
         title = {
             Text(
                 text = stringResource(R.string.adjust_limit_title, limit.appName),
@@ -689,7 +692,7 @@ private fun EditLimitDialog(
                 Text(
                     text = stringResource(R.string.daily_allowance, sliderValue.toInt()),
                     style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
-                    color = Color(0xFF24DFEC)
+                    color = Color(0xFF00E5FF)
                 )
                 Slider(
                     value = sliderValue,
@@ -697,9 +700,9 @@ private fun EditLimitDialog(
                     valueRange = 5f..240f,
                     steps = 46,
                     colors = SliderDefaults.colors(
-                        thumbColor = Color(0xFF24DFEC),
-                        activeTrackColor = Color(0xFF24DFEC),
-                        inactiveTrackColor = Color.White.copy(alpha = 0.2f)
+                        thumbColor = Color(0xFF00E5FF),
+                        activeTrackColor = Color(0xFF00E5FF),
+                        inactiveTrackColor = Color(0xFF1E2F47)
                     )
                 )
                 Row(
@@ -709,12 +712,12 @@ private fun EditLimitDialog(
                     Text(
                         text = stringResource(R.string.min_5),
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.5f)
+                        color = Color(0xFF94A3B8)
                     )
                     Text(
                         text = stringResource(R.string.hours_4),
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.5f)
+                        color = Color(0xFF94A3B8)
                     )
                 }
             }

@@ -1,8 +1,10 @@
 package com.example.ui.theme
 
+import android.content.BroadcastReceiver
 import android.content.Context
-import android.os.PowerManager
-import android.provider.Settings
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.BatteryManager
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
@@ -25,6 +27,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
@@ -52,38 +55,47 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * Liquid Glass Design System for FocusLock.
+ * Unified Dark AMOLED & Subtle Glass Design System for FocusLock.
  *
- * Provides:
- * 1. Deep translucent optical glass (zero flat black/solid cards)
- * 2. Edge refraction (dual-tone Fresnel specular borders)
- * 3. Directional specular highlights & inner bevel luminescence
- * 4. Layered optical depth (shadow + glass body + specular reflection + content)
- * 5. Interactive tactile compression & specular brightening on press
- * 6. Dynamic atmospheric background with smooth undulating luminous orbs
+ * Inspired by the Permission Center reference and FocusLock branding:
+ * - Deep navy and charcoal surfaces (#0D1626 - #132034) with high readability (86-92% opacity)
+ * - Soft, controlled background blur and atmospheric dimming so wallpaper never competes with text
+ * - Readable white (#F8FAFC) and light-gray (#A8B8CC) typography
+ * - Cyan/turquoise primary accent (#00E5FF / #24DFEC)
+ * - Subtle 1dp borders and soft shadows
+ * - Consistent rounded corners and spacing across all screens
  */
 object LiquidGlass {
-    // Glass Surface Tints (Frosted translucent optical shades, never opaque)
-    val GlassTintDark = Color(0x20FFFFFF)          // Translucent frosted glass tint
-    val GlassSurfaceDark = Color(0x22FFFFFF)       // Base card frosted surface
-    val GlassSurfaceElevatedDark = Color(0x2EFFFFFF) // Elevated frosted surface
-    val GlassHighlightCyan = Color(0xFF00E5FF)     // Specular electric cyan
-    val GlassHighlightPurple = Color(0xFF9D4EDD)   // Specular violet accent
-    val GlassHighlightBlue = Color(0xFF2979FF)     // Specular azure accent
+    // Deep Navy & Charcoal Translucent Glass Surfaces
+    val GlassTintDark = Color(0xE0101B2D)            // 88% deep navy-charcoal glass
+    val GlassSurfaceDark = Color(0xE00E1829)         // Base card dark tinted glass surface
+    val GlassSurfaceElevatedDark = Color(0xEB142238) // Elevated card / modal surface (92% opacity)
+    val GlassInputSurface = Color(0xD90A121F)        // Search bar / input field recessed surface
 
-    // Border and Refraction Rims
-    val GlassBorderLuminous = Color(0x8000E5FF)
-    val GlassBorderSpecularWhite = Color(0x60FFFFFF)
-    val GlassBorderSubtleDark = Color(0x30FFFFFF)
+    // Primary & Accent Highlights
+    val GlassHighlightCyan = Color(0xFF00E5FF)       // Primary electric cyan
+    val GlassHighlightTurquoise = Color(0xFF24DFEC)  // Secondary turquoise accent
+    val GlassHighlightPurple = Color(0xFF9D4EDD)     // Ambient violet accent
+    val GlassHighlightBlue = Color(0xFF2979FF)       // Ambient azure accent
+
+    // Subtle Borders & Dividers
+    val GlassBorderLuminous = Color(0x7000E5FF)
+    val GlassBorderSpecularWhite = Color(0x29FFFFFF) // 16% crisp subtle white border
+    val GlassBorderSubtleDark = Color(0x1FFFFFFF)    // 12% subtle divider/border
+
+    // Typography Colors for Guaranteed Readability
+    val TextPrimary = Color(0xFFF8FAFC)              // Crisp readable white
+    val TextSecondary = Color(0xFFB0C0D4)            // Readable cool light-gray
+    val TextMuted = Color(0xFF7E92AA)                // Subtle caption gray
 
     @Composable
     fun cardColor(isElevated: Boolean = false): Color {
-        return if (isElevated) Color(0x28FFFFFF) else Color(0x1CFFFFFF)
+        return if (isElevated) GlassSurfaceElevatedDark else GlassSurfaceDark
     }
 
     @Composable
     fun borderColor(isHighlight: Boolean = false): Color {
-        return if (isHighlight) Color(0x8000E5FF) else Color(0x45FFFFFF)
+        return if (isHighlight) Color(0x7500E5FF) else Color(0x26FFFFFF)
     }
 
     @Composable
@@ -91,10 +103,10 @@ object LiquidGlass {
         return if (isHighlight) {
             Brush.linearGradient(
                 colors = listOf(
-                    Color.White.copy(alpha = 0.85f),
-                    Color(0xFF00E5FF).copy(alpha = 0.70f),
-                    Color(0xFF2979FF).copy(alpha = 0.40f),
-                    Color.White.copy(alpha = 0.25f)
+                    Color(0xFF00E5FF).copy(alpha = 0.65f),
+                    Color(0xFF24DFEC).copy(alpha = 0.35f),
+                    Color.White.copy(alpha = 0.18f),
+                    Color(0xFF00E5FF).copy(alpha = 0.30f)
                 ),
                 start = Offset(0f, 0f),
                 end = Offset(800f, 800f)
@@ -102,10 +114,10 @@ object LiquidGlass {
         } else {
             Brush.linearGradient(
                 colors = listOf(
-                    Color.White.copy(alpha = 0.55f),
-                    Color.White.copy(alpha = 0.25f),
-                    Color.White.copy(alpha = 0.08f),
-                    Color.White.copy(alpha = 0.35f)
+                    Color.White.copy(alpha = 0.22f),
+                    Color.White.copy(alpha = 0.12f),
+                    Color.White.copy(alpha = 0.06f),
+                    Color.White.copy(alpha = 0.14f)
                 ),
                 start = Offset(0f, 0f),
                 end = Offset(800f, 800f)
@@ -115,83 +127,90 @@ object LiquidGlass {
 }
 
 /**
- * Modifier that applies the signature Liquid Glass appearance:
- * - Smoky frosted optical acrylic glass substrate letting background wallpaper illuminate through
- * - Crisp smooth silvery-white refraction border
- * - Specular reflection sheen across the surface
+ * Primary surface modifier for all cards and containers in FocusLock.
+ *
+ * Uses a consistent dark navy-charcoal tinted glass surface (86%-92% opacity) so text, icons,
+ * and controls remain effortlessly readable over any wallpaper, with a subtle 1dp border
+ * and soft top-edge glass sheen.
  */
 fun Modifier.liquidGlass(
-    shape: Shape = RoundedCornerShape(26.dp),
+    shape: Shape = RoundedCornerShape(22.dp),
     isElevated: Boolean = false,
     isHighlight: Boolean = false,
     alphaMultiplier: Float = 1.0f,
-    borderWidth: Dp = 1.2.dp
-): Modifier = this
-    // 1. Soft lightweight ambient shadow for floating glass depth
-    .shadow(
-        elevation = if (isElevated) 8.dp else 2.dp,
-        shape = shape,
-        ambientColor = Color(0x20000000),
-        spotColor = if (isHighlight) Color(0x3000E5FF) else Color(0x10000000)
-    )
-    .clip(shape)
-    // 2. Frosted Liquid Glass smoky translucent acrylic substrate
-    .background(
-        brush = Brush.verticalGradient(
-            colors = if (isHighlight) {
-                listOf(
-                    Color(0x403A4D62).copy(alpha = alphaMultiplier),
-                    Color(0x28203850).copy(alpha = alphaMultiplier),
-                    Color(0x20182C40).copy(alpha = alphaMultiplier)
+    borderWidth: Dp = 1.dp
+): Modifier {
+    val clampedScale = alphaMultiplier.coerceIn(0.85f, 1.10f)
+    val topColor = when {
+        isHighlight -> Color(0xFF13283F).copy(alpha = (0.76f * clampedScale).coerceIn(0.68f, 0.88f))
+        isElevated -> Color(0xFF152338).copy(alpha = (0.80f * clampedScale).coerceIn(0.72f, 0.90f))
+        else -> Color(0xFF101B2D).copy(alpha = (0.72f * clampedScale).coerceIn(0.64f, 0.85f))
+    }
+    val midColor = when {
+        isHighlight -> Color(0xFF0E1F33).copy(alpha = (0.76f * clampedScale).coerceIn(0.68f, 0.88f))
+        isElevated -> Color(0xFF101C2E).copy(alpha = (0.80f * clampedScale).coerceIn(0.72f, 0.90f))
+        else -> Color(0xFF0C1524).copy(alpha = (0.72f * clampedScale).coerceIn(0.64f, 0.85f))
+    }
+    val bottomColor = when {
+        isHighlight -> Color(0xFF0B1828).copy(alpha = (0.78f * clampedScale).coerceIn(0.70f, 0.90f))
+        isElevated -> Color(0xFF0D1726).copy(alpha = (0.82f * clampedScale).coerceIn(0.74f, 0.92f))
+        else -> Color(0xFF09111E).copy(alpha = (0.75f * clampedScale).coerceIn(0.66f, 0.88f))
+    }
+
+    return this
+        .clip(shape)
+        .background(
+            brush = Brush.verticalGradient(
+                colors = listOf(topColor, midColor, bottomColor)
+            )
+        )
+        .drawWithContent {
+            drawContent()
+            // Subtle top glass edge highlight
+            drawRect(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        if (isHighlight) Color(0x2400E5FF) else Color(0x12FFFFFF),
+                        Color.Transparent
+                    ),
+                    startY = 0f,
+                    endY = 28.dp.toPx()
                 )
-            } else if (isElevated) {
-                listOf(
-                    Color(0x443E4E62).copy(alpha = alphaMultiplier),
-                    Color(0x322A3A4D).copy(alpha = alphaMultiplier),
-                    Color(0x251E2B3A).copy(alpha = alphaMultiplier)
+            )
+        }
+        .border(
+            width = borderWidth,
+            brush = if (isHighlight) {
+                Brush.linearGradient(
+                    colors = listOf(
+                        Color(0xFF00E5FF).copy(alpha = 0.60f),
+                        Color(0xFF24DFEC).copy(alpha = 0.35f),
+                        Color.White.copy(alpha = 0.16f),
+                        Color(0xFF00E5FF).copy(alpha = 0.28f)
+                    ),
+                    start = Offset(0f, 0f),
+                    end = Offset(500f, 500f)
                 )
             } else {
-                listOf(
-                    Color(0x3D38485B).copy(alpha = alphaMultiplier),
-                    Color(0x2C263445).copy(alpha = alphaMultiplier),
-                    Color(0x1E1A2533).copy(alpha = alphaMultiplier)
+                Brush.linearGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.20f),
+                        Color(0xFF94A3B8).copy(alpha = 0.12f),
+                        Color.White.copy(alpha = 0.07f),
+                        Color(0xFF94A3B8).copy(alpha = 0.14f)
+                    ),
+                    start = Offset(0f, 0f),
+                    end = Offset(500f, 500f)
                 )
-            }
+            },
+            shape = shape
         )
-    )
-    // 3. Crisp smooth silvery-white glass border rim
-    .border(
-        width = borderWidth,
-        brush = if (isHighlight) {
-            Brush.linearGradient(
-                colors = listOf(
-                    Color.White.copy(alpha = 0.85f),
-                    Color(0xFF00E5FF).copy(alpha = 0.65f),
-                    Color.White.copy(alpha = 0.25f),
-                    Color(0xFF00E5FF).copy(alpha = 0.45f)
-                ),
-                start = Offset(0f, 0f),
-                end = Offset(400f, 400f)
-            )
-        } else {
-            Brush.linearGradient(
-                colors = listOf(
-                    Color.White.copy(alpha = 0.60f),
-                    Color(0xFFD4E0EE).copy(alpha = 0.40f),
-                    Color.White.copy(alpha = 0.18f),
-                    Color(0xFFBACBDA).copy(alpha = 0.45f)
-                ),
-                start = Offset(0f, 0f),
-                end = Offset(400f, 400f)
-            )
-        },
-        shape = shape
-    )
+}
 
 /**
  * Interactive modifier for Liquid Glass elements:
- * Provides tactile elastic scale compression on press (0.975f) with spring physics
- * and dynamically brightens the specular highlight while touched.
+ * Provides tactile elastic scale compression on press (0.98f) with spring physics
+ * and a subtle cyan highlight feedback when touched.
  */
 fun Modifier.liquidGlassPressable(
     interactionSource: MutableInteractionSource,
@@ -201,18 +220,12 @@ fun Modifier.liquidGlassPressable(
     val isPressed by interactionSource.collectIsPressedAsState()
 
     val scale by animateFloatAsState(
-        targetValue = if (isPressed && enabled) 0.975f else 1.0f,
+        targetValue = if (isPressed && enabled) 0.98f else 1.0f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessLow
         ),
         label = "glass_press_scale"
-    )
-
-    val highlightGlow by animateFloatAsState(
-        targetValue = if (isPressed && enabled) 1.4f else 1.0f,
-        animationSpec = tween(150),
-        label = "glass_press_glow"
     )
 
     this
@@ -230,19 +243,19 @@ fun Modifier.liquidGlassPressable(
             drawContent()
             if (isPressed && enabled) {
                 drawRect(
-                    color = Color(0xFF00E5FF).copy(alpha = 0.08f)
+                    color = Color(0xFF00E5FF).copy(alpha = 0.07f)
                 )
             }
         }
 }
 
 /**
- * Dedicated Liquid Glass Card Composable with integrated layered depth and optional press animation.
+ * Dedicated Liquid Glass Card Composable with consistent dark tinted glass surface and optional press animation.
  */
 @Composable
 fun LiquidGlassCard(
     modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(26.dp),
+    shape: Shape = RoundedCornerShape(22.dp),
     isElevated: Boolean = false,
     isHighlight: Boolean = false,
     onClick: (() -> Unit)? = null,
@@ -275,14 +288,14 @@ fun LiquidGlassCard(
  * Button styles supported by the global Glass Design System.
  */
 enum class GlassButtonStyle {
-    PRIMARY,     // Bright cyan/turquoise solid fill with dark text
-    SECONDARY,   // Translucent frosted glass with thin silvery border and white text
-    WARNING,     // Warm amber frosted glass
-    DESTRUCTIVE  // Red frosted glass for irreversible actions
+    PRIMARY,     // Bright cyan/turquoise fill with dark navy text
+    SECONDARY,   // Dark navy tinted glass with subtle border and crisp white text
+    WARNING,     // Warm amber tinted glass
+    DESTRUCTIVE  // Crimson tinted glass for irreversible actions
 }
 
 /**
- * Unified Glass Button matching 1790213352222.png.
+ * Unified Glass Button matching the Permission Center reference design.
  */
 @Composable
 fun GlassButton(
@@ -291,14 +304,14 @@ fun GlassButton(
     text: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
     style: GlassButtonStyle = GlassButtonStyle.PRIMARY,
-    shape: Shape = RoundedCornerShape(16.dp),
+    shape: Shape = RoundedCornerShape(14.dp),
     enabled: Boolean = true
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
 
     val scale by animateFloatAsState(
-        targetValue = if (isPressed && enabled) 0.96f else 1.0f,
+        targetValue = if (isPressed && enabled) 0.97f else 1.0f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessLow
@@ -308,27 +321,38 @@ fun GlassButton(
 
     val bgModifier = when (style) {
         GlassButtonStyle.PRIMARY -> Modifier
-            .background(if (enabled) Color(0xFF24DFEC) else Color(0x6024DFEC))
+            .background(
+                brush = if (enabled) {
+                    Brush.horizontalGradient(
+                        colors = listOf(Color(0xFF00E5FF), Color(0xFF24DFEC))
+                    )
+                } else {
+                    Brush.horizontalGradient(
+                        colors = listOf(Color(0x5500E5FF), Color(0x5524DFEC))
+                    )
+                }
+            )
         GlassButtonStyle.SECONDARY -> Modifier
-            .background(Color(0x403E4C5E))
-            .border(1.dp, Color.White.copy(alpha = 0.40f), shape)
+            .background(Color(0xE6162438))
+            .border(1.dp, Color.White.copy(alpha = 0.18f), shape)
         GlassButtonStyle.WARNING -> Modifier
-            .background(Color(0x455A371B))
-            .border(1.dp, Color(0x80FFA726), shape)
+            .background(Color(0xE62B1D10))
+            .border(1.dp, Color(0x90FFA726), shape)
         GlassButtonStyle.DESTRUCTIVE -> Modifier
-            .background(Color(0x40551822))
-            .border(1.dp, Color(0x80EF4444), shape)
+            .background(Color(0xE62D1219))
+            .border(1.dp, Color(0x90EF4444), shape)
     }
 
     val textColor = when (style) {
-        GlassButtonStyle.PRIMARY -> Color(0xFF061820)
-        GlassButtonStyle.SECONDARY -> Color.White
-        GlassButtonStyle.WARNING -> Color(0xFFFFA726)
-        GlassButtonStyle.DESTRUCTIVE -> Color(0xFFFF5252)
+        GlassButtonStyle.PRIMARY -> if (enabled) Color(0xFF04151F) else Color(0x9904151F)
+        GlassButtonStyle.SECONDARY -> if (enabled) Color(0xFFF8FAFC) else Color(0x80F8FAFC)
+        GlassButtonStyle.WARNING -> Color(0xFFFFB74D)
+        GlassButtonStyle.DESTRUCTIVE -> Color(0xFFFF6E6E)
     }
 
     Box(
         modifier = modifier
+            .defaultMinSize(minHeight = 42.dp)
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
@@ -359,7 +383,7 @@ fun GlassButton(
             }
             Text(
                 text = text,
-                style = MaterialTheme.typography.labelMedium.copy(
+                style = MaterialTheme.typography.labelLarge.copy(
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.5.sp
                 ),
@@ -378,7 +402,7 @@ fun LiquidGlassButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     isPrimary: Boolean = true,
-    shape: Shape = RoundedCornerShape(16.dp),
+    shape: Shape = RoundedCornerShape(14.dp),
     content: @Composable RowScope.() -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -395,6 +419,7 @@ fun LiquidGlassButton(
 
     Box(
         modifier = modifier
+            .defaultMinSize(minHeight = 42.dp)
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
@@ -402,11 +427,21 @@ fun LiquidGlassButton(
             .clip(shape)
             .then(
                 if (isPrimary) {
-                    Modifier.background(if (enabled) Color(0xFF24DFEC) else Color(0x6024DFEC))
+                    Modifier.background(
+                        brush = if (enabled) {
+                            Brush.horizontalGradient(
+                                colors = listOf(Color(0xFF00E5FF), Color(0xFF24DFEC))
+                            )
+                        } else {
+                            Brush.horizontalGradient(
+                                colors = listOf(Color(0x5500E5FF), Color(0x5524DFEC))
+                            )
+                        }
+                    )
                 } else {
                     Modifier
-                        .background(Color(0x403E4C5E))
-                        .border(1.dp, Color.White.copy(alpha = 0.40f), shape)
+                        .background(Color(0xE6162438))
+                        .border(1.dp, Color.White.copy(alpha = 0.18f), shape)
                 }
             )
             .clickable(
@@ -433,23 +468,25 @@ fun LiquidGlassButton(
 fun GlassIconBubble(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     modifier: Modifier = Modifier,
-    size: Dp = 50.dp,
-    iconSize: Dp = 26.dp,
+    size: Dp = 48.dp,
+    iconSize: Dp = 24.dp,
     isHighlight: Boolean = false,
+    tint: Color? = null,
     contentDescription: String? = null
 ) {
+    val effectiveTint = tint ?: if (isHighlight) Color(0xFF00E5FF) else Color(0xFFF1F5F9)
     Box(
         modifier = modifier
             .size(size)
             .clip(CircleShape)
             .background(
-                if (isHighlight) Color(0x3500E5FF)
-                else Color(0x303E4F63)
+                if (isHighlight) Color(0x2600E5FF)
+                else Color(0xE617263B)
             )
             .border(
                 1.dp,
-                if (isHighlight) Color(0x8000E5FF)
-                else Color.White.copy(alpha = 0.35f),
+                if (isHighlight) Color(0x6600E5FF)
+                else Color.White.copy(alpha = 0.16f),
                 CircleShape
             ),
         contentAlignment = Alignment.Center
@@ -457,7 +494,7 @@ fun GlassIconBubble(
         Icon(
             imageVector = icon,
             contentDescription = contentDescription,
-            tint = if (isHighlight) Color(0xFF00E5FF) else Color.White,
+            tint = effectiveTint,
             modifier = Modifier.size(iconSize)
         )
     }
@@ -481,14 +518,15 @@ fun GlassSectionHeader(
                 modifier = Modifier
                     .size(7.dp)
                     .clip(CircleShape)
-                    .background(if (isCritical) primaryCyan else Color(0xFFE2E8F0))
+                    .background(if (isCritical) primaryCyan else Color(0xFF38BDF8))
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = title.uppercase(),
                 style = MaterialTheme.typography.labelMedium.copy(
                     fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = 1.2.sp
+                    letterSpacing = 1.1.sp,
+                    fontSize = 12.sp
                 ),
                 color = if (isCritical) primaryCyan else Color(0xFFE2E8F0)
             )
@@ -498,7 +536,7 @@ fun GlassSectionHeader(
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall.copy(
-                    color = Color.White.copy(alpha = 0.72f),
+                    color = LiquidGlass.TextSecondary,
                     fontSize = 12.5.sp
                 )
             )
@@ -507,7 +545,7 @@ fun GlassSectionHeader(
 }
 
 /**
- * Status Badge matching SETUP NEEDED / PROTECTED from 1790213352222.png.
+ * Status Badge matching SETUP NEEDED / PROTECTED from Permission Center reference.
  */
 @Composable
 fun GlassStatusBadge(
@@ -517,27 +555,31 @@ fun GlassStatusBadge(
     icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
     modifier: Modifier = Modifier
 ) {
+    val bgColor = when {
+        isWarning -> Color(0xE62D141C)
+        isHighlight -> Color(0x2900E5FF)
+        else -> Color(0xE6142538)
+    }
+    val strokeColor = when {
+        isWarning -> Color(0x88FF5252)
+        isHighlight -> Color(0x8000E5FF)
+        else -> Color(0x5500E5FF)
+    }
+    val contentColor = if (isWarning) Color(0xFFFF6E6E) else Color(0xFF00E5FF)
+
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
-            .background(
-                if (isWarning) Color(0x40551822)
-                else Color(0x3000E5FF)
-            )
-            .border(
-                1.dp,
-                if (isWarning) Color(0x80EF4444)
-                else Color(0x8000E5FF),
-                RoundedCornerShape(16.dp)
-            )
-            .padding(horizontal = 12.dp, vertical = 7.dp)
+            .background(bgColor)
+            .border(1.dp, strokeColor, RoundedCornerShape(16.dp))
+            .padding(horizontal = 12.dp, vertical = 6.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (icon != null) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = if (isWarning) Color(0xFFFF5252) else Color(0xFF00E5FF),
+                    tint = contentColor,
                     modifier = Modifier.size(14.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
@@ -549,7 +591,48 @@ fun GlassStatusBadge(
                     fontSize = 10.5.sp,
                     letterSpacing = 0.5.sp
                 ),
-                color = if (isWarning) Color(0xFFFF5252) else Color(0xFF00E5FF)
+                color = contentColor
+            )
+        }
+    }
+}
+
+/**
+ * Standardized Progress Bar with deep recessed track and cyan-turquoise gradient indicator.
+ */
+@Composable
+fun GlassProgressBar(
+    progress: Float,
+    modifier: Modifier = Modifier,
+    height: Dp = 8.dp,
+    isWarning: Boolean = false
+) {
+    val clamped = progress.coerceIn(0f, 1f)
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(height)
+            .clip(CircleShape)
+            .background(Color(0xFF080E1A))
+            .border(0.5.dp, Color.White.copy(alpha = 0.10f), CircleShape)
+    ) {
+        if (clamped > 0f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(clamped)
+                    .clip(CircleShape)
+                    .background(
+                        brush = if (isWarning) {
+                            Brush.horizontalGradient(
+                                listOf(Color(0xFFFF9100), Color(0xFFFF5252))
+                            )
+                        } else {
+                            Brush.horizontalGradient(
+                                listOf(Color(0xFF00E5FF), Color(0xFF10B981))
+                            )
+                        }
+                    )
             )
         }
     }
@@ -570,7 +653,7 @@ fun GlassEmptyState(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .liquidGlass(shape = RoundedCornerShape(26.dp))
+            .liquidGlass(shape = RoundedCornerShape(22.dp))
             .padding(24.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -581,7 +664,8 @@ fun GlassEmptyState(
             GlassIconBubble(
                 icon = icon,
                 size = 54.dp,
-                iconSize = 28.dp
+                iconSize = 26.dp,
+                isHighlight = true
             )
             Spacer(modifier = Modifier.height(14.dp))
             Text(
@@ -590,13 +674,13 @@ fun GlassEmptyState(
                     fontWeight = FontWeight.Bold,
                     fontSize = 17.sp
                 ),
-                color = Color.White
+                color = LiquidGlass.TextPrimary
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall.copy(
-                    color = Color.White.copy(alpha = 0.72f),
+                    color = LiquidGlass.TextSecondary,
                     fontSize = 13.sp
                 ),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -899,8 +983,59 @@ private val staticOceanBubbles = listOf(
 )
 
 /**
+ * Observes real-time device battery level and returns true ONLY when battery is below 20%.
+ * Ensures animations always run smoothly unless battery charge drops under 20%.
+ */
+@Composable
+private fun rememberIsBatteryBelow20Percent(context: Context): Boolean {
+    fun checkBatteryBelow20(intent: Intent?): Boolean {
+        return try {
+            if (intent != null) {
+                val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+                val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+                if (level >= 0 && scale > 0) {
+                    val pct = (level * 100) / scale
+                    return pct in 1..19
+                }
+            }
+            val bm = context.getSystemService(Context.BATTERY_SERVICE) as? BatteryManager
+            val capacity = bm?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: 100
+            capacity in 1..19
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    var isBelow20 by remember {
+        val stickyIntent = runCatching {
+            context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        }.getOrNull()
+        mutableStateOf(checkBatteryBelow20(stickyIntent))
+    }
+
+    DisposableEffect(context) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(ctx: Context?, intent: Intent?) {
+                isBelow20 = checkBatteryBelow20(intent)
+            }
+        }
+        val filter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+        runCatching { context.registerReceiver(receiver, filter) }
+        onDispose {
+            runCatching { context.unregisterReceiver(receiver) }
+        }
+    }
+
+    return isBelow20
+}
+
+/**
  * Shared animated canvas for rendering the living wallpaper with physics-based particles,
  * falling petals, autumn leaves, cyber rain, aurora waves, or ocean bubbles.
+ *
+ * - Runs continuously and smoothly at native VSYNC frame rate (never stutters, jumps, or gets stuck).
+ * - Only pauses animation when device battery is strictly below 20%, displaying a beautifully arranged
+ *   static composition of leaves/petals over the scenic background.
  */
 @Composable
 fun AnimatedThemeCanvas(
@@ -909,91 +1044,64 @@ fun AnimatedThemeCanvas(
     isThumbnail: Boolean = false
 ) {
     val context = LocalContext.current
-    val isPowerSaveMode = try {
-        val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
-        powerManager?.isPowerSaveMode == true
-    } catch (e: Exception) {
-        false
+    val isBatteryLow = rememberIsBatteryBelow20Percent(context)
+
+    // Monotonic continuous time in seconds (curated static arrangement at 4.2s when battery < 20%)
+    var continuousTime by remember { mutableFloatStateOf(4.2f) }
+
+    LaunchedEffect(isBatteryLow) {
+        if (!isBatteryLow) {
+            var lastFrameNanos = 0L
+            while (true) {
+                withFrameNanos { frameTimeNanos ->
+                    if (lastFrameNanos != 0L) {
+                        val deltaSec = ((frameTimeNanos - lastFrameNanos) / 1_000_000_000f)
+                            .coerceIn(0f, 0.05f)
+                        continuousTime += deltaSec
+                        // Keep float precision high over many hours while avoiding visible wrap
+                        if (continuousTime > 86400f) {
+                            continuousTime -= 86400f
+                        }
+                    }
+                    lastFrameNanos = frameTimeNanos
+                }
+            }
+        } else {
+            // Beautifully arranged static snapshot when battery < 20%
+            continuousTime = 4.2f
+        }
     }
 
-    val animatorDurationScale = runCatching {
-        Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f)
-    }.getOrDefault(1f)
-
-    val animationsDisabled = isPowerSaveMode || animatorDurationScale == 0f
-
-    val infiniteTransition = rememberInfiniteTransition(label = "theme_canvas_anim")
-
-    val driftPhase by if (animationsDisabled) {
-        remember { mutableFloatStateOf(0f) }
+    val driftPhase = (continuousTime * 0.3927f) % (2f * Math.PI.toFloat())
+    val pulseGlow = if (isBatteryLow) {
+        1.0f
     } else {
-        infiniteTransition.animateFloat(
-            initialValue = 0f,
-            targetValue = (2 * Math.PI).toFloat(),
-            animationSpec = infiniteRepeatable(
-                animation = tween(16000, easing = LinearEasing),
-                repeatMode = RepeatMode.Restart
-            ),
-            label = "ambient_drift_phase"
-        )
+        1.01f + 0.13f * sin((continuousTime * 0.52f).toDouble()).toFloat()
+    }
+    val particleTwinkle = if (isBatteryLow) {
+        0.95f
+    } else {
+        0.70f + 0.30f * sin((continuousTime * 0.90f).toDouble()).toFloat()
     }
 
-    val continuousTime by if (animationsDisabled) {
-        remember { mutableFloatStateOf(0f) }
-    } else {
-        infiniteTransition.animateFloat(
-            initialValue = 0f,
-            targetValue = 60f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(60000, easing = LinearEasing),
-                repeatMode = RepeatMode.Restart
-            ),
-            label = "continuous_time"
-        )
-    }
-
-    val pulseGlow by if (animationsDisabled) {
-        remember { mutableFloatStateOf(1f) }
-    } else {
-        infiniteTransition.animateFloat(
-            initialValue = 0.88f,
-            targetValue = 1.14f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(6000, easing = EaseInOutSine),
-                repeatMode = RepeatMode.Reverse
-            ),
-            label = "ambient_pulse"
-        )
-    }
-
-    val particleTwinkle by if (animationsDisabled) {
-        remember { mutableFloatStateOf(1f) }
-    } else {
-        infiniteTransition.animateFloat(
-            initialValue = 0.4f,
-            targetValue = 1.0f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(3500, easing = EaseInOutSine),
-                repeatMode = RepeatMode.Reverse
-            ),
-            label = "particle_twinkle"
-        )
-    }
+    // Reusable Path instance to prevent per-frame object allocations and GC stutters
+    val reusablePath = remember { Path() }
 
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(brush = Brush.verticalGradient(colors = theme.baseGradient))
+            .background(theme.baseGradient.first())
     ) {
-        // Wallpaper Image
+        // 1. High-Res Scenic Wallpaper Image (Crisp & Vivid)
         Image(
             painter = painterResource(id = theme.drawableRes),
             contentDescription = null,
             contentScale = ContentScale.Crop,
+            alpha = if (isThumbnail) 0.95f else 0.90f,
             modifier = Modifier.fillMaxSize()
         )
 
-        // Contrast Veil
+        // 2. Subtle Atmospheric Vignette Scrim (Underneath particles so leaves/petals shine brightly)
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -1001,62 +1109,73 @@ fun AnimatedThemeCanvas(
                     brush = Brush.verticalGradient(
                         colors = if (isThumbnail) {
                             listOf(
-                                Color(0x2005070D),
-                                Color(0x38080E18),
-                                Color(0x5505070D)
+                                Color(0x22040810),
+                                Color(0x11040810),
+                                Color(0x55040810)
                             )
                         } else {
                             listOf(
-                                Color(0x2205070D),
-                                Color(0x35080E18),
-                                Color(0x5505070D)
+                                Color(0x4D050912),
+                                Color(0x33070D19),
+                                Color(0x400A1122),
+                                Color(0x66050912)
                             )
                         }
                     )
                 )
         )
 
-        // Dynamic Animation Canvas
+        // 3. Dynamic Animated Canvas Overlay (Luminous Orbs + Physics Petals/Leaves/Rain/Bubbles)
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .drawBehind {
                     val w = size.width
                     val h = size.height
-                    val scaleFactor = if (isThumbnail) (w / 360f).coerceIn(0.4f, 1f) else 1f
+                    val scaleFactor = if (isThumbnail) (w / 360f).coerceIn(0.35f, 1f) else 1f
 
-                    // 1. Undulating glowing orbs
-                    val orb1X = w * (0.80f + 0.09f * cos(driftPhase.toDouble()).toFloat())
-                    val orb1Y = h * (0.18f + 0.07f * sin(driftPhase.toDouble()).toFloat())
+                    // Undulating ambient lighting glows
+                    val orb1X = w * (0.82f + 0.10f * cos(driftPhase.toDouble()).toFloat())
+                    val orb1Y = h * (0.14f + 0.08f * sin(driftPhase.toDouble()).toFloat())
                     drawCircle(
                         brush = Brush.radialGradient(
                             colors = theme.orb1Colors,
                             center = Offset(orb1X, orb1Y),
-                            radius = w * 0.80f * pulseGlow
+                            radius = w * 0.75f * pulseGlow
                         )
                     )
 
-                    val orb2X = w * (0.16f + 0.08f * sin(driftPhase.toDouble()).toFloat())
-                    val orb2Y = h * (0.50f + 0.09f * cos(driftPhase.toDouble()).toFloat())
+                    val orb2X = w * (0.15f + 0.10f * sin(driftPhase.toDouble()).toFloat())
+                    val orb2Y = h * (0.55f + 0.09f * cos(driftPhase.toDouble()).toFloat())
                     drawCircle(
                         brush = Brush.radialGradient(
                             colors = theme.orb2Colors,
                             center = Offset(orb2X, orb2Y),
-                            radius = w * 0.85f * (2.14f - pulseGlow)
+                            radius = w * 0.80f * (2.02f - pulseGlow)
                         )
                     )
 
-                    // 2. Specialized Physics-Based Animation Layer
+                    val orb3X = w * (0.78f + 0.08f * sin((driftPhase + 1.8f).toDouble()).toFloat())
+                    val orb3Y = h * (0.88f + 0.06f * cos((driftPhase + 1.8f).toDouble()).toFloat())
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = theme.orb3Colors,
+                            center = Offset(orb3X, orb3Y),
+                            radius = w * 0.70f * pulseGlow
+                        )
+                    )
+
+                    // Theme-specific live particle physics (or curated static arrangement when battery < 20%)
                     when (theme.animationType) {
                         ThemeAnimationType.SAKURA_PETALS -> {
-                            val petalsToRender = if (isThumbnail) staticPetals.take(12) else staticPetals
+                            val petalsToRender = if (isThumbnail) staticPetals.take(14) else staticPetals
                             petalsToRender.forEach { petal ->
                                 val t = continuousTime
                                 val normalizedY = (petal.relY + t * petal.fallSpeed) % 1.0f
                                 val py = normalizedY * h
 
                                 val swayPhase = t * petal.swaySpeed + petal.phase
-                                val windGust = sin((t * 0.4f).toDouble()).toFloat() * (14f * scaleFactor)
+                                val windGust = sin((t * 0.4f).toDouble()).toFloat() * (18f * scaleFactor)
                                 val px = (petal.relX * w + sin(swayPhase.toDouble()).toFloat() * (petal.swayDistance * scaleFactor) + windGust)
                                     .coerceIn(-20f, w + 20f)
 
@@ -1067,34 +1186,48 @@ fun AnimatedThemeCanvas(
                                 val pw = petal.width.dp.toPx() * scaleFactor
                                 val ph = petal.height.dp.toPx() * scaleFactor
 
+                                // Soft glowing aura behind each cherry blossom petal
+                                drawCircle(
+                                    color = petal.petalColor.copy(alpha = 0.22f),
+                                    radius = ph * 0.7f,
+                                    center = Offset(px, py)
+                                )
+
                                 rotate(degrees = rotationDeg, pivot = Offset(px, py)) {
                                     scale(scaleX = scaleX, scaleY = 1f, pivot = Offset(px, py)) {
-                                        val petalPath = Path().apply {
-                                            moveTo(px, py - ph * 0.5f)
-                                            cubicTo(
-                                                px - pw * 0.65f, py - ph * 0.35f,
-                                                px - pw * 0.65f, py + ph * 0.25f,
-                                                px, py + ph * 0.5f
-                                            )
-                                            cubicTo(
-                                                px + pw * 0.65f, py + ph * 0.25f,
-                                                px + pw * 0.65f, py - ph * 0.35f,
-                                                px, py - ph * 0.5f
-                                            )
-                                            close()
-                                        }
+                                        reusablePath.reset()
+                                        reusablePath.moveTo(px, py - ph * 0.5f)
+                                        reusablePath.cubicTo(
+                                            px - pw * 0.65f, py - ph * 0.35f,
+                                            px - pw * 0.65f, py + ph * 0.25f,
+                                            px, py + ph * 0.5f
+                                        )
+                                        reusablePath.cubicTo(
+                                            px + pw * 0.65f, py + ph * 0.25f,
+                                            px + pw * 0.65f, py - ph * 0.35f,
+                                            px, py - ph * 0.5f
+                                        )
+                                        reusablePath.close()
 
                                         drawPath(
-                                            path = petalPath,
+                                            path = reusablePath,
                                             brush = Brush.radialGradient(
                                                 colors = listOf(
-                                                    petal.edgeColor.copy(alpha = 0.85f),
-                                                    petal.petalColor.copy(alpha = 0.92f),
-                                                    Color.White.copy(alpha = 0.75f)
+                                                    petal.edgeColor.copy(alpha = 0.92f),
+                                                    petal.petalColor.copy(alpha = 0.88f),
+                                                    Color.White.copy(alpha = 0.70f)
                                                 ),
                                                 center = Offset(px, py),
                                                 radius = ph * 0.6f
                                             )
+                                        )
+
+                                        // Subtle petal center highlight vein
+                                        drawLine(
+                                            color = Color.White.copy(alpha = 0.55f),
+                                            start = Offset(px, py - ph * 0.30f),
+                                            end = Offset(px, py + ph * 0.25f),
+                                            strokeWidth = (0.8f * scaleFactor).dp.toPx()
                                         )
                                     }
                                 }
@@ -1102,7 +1235,7 @@ fun AnimatedThemeCanvas(
                         }
 
                         ThemeAnimationType.MAPLE_LEAVES -> {
-                            val leavesToRender = if (isThumbnail) staticMapleLeaves.take(9) else staticMapleLeaves
+                            val leavesToRender = if (isThumbnail) staticMapleLeaves.take(10) else staticMapleLeaves
                             leavesToRender.forEach { leaf ->
                                 val t = continuousTime
                                 val normalizedY = (leaf.relY + t * leaf.fallSpeed) % 1.0f
@@ -1115,39 +1248,53 @@ fun AnimatedThemeCanvas(
                                 val rotationDeg = leaf.phase * 50f + t * leaf.rotationSpeed
                                 val s = leaf.size.dp.toPx() * scaleFactor
 
+                                // Warm amber glow behind leaf
+                                drawCircle(
+                                    color = leaf.color.copy(alpha = 0.25f),
+                                    radius = s * 0.75f,
+                                    center = Offset(px, py)
+                                )
+
                                 rotate(degrees = rotationDeg, pivot = Offset(px, py)) {
-                                    val leafPath = Path().apply {
-                                        moveTo(px, py - s * 0.6f)
-                                        lineTo(px - s * 0.25f, py - s * 0.2f)
-                                        lineTo(px - s * 0.55f, py - s * 0.3f)
-                                        lineTo(px - s * 0.35f, py + s * 0.1f)
-                                        lineTo(px - s * 0.45f, py + s * 0.35f)
-                                        lineTo(px, py + s * 0.55f)
-                                        lineTo(px + s * 0.45f, py + s * 0.35f)
-                                        lineTo(px + s * 0.35f, py + s * 0.1f)
-                                        lineTo(px + s * 0.55f, py - s * 0.3f)
-                                        lineTo(px + s * 0.25f, py - s * 0.2f)
-                                        close()
-                                    }
+                                    reusablePath.reset()
+                                    reusablePath.moveTo(px, py - s * 0.6f)
+                                    reusablePath.lineTo(px - s * 0.25f, py - s * 0.2f)
+                                    reusablePath.lineTo(px - s * 0.55f, py - s * 0.3f)
+                                    reusablePath.lineTo(px - s * 0.35f, py + s * 0.1f)
+                                    reusablePath.lineTo(px - s * 0.45f, py + s * 0.35f)
+                                    reusablePath.lineTo(px, py + s * 0.55f)
+                                    reusablePath.lineTo(px + s * 0.45f, py + s * 0.35f)
+                                    reusablePath.lineTo(px + s * 0.35f, py + s * 0.1f)
+                                    reusablePath.lineTo(px + s * 0.55f, py - s * 0.3f)
+                                    reusablePath.lineTo(px + s * 0.25f, py - s * 0.2f)
+                                    reusablePath.close()
 
                                     drawPath(
-                                        path = leafPath,
+                                        path = reusablePath,
                                         brush = Brush.radialGradient(
                                             colors = listOf(
-                                                Color.White.copy(alpha = 0.75f),
-                                                leaf.color.copy(alpha = 0.90f),
+                                                Color(0xFFFFE082),
+                                                leaf.color.copy(alpha = 0.92f),
                                                 Color(0xFF8D1C00).copy(alpha = 0.85f)
                                             ),
                                             center = Offset(px, py),
                                             radius = s * 0.6f
                                         )
                                     )
+
+                                    // Golden leaf center vein
+                                    drawLine(
+                                        color = Color(0xFFFFF59D).copy(alpha = 0.65f),
+                                        start = Offset(px, py - s * 0.45f),
+                                        end = Offset(px, py + s * 0.45f),
+                                        strokeWidth = (1.0f * scaleFactor).dp.toPx()
+                                    )
                                 }
                             }
                         }
 
                         ThemeAnimationType.CYBER_RAIN -> {
-                            val rainToRender = if (isThumbnail) staticCyberRain.take(10) else staticCyberRain
+                            val rainToRender = if (isThumbnail) staticCyberRain.take(12) else staticCyberRain
                             rainToRender.forEach { rain ->
                                 val t = continuousTime * 4f
                                 val normalizedY = (rain.relY + t * rain.speed) % 1.0f
@@ -1161,8 +1308,8 @@ fun AnimatedThemeCanvas(
                                     brush = Brush.verticalGradient(
                                         colors = listOf(
                                             Color.Transparent,
-                                            rain.color.copy(alpha = 0.35f),
-                                            Color.White.copy(alpha = 0.95f)
+                                            rain.color.copy(alpha = 0.45f),
+                                            Color.White.copy(alpha = 0.90f)
                                         ),
                                         startY = py - streakLen,
                                         endY = py
@@ -1171,55 +1318,62 @@ fun AnimatedThemeCanvas(
                                     end = Offset(px, py),
                                     strokeWidth = streakWidth
                                 )
+
+                                // Glowing raindrop tip
+                                drawCircle(
+                                    color = rain.color.copy(alpha = 0.55f),
+                                    radius = streakWidth * 2.2f,
+                                    center = Offset(px, py)
+                                )
                             }
                         }
 
                         ThemeAnimationType.AURORA_STARDUST -> {
-                            // Aurora waves
-                            val auroraY = h * (0.20f + 0.06f * sin(driftPhase.toDouble()).toFloat())
+                            // Sweeping Aurora Borealis wave ribbon
+                            val auroraY = h * (0.22f + 0.08f * sin(driftPhase.toDouble()).toFloat())
                             drawRect(
                                 brush = Brush.linearGradient(
                                     colors = listOf(
-                                        Color(0x5500E676),
-                                        Color(0x4000E5FF),
-                                        Color(0x209D4EDD),
+                                        Color(0x3800E676),
+                                        Color(0x2800E5FF),
+                                        Color(0x189D4EDD),
                                         Color.Transparent
                                     ),
                                     start = Offset(0f, auroraY - 60f),
                                     end = Offset(w, auroraY + 180f)
                                 ),
-                                size = Size(w, h * 0.50f)
+                                size = Size(w, h * 0.55f)
                             )
 
-                            // Twinkling stardust
-                            val particles = if (isThumbnail) staticParticles.take(10) else staticParticles
+                            val particles = if (isThumbnail) staticParticles.take(12) else staticParticles
                             particles.forEach { p ->
                                 val particlePhase = driftPhase * p.speed + p.phaseOffset
-                                val offsetY = 12f * sin(particlePhase.toDouble()).toFloat()
-                                val offsetX = 6f * cos(particlePhase.toDouble()).toFloat()
+                                val offsetY = 18f * sin(particlePhase.toDouble()).toFloat()
+                                val offsetX = 10f * cos(particlePhase.toDouble()).toFloat()
                                 val px = (p.relX * w + offsetX).coerceIn(0f, w)
                                 val py = (p.relY * h + offsetY).coerceIn(0f, h)
 
                                 val alphaMod = ((sin(particlePhase.toDouble()).toFloat() + 1f) / 2f)
-                                val alpha = (0.35f + 0.55f * alphaMod) * particleTwinkle
+                                val alpha = (0.35f + 0.65f * alphaMod) * particleTwinkle
 
                                 drawCircle(
-                                    color = theme.particleColor.copy(alpha = alpha * 0.4f),
-                                    radius = p.baseRadius * 2.6f * scaleFactor,
+                                    color = theme.particleColor.copy(alpha = alpha * 0.45f),
+                                    radius = p.baseRadius * 3.0f * scaleFactor,
                                     center = Offset(px, py)
                                 )
                                 drawCircle(
-                                    color = Color.White.copy(alpha = alpha * 0.9f),
-                                    radius = p.baseRadius * 0.9f * scaleFactor,
+                                    color = Color.White.copy(alpha = alpha * 0.95f),
+                                    radius = p.baseRadius * 1.1f * scaleFactor,
                                     center = Offset(px, py)
                                 )
                             }
                         }
 
                         ThemeAnimationType.OCEAN_BUBBLES -> {
-                            val bubblesToRender = if (isThumbnail) staticOceanBubbles.take(9) else staticOceanBubbles
+                            val bubblesToRender = if (isThumbnail) staticOceanBubbles.take(10) else staticOceanBubbles
                             bubblesToRender.forEach { bubble ->
                                 val t = continuousTime
+                                // Rise upwards from bottom (1.0 -> 0.0)
                                 val normalizedY = 1.0f - ((1.0f - bubble.relY + t * bubble.riseSpeed) % 1.0f)
                                 val py = normalizedY * h
 
@@ -1229,22 +1383,22 @@ fun AnimatedThemeCanvas(
 
                                 val r = bubble.radius.dp.toPx() * scaleFactor
 
-                                // Translucent bubble body
+                                // Outer bioluminescent halo
                                 drawCircle(
-                                    color = bubble.color.copy(alpha = 0.22f),
-                                    radius = r,
+                                    color = bubble.color.copy(alpha = 0.25f),
+                                    radius = r * 1.4f,
                                     center = Offset(px, py)
                                 )
-                                // Rim stroke
+                                // Bubble rim
                                 drawCircle(
                                     color = Color.White.copy(alpha = 0.65f),
                                     radius = r,
                                     center = Offset(px, py),
                                     style = Stroke(width = 1.2.dp.toPx() * scaleFactor)
                                 )
-                                // Specular highlight glint
+                                // Specular bubble highlight dot
                                 drawCircle(
-                                    color = Color.White.copy(alpha = 0.85f),
+                                    color = Color.White.copy(alpha = 0.9f),
                                     radius = r * 0.28f,
                                     center = Offset(px - r * 0.35f, py - r * 0.35f)
                                 )

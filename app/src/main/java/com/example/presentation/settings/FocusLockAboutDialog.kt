@@ -201,7 +201,7 @@ fun FocusLockAboutDialog(
                             .padding(horizontal = 10.dp, vertical = 3.dp)
                     ) {
                         Text(
-                            text = "v1.2.0 • Build 24 • Obsidian Edition",
+                            text = "v1.3.0 • Build 25 • Obsidian Edition",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
                             color = Color.White.copy(alpha = 0.75f)

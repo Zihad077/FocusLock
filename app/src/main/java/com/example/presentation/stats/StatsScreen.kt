@@ -156,8 +156,8 @@ fun StatsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(18.dp))
-                        .background(Color(0x283E4C5E))
-                        .border(1.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(18.dp))
+                        .background(Color(0xEB0E1829))
+                        .border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(18.dp))
                         .padding(4.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
@@ -168,6 +168,11 @@ fun StatsScreen(
                                 .weight(1f)
                                 .clip(RoundedCornerShape(14.dp))
                                 .background(if (isSelected) primaryCyan.copy(alpha = 0.22f) else Color.Transparent)
+                                .then(
+                                    if (isSelected) {
+                                        Modifier.border(1.dp, primaryCyan.copy(alpha = 0.6f), RoundedCornerShape(14.dp))
+                                    } else Modifier
+                                )
                                 .clickable { selectedTabIndex = index }
                                 .padding(vertical = 9.dp),
                             contentAlignment = Alignment.Center
@@ -178,7 +183,7 @@ fun StatsScreen(
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                     fontSize = 13.5.sp
                                 ),
-                                color = if (isSelected) primaryCyan else Color.White.copy(alpha = 0.65f)
+                                color = if (isSelected) primaryCyan else Color(0xFFCBD5E1)
                             )
                         }
                     }
@@ -358,7 +363,7 @@ fun StatsScreen(
                                 placeholder = {
                                     Text(
                                         stringResource(R.string.search_apps),
-                                        color = Color.White.copy(alpha = 0.45f)
+                                        color = Color(0xFF94A3B8)
                                     )
                                 },
                                 leadingIcon = {
@@ -372,11 +377,12 @@ fun StatsScreen(
                                 shape = RoundedCornerShape(16.dp),
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedBorderColor = primaryCyan,
-                                    unfocusedBorderColor = Color.White.copy(alpha = 0.18f),
-                                    focusedContainerColor = Color(0x283E4C5E),
-                                    unfocusedContainerColor = Color(0x283E4C5E),
+                                    unfocusedBorderColor = Color.White.copy(alpha = 0.16f),
+                                    focusedContainerColor = Color(0xEB0E1829),
+                                    unfocusedContainerColor = Color(0xEB0E1829),
                                     focusedTextColor = Color.White,
-                                    unfocusedTextColor = Color.White
+                                    unfocusedTextColor = Color.White,
+                                    cursorColor = primaryCyan
                                 ),
                                 modifier = Modifier.fillMaxWidth()
                             )
@@ -974,8 +980,8 @@ private fun TimeRangeSelectorRow(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(Color(0x283E4C5E))
-            .border(1.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(16.dp))
+            .background(Color(0xEB0E1829))
+            .border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(16.dp))
             .padding(4.dp),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
@@ -992,17 +998,22 @@ private fun TimeRangeSelectorRow(
                     .weight(1f)
                     .clip(RoundedCornerShape(12.dp))
                     .background(if (isSelected) primaryCyan.copy(alpha = 0.22f) else Color.Transparent)
+                    .then(
+                        if (isSelected) {
+                            Modifier.border(1.dp, primaryCyan.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+                        } else Modifier
+                    )
                     .clickable { onRangeSelected(range) }
-                    .padding(vertical = 7.dp),
+                    .padding(vertical = 8.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = label,
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                        fontSize = 12.sp
+                        fontSize = 12.5.sp
                     ),
-                    color = if (isSelected) primaryCyan else Color.White.copy(alpha = 0.65f)
+                    color = if (isSelected) primaryCyan else Color(0xFFCBD5E1)
                 )
             }
         }

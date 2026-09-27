@@ -65,8 +65,7 @@ fun LiquidGlassNativeAdCard(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
-            setBackgroundColor(AndroidColor.TRANSPARENT)
-            setLayerType(View.LAYER_TYPE_HARDWARE, null)
+            setBackgroundColor(AndroidColor.parseColor("#0E1829"))
             isVerticalScrollBarEnabled = false
             isHorizontalScrollBarEnabled = false
 
@@ -192,9 +191,9 @@ fun LiquidGlassNativeAdCard(
         modifier = modifier
             .fillMaxWidth()
             .liquidGlass(
-                shape = RoundedCornerShape(24.dp),
+                shape = RoundedCornerShape(22.dp),
                 isElevated = false,
-                borderWidth = 0.8.dp
+                borderWidth = 1.dp
             )
             .padding(14.dp)
     ) {
@@ -214,35 +213,34 @@ fun LiquidGlassNativeAdCard(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
-                            .background(primaryCyan.copy(alpha = 0.15f))
-                            .border(0.5.dp, primaryCyan.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
+                            .background(Color(0x2400E5FF))
+                            .border(0.8.dp, Color(0x5500E5FF), RoundedCornerShape(6.dp))
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
                             text = "AD",
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
-                            color = primaryCyan
+                            color = Color(0xFF00E5FF)
                         )
                     }
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "SPONSORED RECOMMENDATION",
-                        fontSize = 9.sp,
+                        fontSize = 9.5.sp,
                         fontWeight = FontWeight.SemiBold,
                         letterSpacing = 0.6.sp,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                        color = Color(0xFFB0C0D4)
                     )
                 }
             }
 
-            // Web-based Native Banner Container
+            // Web-based Native Banner Container (matches card surface, no pure-black box)
             AndroidView(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(265.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color(0x22122030)),
+                    .height(155.dp)
+                    .clip(RoundedCornerShape(14.dp)),
                 factory = {
                     (webView.parent as? ViewGroup)?.removeView(webView)
                     webView.onResume()

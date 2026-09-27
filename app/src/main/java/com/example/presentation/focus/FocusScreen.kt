@@ -39,6 +39,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.ads.AdsterraSocialBar
+import com.example.ads.LiquidGlassAdaptiveBanner
+import com.example.ads.LiquidGlassNativeAdCard
+import com.example.database.isPremiumActive
 import com.example.ui.theme.GlassButton
 import com.example.ui.theme.GlassButtonStyle
 import com.example.ui.theme.GlassIconBubble
@@ -153,15 +157,19 @@ fun FocusScreen(
             Text(
                 text = if (isFocusActive) "Deep work in progress. Distractions & notifications blocked." else "Enter uninterrupted deep flow state. Pick your focus duration.",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f),
+                color = Color(0xFFB0C0D4),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(horizontal = 8.dp)
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            if (!isFocusActive) {
+                com.example.ads.LiquidGlassAdaptiveBanner(
+                    isPremium = userSettings?.isPremiumActive ?: false
+                )
+            }
 
             // ==========================================
-            // CLEAN CIRCULAR TIMER (NO GEOMETRY LINES / ARTIFACTS)
+            // CLEAN CIRCULAR GLASS TIMER
             // ==========================================
             val totalSeconds = (selectedDuration * 60).toFloat()
             val progressFraction = if (isFocusActive && totalSeconds > 0) {
@@ -178,47 +186,55 @@ fun FocusScreen(
 
             Box(
                 modifier = Modifier
-                    .size(260.dp)
-                    .shadow(
-                        elevation = if (isFocusActive) (16 * pulseGlow).dp else 8.dp,
-                        shape = CircleShape,
-                        ambientColor = Color(0x60001025),
-                        spotColor = if (isFocusActive) primaryCyan else Color(0x2500E5FF)
-                    )
+                    .size(256.dp)
                     .clip(CircleShape)
                     .background(
-                        brush = Brush.verticalGradient(
+                        brush = Brush.radialGradient(
                             colors = if (isFocusActive) {
                                 listOf(
-                                    Color(0x35122B48),
-                                    Color(0x250B1728),
-                                    Color(0x40060E18)
+                                    Color(0xF2132842),
+                                    Color(0xF20D1B2E),
+                                    Color(0xF5091220)
                                 )
                             } else {
                                 listOf(
-                                    Color(0x2816253C),
-                                    Color(0x180D1726),
-                                    Color(0x2E070D16)
+                                    Color(0xEB122036),
+                                    Color(0xEE0C1626),
+                                    Color(0xF208101C)
                                 )
                             }
                         )
                     )
                     .border(
                         width = 1.5.dp,
-                        color = if (isFocusActive) primaryCyan.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.15f),
+                        brush = Brush.linearGradient(
+                            colors = if (isFocusActive) {
+                                listOf(
+                                    primaryCyan.copy(alpha = 0.75f * pulseGlow),
+                                    accentBlue.copy(alpha = 0.45f),
+                                    primaryCyan.copy(alpha = 0.35f)
+                                )
+                            } else {
+                                listOf(
+                                    Color.White.copy(alpha = 0.22f),
+                                    Color(0xFF00E5FF).copy(alpha = 0.25f),
+                                    Color.White.copy(alpha = 0.10f)
+                                )
+                            }
+                        ),
                         shape = CircleShape
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                // Smooth Clean Canvas Arc Ring - NO inner diagonal lines or sweep gradient artifacts
-                Canvas(modifier = Modifier.fillMaxSize().padding(14.dp)) {
+                // Smooth Clean Canvas Arc Ring
+                Canvas(modifier = Modifier.fillMaxSize().padding(16.dp)) {
                     val strokePx = 10.dp.toPx()
                     val arcSize = Size(size.width - strokePx, size.height - strokePx)
                     val arcTopLeft = Offset(strokePx / 2f, strokePx / 2f)
 
-                    // 1. Subtle Background Track Ring
+                    // 1. Deep Recessed Track Ring
                     drawArc(
-                        color = Color.White.copy(alpha = 0.08f),
+                        color = Color(0xFF18283E),
                         startAngle = 0f,
                         sweepAngle = 360f,
                         useCenter = false,
@@ -233,9 +249,9 @@ fun FocusScreen(
                         drawArc(
                             brush = Brush.linearGradient(
                                 colors = if (isFocusActive) {
-                                    listOf(primaryCyan, accentBlue, accentPurple)
+                                    listOf(Color(0xFF00E5FF), accentBlue, accentPurple)
                                 } else {
-                                    listOf(primaryCyan.copy(alpha = 0.85f), accentBlue.copy(alpha = 0.7f))
+                                    listOf(Color(0xFF00E5FF), Color(0xFF24DFEC), accentBlue)
                                 },
                                 start = Offset(0f, 0f),
                                 end = Offset(size.width, size.height)
@@ -268,14 +284,14 @@ fun FocusScreen(
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
                             .background(
-                                if (isFocusActive) primaryCyan.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.08f)
+                                if (isFocusActive) Color(0x2900E5FF) else Color(0xFF152338)
                             )
                             .border(
                                 1.dp,
-                                if (isFocusActive) primaryCyan.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.15f),
+                                if (isFocusActive) primaryCyan.copy(alpha = 0.55f) else Color.White.copy(alpha = 0.14f),
                                 RoundedCornerShape(12.dp)
                             )
-                            .padding(horizontal = 10.dp, vertical = 3.dp)
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
                     ) {
                         Text(
                             text = if (isFocusActive) "FLOW STATE ACTIVE" else "TARGET DURATION",
@@ -284,7 +300,7 @@ fun FocusScreen(
                                 letterSpacing = 1.sp,
                                 fontSize = 10.sp
                             ),
-                            color = if (isFocusActive) primaryCyan else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                            color = if (isFocusActive) primaryCyan else Color(0xFFB0C0D4)
                         )
                     }
 
@@ -296,7 +312,7 @@ fun FocusScreen(
                             fontWeight = FontWeight.Black,
                             letterSpacing = 1.sp
                         ),
-                        color = if (isFocusActive) primaryCyan else Color.White
+                        color = if (isFocusActive) primaryCyan else Color(0xFFF8FAFC)
                     )
 
                     Spacer(modifier = Modifier.height(6.dp))
@@ -307,48 +323,52 @@ fun FocusScreen(
                             fontWeight = FontWeight.SemiBold,
                             letterSpacing = 1.2.sp
                         ),
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f)
+                        color = Color(0xFF94A3B8)
                     )
                 }
             }
 
-            // Duration selection chips (Visible when not active)
+            // Duration selection card (Visible when not active)
             AnimatedVisibility(
                 visible = !isFocusActive,
                 enter = fadeIn(),
                 exit = fadeOut()
             ) {
                 Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .liquidGlass(shape = RoundedCornerShape(22.dp))
+                        .padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
                         text = "SELECT DURATION",
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.ExtraBold,
-                            letterSpacing = 1.sp
+                            letterSpacing = 1.1.sp
                         ),
-                        color = Color.White.copy(alpha = 0.7f)
+                        color = Color(0xFFB0C0D4)
                     )
 
                     val durations = listOf(15, 25, 45, 60, 90, 120)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         durations.forEach { duration ->
                             val isSelected = selectedDuration == duration
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .clip(RoundedCornerShape(14.dp))
+                                    .clip(RoundedCornerShape(13.dp))
                                     .background(
-                                        if (isSelected) Color(0x3524DFEC) else Color(0x253E4C5E)
+                                        if (isSelected) Color(0xFF15324D) else Color(0xFF152236)
                                     )
                                     .border(
                                         width = 1.dp,
-                                        color = if (isSelected) primaryCyan else Color.White.copy(alpha = 0.25f),
-                                        shape = RoundedCornerShape(14.dp)
+                                        color = if (isSelected) primaryCyan else Color.White.copy(alpha = 0.14f),
+                                        shape = RoundedCornerShape(13.dp)
                                     )
                                     .clickable { viewModel.setDuration(duration) }
                                     .padding(vertical = 10.dp),
@@ -359,7 +379,7 @@ fun FocusScreen(
                                     style = MaterialTheme.typography.labelMedium.copy(
                                         fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold
                                     ),
-                                    color = if (isSelected) primaryCyan else Color.White.copy(alpha = 0.85f)
+                                    color = if (isSelected) primaryCyan else Color(0xFFE2E8F0)
                                 )
                             }
                         }
@@ -444,10 +464,20 @@ fun FocusScreen(
                         Text(
                             text = if (isFocusActive) "Restricted apps are blocked until your session concludes." else "Includes cooling-down protection to prevent impulsive unlocking.",
                             style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.5.sp),
-                            color = Color.White.copy(alpha = 0.72f)
+                            color = Color(0xFFB0C0D4)
                         )
                     }
                 }
+            }
+
+            if (!isFocusActive) {
+                LiquidGlassNativeAdCard(
+                    isPremium = userSettings?.isPremiumActive ?: false
+                )
+                AdsterraSocialBar(
+                    isPremium = userSettings?.isPremiumActive ?: false,
+                    isFocusActive = isFocusActive
+                )
             }
         }
     }
@@ -460,8 +490,9 @@ fun FocusScreen(
                 viewModel.dismissJournalDialog()
                 onNavigateToHome()
             },
-            modifier = Modifier.liquidGlass(shape = RoundedCornerShape(26.dp), isElevated = true),
-            containerColor = Color.Transparent,
+            shape = RoundedCornerShape(24.dp),
+            containerColor = Color(0xFF101C2E),
+            modifier = Modifier.border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(24.dp)),
             title = {
                 Text(
                     text = "Focus Session Complete! 🎉",
@@ -474,7 +505,7 @@ fun FocusScreen(
                     Text(
                         text = "Great job staying in the zone! What did you accomplish?",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.8f)
+                        color = Color(0xFFB0C0D4)
                     )
                     Spacer(modifier = Modifier.height(14.dp))
                     OutlinedTextField(
@@ -483,12 +514,14 @@ fun FocusScreen(
                         modifier = Modifier.fillMaxWidth(),
                         minLines = 3,
                         shape = RoundedCornerShape(16.dp),
-                        placeholder = { Text("Notes, insights, accomplishments...") },
+                        placeholder = { Text("Notes, insights, accomplishments...", color = Color(0xFF94A3B8)) },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = Color.White,
                             unfocusedTextColor = Color.White,
                             focusedBorderColor = primaryCyan,
-                            unfocusedBorderColor = Color.White.copy(alpha = 0.3f)
+                            unfocusedBorderColor = Color.White.copy(alpha = 0.20f),
+                            focusedContainerColor = Color(0xFF0B1422),
+                            unfocusedContainerColor = Color(0xFF0B1422)
                         )
                     )
                 }

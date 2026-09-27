@@ -224,7 +224,7 @@ fun AppsScreen(
                     placeholder = {
                         Text(
                             "Search apps...",
-                            color = Color.White.copy(alpha = 0.5f),
+                            color = Color(0xFF94A3B8),
                             fontSize = 14.sp
                         )
                     },
@@ -232,7 +232,7 @@ fun AppsScreen(
                         Icon(
                             Icons.Default.Search,
                             contentDescription = "Search",
-                            tint = Color.White.copy(alpha = 0.65f),
+                            tint = Color(0xFF00E5FF),
                             modifier = Modifier.size(20.dp)
                         )
                     },
@@ -242,20 +242,20 @@ fun AppsScreen(
                                 Icon(
                                     Icons.Default.Clear,
                                     contentDescription = "Clear search",
-                                    tint = Color.White.copy(alpha = 0.7f),
+                                    tint = Color(0xFFCBD5E1),
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
                         }
                     },
-                    shape = RoundedCornerShape(20.dp),
+                    shape = RoundedCornerShape(18.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        focusedBorderColor = Color(0xFF24DFEC).copy(alpha = 0.8f),
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.35f),
-                        focusedContainerColor = Color(0x3538485B),
-                        unfocusedContainerColor = Color(0x2838485B)
+                        focusedTextColor = Color(0xFFF8FAFC),
+                        unfocusedTextColor = Color(0xFFF8FAFC),
+                        focusedBorderColor = Color(0xFF00E5FF),
+                        unfocusedBorderColor = Color.White.copy(alpha = 0.16f),
+                        focusedContainerColor = Color(0xEB101B2D),
+                        unfocusedContainerColor = Color(0xE00D1626)
                     ),
                     modifier = Modifier
                         .testTag("app_search_input")
@@ -265,10 +265,15 @@ fun AppsScreen(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Prioritized Filters: All vs Limited vs Blocked
+                // Prioritized Filters: All vs Limited vs Blocked in a unified segmented glass bar
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(Color(0xE00B1322))
+                        .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(18.dp))
+                        .padding(5.dp)
                 ) {
                     val allSelected = selectedFilter == "ALL"
                     val limitedSelected = selectedFilter == "LIMITED"
@@ -278,15 +283,14 @@ fun AppsScreen(
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(if (allSelected) Color(0x3524DFEC) else Color(0x303E4C5E))
-                            .border(
-                                1.dp,
-                                if (allSelected) Color(0xFF24DFEC) else Color.White.copy(alpha = 0.30f),
-                                RoundedCornerShape(16.dp)
+                            .clip(RoundedCornerShape(13.dp))
+                            .background(if (allSelected) Color(0xFF152C44) else Color.Transparent)
+                            .then(
+                                if (allSelected) Modifier.border(1.dp, Color(0x8000E5FF), RoundedCornerShape(13.dp))
+                                else Modifier
                             )
                             .clickable { selectedFilter = "ALL" }
-                            .padding(vertical = 10.dp),
+                            .padding(vertical = 9.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -295,29 +299,28 @@ fun AppsScreen(
                                 fontWeight = if (allSelected) FontWeight.Bold else FontWeight.Medium,
                                 fontSize = 12.5.sp
                             ),
-                            color = if (allSelected) Color(0xFF24DFEC) else Color.White.copy(alpha = 0.8f)
+                            color = if (allSelected) Color(0xFF00E5FF) else Color(0xFFB0C0D4)
                         )
                     }
 
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(if (limitedSelected) Color(0x3524DFEC) else Color(0x303E4C5E))
-                            .border(
-                                1.dp,
-                                if (limitedSelected) Color(0xFF24DFEC) else Color.White.copy(alpha = 0.30f),
-                                RoundedCornerShape(16.dp)
+                            .clip(RoundedCornerShape(13.dp))
+                            .background(if (limitedSelected) Color(0xFF152C44) else Color.Transparent)
+                            .then(
+                                if (limitedSelected) Modifier.border(1.dp, Color(0x8000E5FF), RoundedCornerShape(13.dp))
+                                else Modifier
                             )
                             .clickable { selectedFilter = "LIMITED" }
-                            .padding(vertical = 10.dp),
+                            .padding(vertical = 9.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 Icons.Default.Lock,
                                 contentDescription = null,
-                                tint = if (limitedSelected) Color(0xFF24DFEC) else Color.White.copy(alpha = 0.8f),
+                                tint = if (limitedSelected) Color(0xFF00E5FF) else Color(0xFFB0C0D4),
                                 modifier = Modifier.size(13.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
@@ -327,7 +330,7 @@ fun AppsScreen(
                                     fontWeight = if (limitedSelected) FontWeight.Bold else FontWeight.Medium,
                                     fontSize = 12.5.sp
                                 ),
-                                color = if (limitedSelected) Color(0xFF24DFEC) else Color.White.copy(alpha = 0.8f)
+                                color = if (limitedSelected) Color(0xFF00E5FF) else Color(0xFFB0C0D4)
                             )
                         }
                     }
@@ -335,15 +338,14 @@ fun AppsScreen(
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(if (blockedSelected) Color(0x35FF5252) else Color(0x303E4C5E))
-                            .border(
-                                1.dp,
-                                if (blockedSelected) Color(0xFFFF5252) else Color.White.copy(alpha = 0.30f),
-                                RoundedCornerShape(16.dp)
+                            .clip(RoundedCornerShape(13.dp))
+                            .background(if (blockedSelected) Color(0xFF2D141C) else Color.Transparent)
+                            .then(
+                                if (blockedSelected) Modifier.border(1.dp, Color(0x80FF5252), RoundedCornerShape(13.dp))
+                                else Modifier
                             )
                             .clickable { selectedFilter = "BLOCKED" }
-                            .padding(vertical = 10.dp),
+                            .padding(vertical = 9.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -351,7 +353,7 @@ fun AppsScreen(
                                 modifier = Modifier
                                     .size(7.dp)
                                     .clip(CircleShape)
-                                    .background(if (blockedCount > 0) Color(0xFFFF5252) else Color.White.copy(alpha = 0.5f))
+                                    .background(if (blockedCount > 0) Color(0xFFFF5252) else Color(0xFF64748B))
                             )
                             Spacer(modifier = Modifier.width(5.dp))
                             Text(
@@ -360,12 +362,12 @@ fun AppsScreen(
                                     fontWeight = if (blockedSelected) FontWeight.Bold else FontWeight.Medium,
                                     fontSize = 12.5.sp
                                 ),
-                                color = if (blockedSelected) Color(0xFFFF5252) else Color.White.copy(alpha = 0.8f)
+                                color = if (blockedSelected) Color(0xFFFF6E6E) else Color(0xFFB0C0D4)
                             )
                         }
                     }
                 }
-        }
+            }
 
             // App List
             if (filteredApps.isEmpty()) {
@@ -449,8 +451,9 @@ fun AppsScreen(
     if (showTemplatesDialog) {
         AlertDialog(
             onDismissRequest = { showTemplatesDialog = false },
-            modifier = Modifier.liquidGlass(shape = RoundedCornerShape(26.dp), isElevated = true),
-            containerColor = Color.Transparent,
+            shape = RoundedCornerShape(24.dp),
+            containerColor = Color(0xFF101C2E),
+            modifier = Modifier.border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(24.dp)),
             title = {
                 Text(
                     text = "Quick Restriction Templates",
@@ -470,7 +473,9 @@ fun AppsScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .liquidGlass(shape = RoundedCornerShape(18.dp))
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Color(0xFF16253A))
+                                .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(16.dp))
                                 .clickable {
                                     viewModel.applyTemplate(title)
                                     showTemplatesDialog = false
@@ -492,7 +497,7 @@ fun AppsScreen(
                                     Text(
                                         text = subtitle,
                                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.5.sp),
-                                        color = Color.White.copy(alpha = 0.65f)
+                                        color = Color(0xFFB0C0D4)
                                     )
                                 }
                             }
@@ -536,8 +541,9 @@ fun AppsScreen(
         val (app, minutes, sessionMinutes) = highImpactAppPending!!
         AlertDialog(
             onDismissRequest = { highImpactAppPending = null },
-            modifier = Modifier.liquidGlass(shape = RoundedCornerShape(26.dp), isElevated = true),
-            containerColor = Color.Transparent,
+            shape = RoundedCornerShape(24.dp),
+            containerColor = Color(0xFF101C2E),
+            modifier = Modifier.border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(24.dp)),
             title = {
                 Text(
                     text = "Confirm Restriction",
@@ -549,7 +555,7 @@ fun AppsScreen(
                 Text(
                     text = "Add \"${app.appName}\" to active limits with ${if (minutes == 0) "strict block (0m)" else "$minutes min/day allowance"}?",
                     style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
-                    color = Color.White.copy(alpha = 0.8f)
+                    color = Color(0xFFB0C0D4)
                 )
             },
             confirmButton = {
@@ -646,7 +652,7 @@ fun AppListItem(
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.5.sp),
-                    color = if (app.isLimited) Color(0xFF24DFEC) else Color.White.copy(alpha = 0.65f)
+                    color = if (app.isLimited) Color(0xFF00E5FF) else Color(0xFFB0C0D4)
                 )
             }
 
@@ -654,11 +660,11 @@ fun AppListItem(
                 checked = app.isLimited,
                 onCheckedChange = onCheckedChange,
                 colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color(0xFF061820),
-                    checkedTrackColor = Color(0xFF24DFEC),
-                    uncheckedThumbColor = Color.White.copy(alpha = 0.7f),
-                    uncheckedTrackColor = Color(0x303E4C5E),
-                    uncheckedBorderColor = Color.White.copy(alpha = 0.3f)
+                    checkedThumbColor = Color(0xFF04151F),
+                    checkedTrackColor = Color(0xFF00E5FF),
+                    uncheckedThumbColor = Color(0xFFCBD5E1),
+                    uncheckedTrackColor = Color(0xFF18263A),
+                    uncheckedBorderColor = Color.White.copy(alpha = 0.22f)
                 )
             )
         }
@@ -680,8 +686,9 @@ fun CustomTimeLimitDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.liquidGlass(shape = RoundedCornerShape(26.dp), isElevated = true),
-        containerColor = Color.Transparent,
+        shape = RoundedCornerShape(24.dp),
+        containerColor = Color(0xFF101C2E),
+        modifier = Modifier.border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(24.dp)),
         title = {
             Column {
                 Text(
@@ -692,7 +699,7 @@ fun CustomTimeLimitDialog(
                 Text(
                     text = app.appName,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFF24DFEC)
+                    color = Color(0xFF00E5FF)
                 )
             }
         },
@@ -707,7 +714,7 @@ fun CustomTimeLimitDialog(
                         fontWeight = FontWeight.ExtraBold,
                         letterSpacing = 1.sp
                     ),
-                    color = Color.White.copy(alpha = 0.7f)
+                    color = Color(0xFFB0C0D4)
                 )
 
                 Row(
@@ -720,23 +727,23 @@ fun CustomTimeLimitDialog(
                             modifier = Modifier
                                 .weight(1f)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(if (isSelected) Color(0x3524DFEC) else Color(0x253E4C5E))
+                                .background(if (isSelected) Color(0xFF15324D) else Color(0xFF162438))
                                 .border(
                                     1.dp,
-                                    if (isSelected) Color(0xFF24DFEC) else Color.White.copy(alpha = 0.25f),
+                                    if (isSelected) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.16f),
                                     RoundedCornerShape(12.dp)
                                 )
                                 .clickable {
                                     minutes = presetMin
                                     textInput = presetMin.toString()
                                 }
-                                .padding(vertical = 8.dp),
+                                .padding(vertical = 9.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = if (presetMin == 0) "Block" else "${presetMin}m",
                                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                color = if (isSelected) Color(0xFF24DFEC) else Color.White
+                                color = if (isSelected) Color(0xFF00E5FF) else Color.White
                             )
                         }
                     }
@@ -752,23 +759,23 @@ fun CustomTimeLimitDialog(
                             modifier = Modifier
                                 .weight(1f)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(if (isSelected) Color(0x3524DFEC) else Color(0x253E4C5E))
+                                .background(if (isSelected) Color(0xFF15324D) else Color(0xFF162438))
                                 .border(
                                     1.dp,
-                                    if (isSelected) Color(0xFF24DFEC) else Color.White.copy(alpha = 0.25f),
+                                    if (isSelected) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.16f),
                                     RoundedCornerShape(12.dp)
                                 )
                                 .clickable {
                                     minutes = presetMin
                                     textInput = presetMin.toString()
                                 }
-                                .padding(vertical = 8.dp),
+                                .padding(vertical = 9.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = if (presetMin >= 60) "${presetMin / 60}h" else "${presetMin}m",
                                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                color = if (isSelected) Color(0xFF24DFEC) else Color.White
+                                color = if (isSelected) Color(0xFF00E5FF) else Color.White
                             )
                         }
                     }
@@ -777,7 +784,7 @@ fun CustomTimeLimitDialog(
                 Text(
                     text = "Daily Allowance: ${if (minutes == 0) "Strict Block (0m)" else "$minutes minutes"}",
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = Color(0xFF24DFEC)
+                    color = Color(0xFF00E5FF)
                 )
 
                 Row(
@@ -792,10 +799,10 @@ fun CustomTimeLimitDialog(
                             textInput = newMin.toString()
                         },
                         modifier = Modifier
-                            .size(42.dp)
+                            .size(44.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0x303E4C5E))
-                            .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                            .background(Color(0xFF162438))
+                            .border(1.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(12.dp))
                     ) {
                         Icon(Icons.Default.Remove, contentDescription = "Decrease 5m", tint = Color.White)
                     }
@@ -812,11 +819,14 @@ fun CustomTimeLimitDialog(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.weight(1f),
                         singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = Color.White,
                             unfocusedTextColor = Color.White,
-                            focusedBorderColor = Color(0xFF24DFEC),
-                            unfocusedBorderColor = Color.White.copy(alpha = 0.3f)
+                            focusedBorderColor = Color(0xFF00E5FF),
+                            unfocusedBorderColor = Color.White.copy(alpha = 0.20f),
+                            focusedContainerColor = Color(0xFF0B1422),
+                            unfocusedContainerColor = Color(0xFF0B1422)
                         )
                     )
 
@@ -827,10 +837,10 @@ fun CustomTimeLimitDialog(
                             textInput = newMin.toString()
                         },
                         modifier = Modifier
-                            .size(42.dp)
+                            .size(44.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0x303E4C5E))
-                            .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                            .background(Color(0xFF162438))
+                            .border(1.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(12.dp))
                     ) {
                         Icon(Icons.Default.Add, contentDescription = "Increase 5m", tint = Color.White)
                     }
