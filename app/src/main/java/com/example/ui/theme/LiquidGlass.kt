@@ -43,6 +43,8 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
@@ -314,11 +316,12 @@ fun GlassButton(
     shape: Shape = RoundedCornerShape(14.dp),
     enabled: Boolean = true
 ) {
+    val haptic = LocalHapticFeedback.current
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
 
     val scale by animateFloatAsState(
-        targetValue = if (isPressed && enabled) 0.97f else 1.0f,
+        targetValue = if (isPressed && enabled) 0.96f else 1.0f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessLow
@@ -370,7 +373,12 @@ fun GlassButton(
                 interactionSource = interactionSource,
                 indication = null,
                 enabled = enabled,
-                onClick = onClick
+                onClick = {
+                    try {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    } catch (_: Exception) {}
+                    onClick()
+                }
             )
             .padding(horizontal = 18.dp, vertical = 10.dp),
         contentAlignment = Alignment.Center

@@ -49,7 +49,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.presentation.achievements.AchievementShareScreen
 import com.example.presentation.apps.AppsScreen
+import com.example.presentation.common.AchievementUnlockOverlay
 import com.example.presentation.escape.EscapeScreen
 import com.example.presentation.focus.FocusScreen
 import com.example.presentation.goals.GoalsScreen
@@ -62,12 +64,18 @@ import com.example.presentation.stats.StatsScreen
 import com.example.database.isPremiumActive
 import com.example.ui.theme.LiquidBackground
 import com.example.util.PermissionHelper
+import com.example.util.StreakAndAchievementManager
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 
 private const val PREFS_NAME = "focuslock_onboarding_prefs"
 private const val KEY_ONBOARDING_COMPLETED = "key_onboarding_v2_completed"
 
 @Composable
-fun FocusLockApp() {
+fun FocusLockApp(
+    shortcutDestination: String? = null,
+    onShortcutConsumed: () -> Unit = {}
+) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val sharedPrefs = remember { context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
@@ -135,13 +143,19 @@ fun FocusLockApp() {
             )
         }
         composable<Route.MainTab> {
-            MainTabScreen()
+            MainTabScreen(
+                shortcutDestination = shortcutDestination,
+                onShortcutConsumed = onShortcutConsumed
+            )
         }
     }
 }
 
 @Composable
-fun MainTabScreen() {
+fun MainTabScreen(
+    shortcutDestination: String? = null,
+    onShortcutConsumed: () -> Unit = {}
+) {
     val context = LocalContext.current
     val app = context.applicationContext as FocusLockApplication
     val userSettings by app.repository.userSettings.collectAsState(initial = com.example.database.UserSettings())
@@ -171,22 +185,14 @@ fun MainTabScreen() {
         else -> "NONE"
     }
 
-    // Immediately stop & remove previous tab's ads when switching tabs, then preload all ads for the active tab
+    // Safely switch active tab ads: detaches old tab, waits for exit animation, destroys old WebViews, and preloads active tab
     LaunchedEffect(activeScreenKey, isPremiumActive, isFocusActive) {
-        com.example.ads.AdsterraManager.deactivateOtherScreens(
+        com.example.ads.AdsterraManager.switchActiveTab(
+            context = context,
             newScreenKey = activeScreenKey,
             isPremium = isPremiumActive,
             isFocusActive = isFocusActive
         )
-        if (!isPremiumActive && activeScreenKey != "NONE" && !(activeScreenKey == "FOCUS" && isFocusActive)) {
-            kotlinx.coroutines.delay(250)
-            com.example.ads.AdsterraManager.activateAndPreloadScreen(
-                context = context,
-                screenKey = activeScreenKey,
-                isPremium = isPremiumActive,
-                isFocusActive = isFocusActive
-            )
-        }
     }
 
     DisposableEffect(Unit) {
@@ -215,6 +221,35 @@ fun MainTabScreen() {
                 }
                 launchSingleTop = true
             }
+        }
+    }
+
+    // Handle home-screen long-press app shortcut navigation
+    LaunchedEffect(shortcutDestination, isFocusActive) {
+        if (!shortcutDestination.isNullOrBlank() && !isFocusActive) {
+            val targetRoute: Route? = when (shortcutDestination) {
+                "FOCUS" -> Route.Focus
+                "APPS" -> Route.Apps
+                "STATS" -> Route.Stats
+                "SHARE_ACHIEVEMENTS" -> Route.AchievementShare
+                else -> null
+            }
+            if (targetRoute != null) {
+                if (targetRoute == Route.AchievementShare) {
+                    navController.navigate(Route.AchievementShare) {
+                        launchSingleTop = true
+                    }
+                } else {
+                    navController.navigate(targetRoute) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
+            }
+            onShortcutConsumed()
         }
     }
 
@@ -306,6 +341,11 @@ fun MainTabScreen() {
                                     launchSingleTop = true
                                     restoreState = true
                                 }
+                            },
+                            onNavigateToAchievementShare = {
+                                navController.navigate(Route.AchievementShare) {
+                                    launchSingleTop = true
+                                }
                             }
                         )
                     }
@@ -331,7 +371,13 @@ fun MainTabScreen() {
                 }
                 composable<Route.Goals> {
                     CompositionLocalProvider(com.example.ads.LocalAdScreenKey provides "GOALS") {
-                        GoalsScreen()
+                        GoalsScreen(
+                            onNavigateToAchievementShare = {
+                                navController.navigate(Route.AchievementShare) {
+                                    launchSingleTop = true
+                                }
+                            }
+                        )
                     }
                 }
                 composable<Route.Insights> {
@@ -341,8 +387,19 @@ fun MainTabScreen() {
                 }
                 composable<Route.Stats> {
                     CompositionLocalProvider(com.example.ads.LocalAdScreenKey provides "STATS") {
-                        StatsScreen()
+                        StatsScreen(
+                            onNavigateToAchievementShare = {
+                                navController.navigate(Route.AchievementShare) {
+                                    launchSingleTop = true
+                                }
+                            }
+                        )
                     }
+                }
+                composable<Route.AchievementShare> {
+                    AchievementShareScreen(
+                        onNavigateBack = { navController.popBackStack() }
+                    )
                 }
                 composable<Route.Settings> { 
                     CompositionLocalProvider(com.example.ads.LocalAdScreenKey provides "SETTINGS") {
@@ -509,6 +566,8 @@ fun MainTabScreen() {
                                 label = "nav_pill_bg"
                             )
 
+                            val haptic = LocalHapticFeedback.current
+
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 modifier = Modifier
@@ -523,6 +582,9 @@ fun MainTabScreen() {
                                         interactionSource = itemInteractionSource,
                                         indication = null
                                     ) {
+                                        try {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        } catch (_: Exception) {}
                                         if (item.route == Route.Home) {
                                             navController.navigate(Route.Home) {
                                                 popUpTo(navController.graph.findStartDestination().id) {
@@ -583,6 +645,22 @@ fun MainTabScreen() {
                     }
                 }
             }
+
+            // Global Achievement Unlock Celebration Banner
+            val newlyUnlockedAchievement by StreakAndAchievementManager.newlyUnlockedAchievement.collectAsState()
+            AchievementUnlockOverlay(
+                achievement = newlyUnlockedAchievement,
+                onDismiss = { StreakAndAchievementManager.dismissUnlockedBanner() },
+                onShareClick = {
+                    StreakAndAchievementManager.dismissUnlockedBanner()
+                    navController.navigate(Route.AchievementShare) {
+                        launchSingleTop = true
+                    }
+                },
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .statusBarsPadding()
+            )
         }
     }
 }

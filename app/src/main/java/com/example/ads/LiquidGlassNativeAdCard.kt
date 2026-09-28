@@ -20,11 +20,6 @@ import com.example.ui.theme.liquidGlass
 
 /**
  * Liquid Glass Styled Adsterra Native Banner Container for FocusLock.
- *
- * Uses [AdsterraManager]'s tab-scoped [KeepAliveAdWebView] pool so:
- * - The native ad in the active tab is preloaded immediately and stays loaded/running
- *   even when scrolled outside the LazyColumn viewport.
- * - Switching to another tab removes and destroys the previous tab's native ad.
  */
 @Composable
 fun LiquidGlassNativeAdCard(
@@ -36,8 +31,9 @@ fun LiquidGlassNativeAdCard(
 
     val context = LocalContext.current
     val screenKey = LocalAdScreenKey.current
-    val readyScreenKey by AdsterraManager.readyScreenKey.collectAsState()
-    val isReadyForCurrentTab = readyScreenKey == screenKey
+    val compositeKey = "$screenKey::$slotKey"
+    val readySlots by AdsterraManager.readySlots.collectAsState()
+    val isSlotReady = compositeKey in readySlots
 
     Box(
         modifier = modifier
@@ -87,8 +83,8 @@ fun LiquidGlassNativeAdCard(
                 }
             }
 
-            if (isReadyForCurrentTab) {
-                val webView = remember(screenKey, slotKey) {
+            if (isSlotReady) {
+                val webView = remember(compositeKey) {
                     AdsterraManager.getOrCreateWebView(
                         context = context,
                         screenKey = screenKey,
@@ -104,13 +100,10 @@ fun LiquidGlassNativeAdCard(
                         .clip(RoundedCornerShape(14.dp)),
                     factory = {
                         (webView.parent as? ViewGroup)?.removeView(webView)
-                        webView.keepRunningInBackground = true
                         webView.onResume()
-                        webView.resumeTimers()
                         webView
                     },
                     update = { view ->
-                        view.keepRunningInBackground = true
                         view.onResume()
                     }
                 )

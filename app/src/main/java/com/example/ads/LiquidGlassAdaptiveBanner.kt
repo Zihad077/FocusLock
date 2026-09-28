@@ -19,11 +19,6 @@ import com.example.ui.theme.liquidGlass
 
 /**
  * Liquid Glass 320x50 Fixed Mobile Banner Container for FocusLock.
- *
- * Uses [AdsterraManager]'s tab-scoped [KeepAliveAdWebView] pool so:
- * - All 320x50 banners in the active tab are preloaded immediately and remain loaded/running
- *   in the background even when scrolled outside the LazyColumn viewport.
- * - Switching to another tab removes and destroys the previous tab's banners.
  */
 @Composable
 fun LiquidGlassAdaptiveBanner(
@@ -35,8 +30,9 @@ fun LiquidGlassAdaptiveBanner(
 
     val context = LocalContext.current
     val screenKey = LocalAdScreenKey.current
-    val readyScreenKey by AdsterraManager.readyScreenKey.collectAsState()
-    val isReadyForCurrentTab = readyScreenKey == screenKey
+    val compositeKey = "$screenKey::$slotKey"
+    val readySlots by AdsterraManager.readySlots.collectAsState()
+    val isSlotReady = compositeKey in readySlots
 
     Box(
         modifier = modifier
@@ -60,8 +56,8 @@ fun LiquidGlassAdaptiveBanner(
                 modifier = Modifier.padding(bottom = 4.dp)
             )
 
-            if (isReadyForCurrentTab) {
-                val webView = remember(screenKey, slotKey) {
+            if (isSlotReady) {
+                val webView = remember(compositeKey) {
                     AdsterraManager.getOrCreateWebView(
                         context = context,
                         screenKey = screenKey,
@@ -77,13 +73,10 @@ fun LiquidGlassAdaptiveBanner(
                         .clip(RoundedCornerShape(8.dp)),
                     factory = {
                         (webView.parent as? ViewGroup)?.removeView(webView)
-                        webView.keepRunningInBackground = true
                         webView.onResume()
-                        webView.resumeTimers()
                         webView
                     },
                     update = { view ->
-                        view.keepRunningInBackground = true
                         view.onResume()
                     }
                 )

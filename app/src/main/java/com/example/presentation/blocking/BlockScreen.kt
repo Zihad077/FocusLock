@@ -1,7 +1,11 @@
 package com.example.presentation.blocking
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.*
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,10 +23,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -32,6 +41,7 @@ import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.ui.theme.LiquidBackground
 import com.example.ui.theme.liquidGlass
+import kotlinx.coroutines.delay
 
 @Composable
 fun BlockScreen(
@@ -48,13 +58,15 @@ fun BlockScreen(
     val accentRed = Color(0xFFFF5252)
     val amberGold = Color(0xFFFFAB00)
 
+    val isAntiDelete = blockReason == "ANTI_DELETE_PROTECTION"
     val isFocusSession = blockReason == "FOCUS_MODE_ACTIVE"
     val isBedtime = blockReason == "BEDTIME_ACTIVE"
     val isSchedule = blockReason == "SCHEDULE_ACTIVE"
     val isSession = blockReason == "SESSION_LIMIT_EXCEEDED"
-    val isStrictLockdown = blockReason == "ALWAYS_BLOCKED" || limitMinutes == 0
+    val isStrictLockdown = isAntiDelete || blockReason == "ALWAYS_BLOCKED" || limitMinutes == 0
 
     val activeColor = when {
+        isAntiDelete -> accentRed
         isStrictLockdown -> accentRed
         isFocusSession -> primaryCyan
         isBedtime -> Color(0xFF7C4DFF)
@@ -63,49 +75,118 @@ fun BlockScreen(
     }
 
     val statusBadgeText = when {
-        isFocusSession -> "DEEP FOCUS MODE ACTIVE"
-        isBedtime -> "BEDTIME LOCKDOWN ACTIVE"
+        isAntiDelete -> "TAMPER GUARD • ANTI-DELETE ACTIVE"
+        isFocusSession -> "FOCUS MODE: ON • DISTRACTIONS: BYE"
+        isBedtime -> "SLEEP SHIELD • RECHARGE MODE"
         isSchedule -> "SCHEDULED FOCUS WINDOW"
-        isSession -> "SESSION LIMIT REACHED"
-        isStrictLockdown -> "STRICT LOCKDOWN ACTIVE"
-        else -> "DAILY LIMIT REACHED"
+        isSession -> "SESSION LIMIT • BREATHER TIME"
+        isStrictLockdown -> "STRICT LOCK • ZERO DISTRACTIONS"
+        else -> "DAILY QUOTA REACHED"
     }
 
     val headlineText = when {
-        isFocusSession -> "Focus Mode Active"
-        isBedtime -> "Bedtime Lockdown"
-        isSchedule -> "Scheduled Focus"
-        isSession -> "Time For A Break"
-        isStrictLockdown -> stringResource(R.string.app_restricted)
-        else -> stringResource(R.string.times_up)
+        isAntiDelete -> "Nice try! Shield is locked 🔒"
+        isFocusSession -> "Focus mode: ON.\nDistractions: BYE."
+        isBedtime -> "Time to Unwind 🌙"
+        isSchedule -> "Let's Stay Locked In 🔒"
+        isSession -> "Time to Touch Grass 🌱"
+        isStrictLockdown -> "Focus mode: ON.\nDistractions: BYE."
+        else -> "Time to Touch Grass 🌱"
     }
 
     val descriptionText = when {
-        isFocusSession -> "All distracting apps are locked during your active focus sprint. Stay in your flow state!"
-        isBedtime -> "FocusLock bedtime protection is active to help you unwind and rest."
-        isSchedule -> "This app is restricted during your scheduled focus hours."
-        isSession -> "You've reached your continuous session limit for \"$appName\". Step back, breathe, and reset."
+        isAntiDelete -> "Anti-Delete Protection blocked an attempt to force-stop, uninstall, or disable FocusLock. Stay locked in!"
+        isFocusSession -> "\"$appName\" can wait. You're in the middle of a deep focus sprint — keep that streak alive!"
+        isBedtime -> "Sleep shield is on so your mind can rest. \"$appName\" will be there tomorrow."
+        isSchedule -> "\"$appName\" is paused during your scheduled focus hours. Stay in your flow state ✨"
+        isSession -> "You've hit your continuous session limit for \"$appName\". Step back, stretch, and reset."
         isStrictLockdown -> stringResource(R.string.restricted_reason, appName)
         else -> stringResource(R.string.quota_reached_reason, appName)
     }
 
+    val playfulPrompts = remember {
+        listOf(
+            "Focus mode: ON. Distractions: BYE.",
+            "Time to touch grass 🌱",
+            "Let's stay locked in 🔒",
+            "Protect your peace & flow state ✨",
+            "You're on a roll — don't break the streak 🔥"
+        )
+    }
+    var promptIndex by remember { mutableIntStateOf(0) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(3800)
+            promptIndex = (promptIndex + 1) % playfulPrompts.size
+        }
+    }
+
+    // Subtle lightweight breathing animation for lock orb and ambient background aura
+    val infiniteTransition = rememberInfiniteTransition(label = "lock_screen_breathing")
+    val orbPulse by infiniteTransition.animateFloat(
+        initialValue = 0.94f,
+        targetValue = 1.08f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2400, easing = EaseInOutSine),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "orb_pulse"
+    )
+    val ringAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.18f,
+        targetValue = 0.52f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2400, easing = EaseInOutSine),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "ring_alpha"
+    )
+    val auraDrift by infiniteTransition.animateFloat(
+        initialValue = -18f,
+        targetValue = 18f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(4200, easing = EaseInOutSine),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "aura_drift"
+    )
+
     val scrollState = rememberScrollState()
 
     LiquidBackground {
-        // High-contrast translucent dark scrim to ensure full legibility over any animated wallpaper
+        // High-contrast translucent dark scrim with smooth animated ambient glow
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            Color(0x9508111D),
-                            Color(0xC00B1626),
-                            Color(0xE0091322)
+                            Color(0x9807101C),
+                            Color(0xC60A1525),
+                            Color(0xE608111F)
                         )
                     )
                 )
         ) {
+            // Lightweight ambient glow canvas in background
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val cx = size.width * 0.5f
+                val cy = size.height * 0.30f + auraDrift
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            activeColor.copy(alpha = 0.16f * orbPulse),
+                            activeColor.copy(alpha = 0.04f),
+                            Color.Transparent
+                        ),
+                        center = Offset(cx, cy),
+                        radius = size.minDimension * 0.62f
+                    ),
+                    radius = size.minDimension * 0.62f,
+                    center = Offset(cx, cy)
+                )
+            }
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -121,8 +202,8 @@ fun BlockScreen(
                     modifier = Modifier
                         .padding(top = 8.dp)
                         .clip(RoundedCornerShape(20.dp))
-                        .background(Color(0x35142436))
-                        .border(1.dp, activeColor.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
+                        .background(Color(0x40142436))
+                        .border(1.dp, activeColor.copy(alpha = 0.55f), RoundedCornerShape(20.dp))
                         .padding(horizontal = 14.dp, vertical = 6.dp)
                 ) {
                     Row(
@@ -132,6 +213,10 @@ fun BlockScreen(
                         Box(
                             modifier = Modifier
                                 .size(7.dp)
+                                .graphicsLayer {
+                                    scaleX = orbPulse
+                                    scaleY = orbPulse
+                                }
                                 .clip(CircleShape)
                                 .background(activeColor)
                         )
@@ -139,15 +224,15 @@ fun BlockScreen(
                             text = statusBadgeText,
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontWeight = FontWeight.ExtraBold,
-                                letterSpacing = 1.2.sp,
-                                fontSize = 11.sp
+                                letterSpacing = 1.1.sp,
+                                fontSize = 10.5.sp
                             ),
                             color = activeColor
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
                 // Hero Liquid Glass Card Container
                 Box(
@@ -164,39 +249,65 @@ fun BlockScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        // Glowing Frosted Orb with Lock / Shield Icon
+                        // Animated Breathing Orb with Concentric Aura Rings
                         Box(
-                            modifier = Modifier
-                                .size(84.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    Brush.radialGradient(
-                                        colors = listOf(
-                                            activeColor.copy(alpha = 0.30f),
-                                            activeColor.copy(alpha = 0.08f),
-                                            Color.Transparent
-                                        )
-                                    )
-                                )
-                                .border(1.5.dp, activeColor.copy(alpha = 0.65f), CircleShape),
+                            modifier = Modifier.size(104.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                imageVector = if (isStrictLockdown) Icons.Default.Shield else Icons.Default.Lock,
-                                contentDescription = "Lock Status",
-                                tint = activeColor,
-                                modifier = Modifier.size(42.dp)
-                            )
+                            Canvas(modifier = Modifier.fillMaxSize()) {
+                                val centerOffset = Offset(size.width / 2f, size.height / 2f)
+                                drawCircle(
+                                    color = activeColor.copy(alpha = ringAlpha * 0.45f),
+                                    radius = (size.minDimension / 2f) * orbPulse,
+                                    center = centerOffset,
+                                    style = Stroke(width = 2.dp.toPx())
+                                )
+                                drawCircle(
+                                    color = activeColor.copy(alpha = ringAlpha * 0.22f),
+                                    radius = (size.minDimension / 2f) * (orbPulse * 1.12f),
+                                    center = centerOffset,
+                                    style = Stroke(width = 1.2.dp.toPx())
+                                )
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .size(82.dp)
+                                    .graphicsLayer {
+                                        scaleX = orbPulse
+                                        scaleY = orbPulse
+                                    }
+                                    .clip(CircleShape)
+                                    .background(
+                                        Brush.radialGradient(
+                                            colors = listOf(
+                                                activeColor.copy(alpha = 0.32f),
+                                                activeColor.copy(alpha = 0.10f),
+                                                Color.Transparent
+                                            )
+                                        )
+                                    )
+                                    .border(1.5.dp, activeColor.copy(alpha = 0.70f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = if (isStrictLockdown) Icons.Default.Shield else Icons.Default.Lock,
+                                    contentDescription = "Lock Status",
+                                    tint = activeColor,
+                                    modifier = Modifier.size(40.dp)
+                                )
+                            }
                         }
 
-                        Spacer(modifier = Modifier.height(18.dp))
+                        Spacer(modifier = Modifier.height(14.dp))
 
                         // Headline
                         Text(
                             text = headlineText,
                             style = MaterialTheme.typography.headlineMedium.copy(
                                 fontWeight = FontWeight.ExtraBold,
-                                fontSize = 24.sp,
+                                fontSize = 23.sp,
+                                lineHeight = 29.sp,
                                 letterSpacing = (-0.3).sp
                             ),
                             color = Color.White,
@@ -247,12 +358,42 @@ fun BlockScreen(
                                 fontSize = 14.sp,
                                 lineHeight = 20.sp
                             ),
-                            color = Color.White.copy(alpha = 0.85f),
+                            color = Color.White.copy(alpha = 0.86f),
                             textAlign = TextAlign.Center,
                             modifier = Modifier.padding(horizontal = 4.dp)
                         )
 
-                        Spacer(modifier = Modifier.height(20.dp))
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        // Subtle Rotating Gen Z Vibe Pill
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(activeColor.copy(alpha = 0.10f))
+                                .border(0.8.dp, activeColor.copy(alpha = 0.30f), RoundedCornerShape(14.dp))
+                                .padding(horizontal = 14.dp, vertical = 7.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            AnimatedContent(
+                                targetState = playfulPrompts[promptIndex],
+                                transitionSpec = {
+                                    fadeIn(tween(350)) togetherWith fadeOut(tween(250))
+                                },
+                                label = "playful_prompt_anim"
+                            ) { prompt ->
+                                Text(
+                                    text = prompt,
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 12.sp
+                                    ),
+                                    color = activeColor,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(18.dp))
 
                         // Usage Telemetry Sub-Card
                         Surface(
@@ -322,18 +463,19 @@ fun BlockScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(18.dp))
 
-                // Bottom Full-Width Action Buttons
+                // Bottom Full-Width Action Buttons with smooth spring micro-interactions
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    // 1. Primary CTA: Return to Home
+                    // 1. Primary CTA: Stay Locked In / Return to Home
                     BlockFullWidthButton(
                         text = stringResource(R.string.return_to_home),
                         icon = Icons.Default.Home,
                         isPrimary = true,
+                        testTag = "block_stay_locked_in_button",
                         onClick = onWaitClick
                     )
 
@@ -342,6 +484,7 @@ fun BlockScreen(
                         text = stringResource(R.string.complete_challenge_to_unlock),
                         icon = Icons.Default.Psychology,
                         isPrimary = false,
+                        testTag = "block_challenge_button",
                         onClick = onChallengeClick
                     )
 
@@ -372,12 +515,18 @@ private fun BlockFullWidthButton(
     text: String,
     icon: ImageVector,
     isPrimary: Boolean,
+    testTag: String = "",
     onClick: () -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.97f else 1.0f,
+        targetValue = if (isPressed) 0.96f else 1.0f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
         label = "btn_scale"
     )
 
@@ -389,6 +538,7 @@ private fun BlockFullWidthButton(
         modifier = Modifier
             .fillMaxWidth()
             .height(52.dp)
+            .then(if (testTag.isNotEmpty()) Modifier.testTag(testTag) else Modifier)
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
@@ -406,7 +556,12 @@ private fun BlockFullWidthButton(
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
-                onClick = onClick
+                onClick = {
+                    try {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    } catch (_: Exception) {}
+                    onClick()
+                }
             ),
         contentAlignment = Alignment.Center
     ) {
@@ -439,10 +594,15 @@ private fun BlockEmergencyButton(
     enabled: Boolean,
     onClick: () -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (isPressed && enabled) 0.97f else 1.0f,
+        targetValue = if (isPressed && enabled) 0.96f else 1.0f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
         label = "emergency_btn_scale"
     )
 
@@ -450,6 +610,7 @@ private fun BlockEmergencyButton(
         modifier = Modifier
             .fillMaxWidth()
             .height(48.dp)
+            .testTag("block_emergency_unlock_button")
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
@@ -467,7 +628,12 @@ private fun BlockEmergencyButton(
                 interactionSource = interactionSource,
                 indication = null,
                 enabled = enabled,
-                onClick = onClick
+                onClick = {
+                    try {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    } catch (_: Exception) {}
+                    onClick()
+                }
             ),
         contentAlignment = Alignment.Center
     ) {

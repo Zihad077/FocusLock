@@ -203,3 +203,28 @@ val UserSettings.isPremiumActive: Boolean
             isPremium
         }
     }
+
+val UserSettings.isFocusActiveNow: Boolean
+    get() = isFocusModeActive && (activeFocusEndTime == 0L || activeFocusEndTime > System.currentTimeMillis())
+
+val UserSettings.isFocusProtectionEnforcedNow: Boolean
+    get() = focusProtectionEnabled && isFocusActiveNow
+
+val UserSettings.effectiveNotificationProtection: Boolean
+    get() = notificationProtectionEnabled || isFocusProtectionEnforcedNow
+
+val UserSettings.effectiveAntiDeleteProtection: Boolean
+    get() = antiDeleteProtectionEnabled || isFocusProtectionEnforcedNow
+
+val UserSettings.effectiveStableLockMode: Boolean
+    get() = stableLockModeEnabled || isFocusProtectionEnforcedNow
+
+val UserSettings.effectivePermissionProtection: Boolean
+    get() = permissionProtectionEnabled || isFocusProtectionEnforcedNow
+
+val UserSettings.effectiveEscapeAttemptDetection: Boolean
+    get() = escapeAttemptDetectionEnabled || isFocusProtectionEnforcedNow
+
+val UserSettings.effectiveAutoServiceRecovery: Boolean
+    get() = autoServiceRecoveryEnabled || isFocusProtectionEnforcedNow
+

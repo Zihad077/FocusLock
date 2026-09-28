@@ -7,6 +7,7 @@ import android.graphics.Bitmap
 import android.graphics.Color as AndroidColor
 import android.net.Uri
 import android.net.http.SslError
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.Message
@@ -15,6 +16,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.webkit.ConsoleMessage
 import android.webkit.CookieManager
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.SslErrorHandler
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
@@ -22,6 +24,7 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.runtime.compositionLocalOf
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -44,36 +47,20 @@ data class AdSlotSpec(
 )
 
 /**
- * Custom WebView that keeps its visibility state active (`View.VISIBLE`) while its owning
- * tab/screen is active, even when scrolled outside the LazyColumn viewport.
- * When the user switches to another tab, `keepRunningInBackground` is set to false and the
- * WebView is completely stopped and destroyed.
- */
-class KeepAliveAdWebView(context: Context) : WebView(context) {
-    var keepRunningInBackground: Boolean = true
-
-    override fun onWindowVisibilityChanged(visibility: Int) {
-        if (keepRunningInBackground) {
-            super.onWindowVisibilityChanged(View.VISIBLE)
-        } else {
-            super.onWindowVisibilityChanged(visibility)
-        }
-    }
-}
-
-/**
  * Adsterra monetization configuration and tab-scoped WebView lifecycle manager for FocusLock.
  *
  * Behavior:
- * - Preloads all ad slots belonging to the currently active tab/screen immediately so they stay
- *   loaded and running in the background even when scrolled outside the viewport.
- * - Immediately stops, clears, and destroys all ad WebViews from the previous tab as soon as the
- *   user navigates to a different tab.
- * - Reloads the tab's ads fresh when the user navigates back to that tab.
+ * - Preloads all ad slots belonging to the currently active tab/screen with a safe staggered delay
+ *   so they stay loaded in memory even when scrolled outside the LazyColumn viewport.
+ * - Detaches and destroys all ad WebViews from the previous tab when switching to a different tab,
+ *   waiting for Compose exit animations to finish so WebViews are never destroyed while drawing.
+ * - Implements [WebViewClient.onRenderProcessGone] returning `true` on all WebViews to prevent
+ *   `aw_browser_terminator.cc` renderer crashes.
  */
 object AdsterraManager {
 
     private const val TAG = "AdsterraManager"
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     // Adsterra Native Banner script URL / container key
     const val NATIVE_BANNER_KEY = "43cfe3dc4791cdf4c02fababba57f14d"
@@ -92,12 +79,12 @@ object AdsterraManager {
     private val _isSocialBarActive = MutableStateFlow(false)
     val isSocialBarActive: StateFlow<Boolean> = _isSocialBarActive.asStateFlow()
 
-    // Tracks which screen currently has its ad pool active and ready
-    private val _readyScreenKey = MutableStateFlow<String?>(null)
-    val readyScreenKey: StateFlow<String?> = _readyScreenKey.asStateFlow()
+    // Set of composite keys ("SCREEN::SLOT") that are ready to be displayed
+    private val _readySlots = MutableStateFlow<Set<String>>(emptySet())
+    val readySlots: StateFlow<Set<String>> = _readySlots.asStateFlow()
 
     // Active WebViews keyed by "SCREEN_KEY::SLOT_KEY"
-    private val activeWebViews = mutableMapOf<String, KeepAliveAdWebView>()
+    private val activeWebViews = mutableMapOf<String, WebView>()
     private var currentScreenKey: String? = null
 
     fun canShowSocialBar(isPremium: Boolean, isFocusActive: Boolean = false): Boolean {
@@ -108,10 +95,6 @@ object AdsterraManager {
         _isSocialBarActive.value = true
     }
 
-    /**
-     * Defines all ad slots belonging to a given screen so they can be eagerly loaded
-     * as soon as the user enters that tab and kept alive regardless of scroll position.
-     */
     private fun getSlotsForScreen(screenKey: String, isFocusActive: Boolean): List<AdSlotSpec> {
         return when (screenKey) {
             "HOME", "APPS", "STATS" -> buildList {
@@ -147,111 +130,106 @@ object AdsterraManager {
     }
 
     /**
-     * Immediately destroys and removes all WebViews from any screen other than [newScreenKey]
-     * (or destroys all if premium / focus lock hides ads).
+     * Switches the active ad tab to [newScreenKey]:
+     * 1. Immediately hides previous tab's slots from Compose so AndroidView detaches cleanly.
+     * 2. Waits for NavHost's 220ms exit animation to finish, then safely stops and destroys all
+     *    WebViews belonging to the previous tab.
+     * 3. Preloads all ad slots for [newScreenKey] with a staggered delay so they stay loaded
+     *    even if scrolled outside the viewport, without overwhelming the Chromium renderer.
      */
-    fun deactivateOtherScreens(
+    suspend fun switchActiveTab(
+        context: Context,
         newScreenKey: String,
         isPremium: Boolean,
         isFocusActive: Boolean
     ) {
+        currentScreenKey = newScreenKey
+
         if (isPremium || newScreenKey == "NONE" || (newScreenKey == "FOCUS" && isFocusActive)) {
+            _readySlots.value = emptySet()
+            delay(300)
             destroyAll()
-            currentScreenKey = newScreenKey
-            _readyScreenKey.value = null
             return
         }
 
         val prefix = "$newScreenKey::"
+        // Keep only slots belonging to newScreenKey in readySlots; hide old screen slots first
+        _readySlots.value = _readySlots.value.filter { it.startsWith(prefix) }.toSet()
+
+        // Remove old tab WebViews from map and destroy them AFTER NavHost's 220ms exit transition finishes
         val keysToRemove = activeWebViews.keys.filter { !it.startsWith(prefix) }
-        if (keysToRemove.isNotEmpty()) {
-            keysToRemove.forEach { key ->
-                activeWebViews.remove(key)?.let { destroyWebViewSafely(it) }
-            }
-            Log.d(TAG, "Removed ${keysToRemove.size} ad WebViews from previous tab (now on $newScreenKey)")
+        val webViewsToDestroy = keysToRemove.mapNotNull { activeWebViews.remove(it) }
+
+        if (webViewsToDestroy.isNotEmpty()) {
+            delay(320)
+            webViewsToDestroy.forEach { destroyWebViewSafely(it) }
+            Log.d(TAG, "Destroyed ${webViewsToDestroy.size} ad WebViews from previous tab")
+        } else {
+            delay(280)
         }
 
-        if (currentScreenKey != newScreenKey) {
-            currentScreenKey = newScreenKey
-            _readyScreenKey.value = null
-        }
-    }
+        if (currentScreenKey != newScreenKey) return
 
-    /**
-     * Eagerly preloads all ad slots for [screenKey] and marks the screen ready so all ads
-     * on that tab stay loaded whether visible on screen or scrolled off-screen.
-     */
-    fun activateAndPreloadScreen(
-        context: Context,
-        screenKey: String,
-        isPremium: Boolean,
-        isFocusActive: Boolean
-    ) {
-        if (isPremium || screenKey == "NONE" || (screenKey == "FOCUS" && isFocusActive)) {
-            destroyAll()
-            return
-        }
-
-        // First ensure any other screen's WebViews are gone
-        deactivateOtherScreens(screenKey, isPremium, isFocusActive)
-
-        val slots = getSlotsForScreen(screenKey, isFocusActive)
-        slots.forEach { spec ->
+        // Preload all slots for the active tab one by one (staggered to avoid renderer memory spikes)
+        val slots = getSlotsForScreen(newScreenKey, isFocusActive)
+        for (spec in slots) {
+            if (currentScreenKey != newScreenKey) return
+            val compositeKey = "$newScreenKey::${spec.slotKey}"
             getOrCreateWebView(
                 context = context,
-                screenKey = screenKey,
+                screenKey = newScreenKey,
                 slotKey = spec.slotKey,
                 slotType = spec.slotType
             )
             if (spec.slotType == AdSlotType.SOCIAL_BAR) {
                 markSocialBarShown()
             }
+            _readySlots.value = _readySlots.value + compositeKey
+            delay(180)
         }
-
-        _readyScreenKey.value = screenKey
-        Log.d(TAG, "Activated & preloaded ${slots.size} ad slots for tab: $screenKey")
     }
 
     /**
-     * Returns the preloaded [KeepAliveAdWebView] for ([screenKey], [slotKey]), or creates it if needed.
+     * Returns the preloaded [WebView] for ([screenKey], [slotKey]), or creates it if needed.
      */
     fun getOrCreateWebView(
         context: Context,
         screenKey: String,
         slotKey: String,
         slotType: AdSlotType
-    ): KeepAliveAdWebView {
+    ): WebView {
         val compositeKey = "$screenKey::$slotKey"
         val existing = activeWebViews[compositeKey]
         if (existing != null) {
-            existing.keepRunningInBackground = true
             existing.onResume()
-            existing.resumeTimers()
             return existing
         }
 
-        val created = createConfiguredAdWebView(context, slotType)
+        val created = createConfiguredAdWebView(context, compositeKey, slotType)
         activeWebViews[compositeKey] = created
         return created
     }
 
     /**
-     * Destroys all active ad WebViews across all tabs (e.g. when MainActivity is disposed or Premium is enabled).
+     * Destroys all active ad WebViews across all tabs.
      */
     fun destroyAll() {
+        _readySlots.value = emptySet()
         val all = activeWebViews.values.toList()
         activeWebViews.clear()
-        _readyScreenKey.value = null
-        all.forEach { destroyWebViewSafely(it) }
+        all.forEach { webView ->
+            mainHandler.postDelayed({
+                destroyWebViewSafely(webView)
+            }, 250)
+        }
     }
 
-    private fun destroyWebViewSafely(webView: KeepAliveAdWebView) {
+    private fun destroyWebViewSafely(webView: WebView) {
         try {
-            webView.keepRunningInBackground = false
             (webView.parent as? ViewGroup)?.removeView(webView)
             webView.stopLoading()
-            webView.loadDataWithBaseURL(null, "", "text/html", "UTF-8", null)
             webView.onPause()
+            webView.webChromeClient = null
             webView.removeAllViews()
             webView.destroy()
         } catch (e: Exception) {
@@ -262,17 +240,9 @@ object AdsterraManager {
     @SuppressLint("SetJavaScriptEnabled")
     private fun createConfiguredAdWebView(
         context: Context,
+        compositeKey: String,
         slotType: AdSlotType
-    ): KeepAliveAdWebView {
-        val density = context.resources.displayMetrics.density
-        val screenWidthPx = context.resources.displayMetrics.widthPixels
-
-        val (widthPx, heightPx) = when (slotType) {
-            AdSlotType.BANNER_320_50 -> (320 * density).toInt() to (50 * density).toInt()
-            AdSlotType.NATIVE_BANNER -> (screenWidthPx - (60 * density).toInt()).coerceAtLeast((300 * density).toInt()) to (155 * density).toInt()
-            AdSlotType.SOCIAL_BAR -> (screenWidthPx - (32 * density).toInt()).coerceAtLeast((300 * density).toInt()) to (76 * density).toInt()
-        }
-
+    ): WebView {
         val baseUrl = when (slotType) {
             AdSlotType.BANNER_320_50 -> BANNER_320_50_BASE_URL
             AdSlotType.NATIVE_BANNER -> NATIVE_BANNER_BASE_URL
@@ -285,8 +255,7 @@ object AdsterraManager {
             AdSlotType.SOCIAL_BAR -> getSocialBarHtml()
         }
 
-        return KeepAliveAdWebView(context).apply {
-            keepRunningInBackground = true
+        return WebView(context).apply {
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
@@ -364,6 +333,22 @@ object AdsterraManager {
                     Log.w(TAG, "[$slotType SSL Warning] $error")
                     handler?.proceed()
                 }
+
+                override fun onRenderProcessGone(view: WebView?, detail: RenderProcessGoneDetail?): Boolean {
+                    Log.w(TAG, "[$slotType] WebView renderer process exited (didCrash=${detail?.didCrash()}); recovering cleanly")
+                    _readySlots.value = _readySlots.value - compositeKey
+                    activeWebViews.remove(compositeKey)
+                    if (view != null) {
+                        mainHandler.post {
+                            try {
+                                (view.parent as? ViewGroup)?.removeView(view)
+                                view.destroy()
+                            } catch (_: Exception) {}
+                        }
+                    }
+                    // Return true so Android WebView NEVER crashes the host app process
+                    return true
+                }
             }
 
             webChromeClient = object : WebChromeClient() {
@@ -377,7 +362,7 @@ object AdsterraManager {
 
                     val hasLaunched = AtomicBoolean(false)
 
-                    // Only use HitTestResult.extra when type is explicitly SRC_ANCHOR_TYPE (text link).
+                    // 1. Only use HitTestResult.extra when type is explicitly SRC_ANCHOR_TYPE (text link).
                     // Never use HitTestResult.extra for SRC_IMAGE_ANCHOR_TYPE or IMAGE_TYPE because
                     // Android WebView returns the <img> src URL instead of the <a> href sponsor URL!
                     val hitTestResult = view.hitTestResult
@@ -395,7 +380,7 @@ object AdsterraManager {
                         }
                     }
 
-                    // Extract the enclosing <a> href ("url") rather than <img> src ("src") for image anchors
+                    // 2. Extract the enclosing <a> href ("url") rather than <img> src ("src") for image anchors
                     val hrefHandler = Handler(Looper.getMainLooper()) { msg ->
                         val hrefUrl = msg.data?.getString("url")
                         if (!hrefUrl.isNullOrBlank() &&
@@ -414,7 +399,9 @@ object AdsterraManager {
                     }
                     view.requestFocusNodeHref(hrefHandler.obtainMessage())
 
-                    // Attach popup WebView via WebViewTransport to resolve target="_blank" & window.open()
+                    // 3. Attach popup WebView via WebViewTransport to resolve target="_blank" & window.open()
+                    // IMPORTANT: Never call v.destroy() synchronously inside onPageStarted/shouldOverrideUrlLoading
+                    // as that crashes the Chromium renderer process while JNI is on the stack!
                     val tempWebView = WebView(view.context).apply {
                         setLayerType(View.LAYER_TYPE_SOFTWARE, null)
                         settings.apply {
@@ -441,7 +428,11 @@ object AdsterraManager {
                                         launchExternalUrl(context, targetUrl)
                                     }
                                     v?.stopLoading()
-                                    v?.destroy()
+                                    mainHandler.postDelayed({
+                                        try {
+                                            v?.destroy()
+                                        } catch (_: Exception) {}
+                                    }, 500)
                                     return true
                                 }
                                 return false
@@ -455,6 +446,15 @@ object AdsterraManager {
                                 super.onPageStarted(v, url, favicon)
                                 interceptPopupUrl(v, url)
                             }
+
+                            override fun onRenderProcessGone(v: WebView?, detail: RenderProcessGoneDetail?): Boolean {
+                                if (v != null) {
+                                    mainHandler.post {
+                                        try { v.destroy() } catch (_: Exception) {}
+                                    }
+                                }
+                                return true
+                            }
                         }
                     }
                     val transport = resultMsg.obj as? WebView.WebViewTransport
@@ -463,7 +463,9 @@ object AdsterraManager {
                         resultMsg.sendToTarget()
                         return true
                     }
-                    tempWebView.destroy()
+                    mainHandler.post {
+                        try { tempWebView.destroy() } catch (_: Exception) {}
+                    }
                     return false
                 }
 
@@ -472,14 +474,7 @@ object AdsterraManager {
                 }
             }
 
-            // Pre-measure and pre-layout so off-screen ad slots have valid viewport dimensions immediately
-            measure(
-                View.MeasureSpec.makeMeasureSpec(widthPx, View.MeasureSpec.EXACTLY),
-                View.MeasureSpec.makeMeasureSpec(heightPx, View.MeasureSpec.EXACTLY)
-            )
-            layout(0, 0, widthPx, heightPx)
             onResume()
-            resumeTimers()
             loadDataWithBaseURL(baseUrl, html, "text/html", "UTF-8", null)
         }
     }

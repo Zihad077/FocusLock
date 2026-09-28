@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="shortcut_start_focus"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_focus"
+        android:shortcutShortLabel="@string/shortcut_focus_short"
+        android:shortcutLongLabel="@string/shortcut_focus_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.aistudio.focuslock.flzihd"
+            android:targetClass="com.example.MainActivity">
+            <extra android:name="shortcut_destination" android:value="FOCUS" />
+        </intent>
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="shortcut_block_apps"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_apps"
+        android:shortcutShortLabel="@string/shortcut_apps_short"
+        android:shortcutLongLabel="@string/shortcut_apps_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.aistudio.focuslock.flzihd"
+            android:targetClass="com.example.MainActivity">
+            <extra android:name="shortcut_destination" android:value="APPS" />
+        </intent>
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="shortcut_view_stats"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_stats"
+        android:shortcutShortLabel="@string/shortcut_stats_short"
+        android:shortcutLongLabel="@string/shortcut_stats_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.aistudio.focuslock.flzihd"
+            android:targetClass="com.example.MainActivity">
+            <extra android:name="shortcut_destination" android:value="STATS" />
+        </intent>
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="shortcut_share_badges"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_share"
+        android:shortcutShortLabel="@string/shortcut_share_short"
+        android:shortcutLongLabel="@string/shortcut_share_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.aistudio.focuslock.flzihd"
+            android:targetClass="com.example.MainActivity">
+            <extra android:name="shortcut_destination" android:value="SHARE_ACHIEVEMENTS" />
+        </intent>
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+</shortcuts>

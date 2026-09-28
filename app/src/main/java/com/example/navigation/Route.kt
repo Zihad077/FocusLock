@@ -22,6 +22,7 @@ sealed class Route {
     @Serializable data object Insights : Route()
     @Serializable data object Journal : Route()
     @Serializable data object Profiles : Route()
+    @Serializable data object AchievementShare : Route()
     
     // Deep pages
     @Serializable data class AppLimitDetail(val packageName: String) : Route()

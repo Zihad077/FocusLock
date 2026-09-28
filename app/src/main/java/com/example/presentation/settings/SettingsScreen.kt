@@ -70,6 +70,7 @@ fun SettingsScreen(
     var showProfileDialog by remember { mutableStateOf(false) }
     var showChallengeDialog by remember { mutableStateOf(false) }
     var showPrivacyDialog by remember { mutableStateOf(false) }
+    var legalInitialTab by remember { mutableStateOf(LegalTab.PRIVACY) }
     var showAboutDialog by remember { mutableStateOf(false) }
     var showPermissionsDialog by remember { mutableStateOf(false) }
 
@@ -227,7 +228,19 @@ fun SettingsScreen(
                         icon = Icons.Default.Security,
                         title = stringResource(R.string.privacy_policy),
                         subtitle = stringResource(R.string.privacy_policy_subtitle),
-                        onClick = { showPrivacyDialog = true }
+                        onClick = {
+                            legalInitialTab = LegalTab.PRIVACY
+                            showPrivacyDialog = true
+                        }
+                    )
+                    SettingsRow(
+                        icon = Icons.Default.Gavel,
+                        title = stringResource(R.string.terms_of_service),
+                        subtitle = stringResource(R.string.terms_of_service_subtitle),
+                        onClick = {
+                            legalInitialTab = LegalTab.TERMS
+                            showPrivacyDialog = true
+                        }
                     )
                     SettingsRow(
                         icon = Icons.Default.Info,
@@ -919,43 +932,12 @@ fun SettingsScreen(
         )
     }
 
-    // 7. Privacy Dialog
+    // 7. Privacy Policy & Terms of Service Legal Dialog
     if (showPrivacyDialog) {
-        val primaryCyan = Color(0xFF24DFEC)
-
-        AlertDialog(
-            onDismissRequest = { showPrivacyDialog = false },
-            containerColor = Color(0xFF162534),
-            title = { Text("Privacy & Data Safety", fontWeight = FontWeight.Bold, color = Color.White) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        "• 100% Offline & Private: FocusLock does not collect or upload personal usage data, keystrokes, or screen contents to remote servers.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.8f)
-                    )
-                    Text(
-                        "• Local Storage: All time limits, schedules, and usage statistics are stored strictly on-device in a secure SQLite/Room database.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.8f)
-                    )
-                    Text(
-                        "• Accessibility Service: Used exclusively to identify the current foreground application package in order to display the block screen when limits are exceeded.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.8f)
-                    )
-                    Text(
-                        "• Zero telemetry or third-party ad tracking.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.8f)
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showPrivacyDialog = false }) {
-                    Text("I Understand", color = primaryCyan, fontWeight = FontWeight.Bold)
-                }
-            }
+        FocusLockLegalDialog(
+            initialTab = legalInitialTab,
+            defaultLanguageCode = settings.language,
+            onDismiss = { showPrivacyDialog = false }
         )
     }
 
@@ -965,6 +947,12 @@ fun SettingsScreen(
             onDismiss = { showAboutDialog = false },
             onOpenPrivacyPolicy = {
                 showAboutDialog = false
+                legalInitialTab = LegalTab.PRIVACY
+                showPrivacyDialog = true
+            },
+            onOpenTermsOfService = {
+                showAboutDialog = false
+                legalInitialTab = LegalTab.TERMS
                 showPrivacyDialog = true
             }
         )

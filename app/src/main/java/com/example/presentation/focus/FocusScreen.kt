@@ -31,13 +31,19 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.presentation.common.SessionCompleteBurstIcon
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ads.AdsterraSocialBar
 import com.example.ads.LiquidGlassAdaptiveBanner
@@ -129,9 +135,17 @@ fun FocusScreen(
                 },
                 actions = {
                     if (userSettings != null) {
+                        val streakDays = userSettings?.currentStreak ?: 0
+                        if (streakDays > 0) {
+                            GlassStatusBadge(
+                                text = "🔥 ${streakDays}d",
+                                isHighlight = true
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                        }
                         GlassStatusBadge(
                             text = "Lv. ${userSettings?.level ?: 1}",
-                            isHighlight = true
+                            isHighlight = streakDays == 0
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                     }
@@ -143,6 +157,7 @@ fun FocusScreen(
             )
         }
     ) { innerPadding ->
+        val haptic = LocalHapticFeedback.current
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -155,7 +170,11 @@ fun FocusScreen(
         ) {
             // Header Description Subtitle
             Text(
-                text = if (isFocusActive) "Deep work in progress. Distractions & notifications blocked." else "Enter uninterrupted deep flow state. Pick your focus duration.",
+                text = if (isFocusActive) {
+                    "Focus mode: ON. Distractions: BYE. Stay in your flow state 🔒"
+                } else {
+                    "Let's lock in 🔒 Pick your duration and enter pure flow state."
+                },
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color(0xFFB0C0D4),
                 textAlign = TextAlign.Center,
@@ -358,9 +377,20 @@ fun FocusScreen(
                     ) {
                         durations.forEach { duration ->
                             val isSelected = selectedDuration == duration
+                            val chipInteraction = remember { MutableInteractionSource() }
+                            val isChipPressed by chipInteraction.collectIsPressedAsState()
+                            val chipScale by animateFloatAsState(
+                                targetValue = if (isChipPressed) 0.93f else 1.0f,
+                                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+                                label = "duration_chip_$duration"
+                            )
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
+                                    .graphicsLayer {
+                                        scaleX = chipScale
+                                        scaleY = chipScale
+                                    }
                                     .clip(RoundedCornerShape(13.dp))
                                     .background(
                                         if (isSelected) Color(0xFF15324D) else Color(0xFF152236)
@@ -370,7 +400,15 @@ fun FocusScreen(
                                         color = if (isSelected) primaryCyan else Color.White.copy(alpha = 0.14f),
                                         shape = RoundedCornerShape(13.dp)
                                     )
-                                    .clickable { viewModel.setDuration(duration) }
+                                    .clickable(
+                                        interactionSource = chipInteraction,
+                                        indication = null
+                                    ) {
+                                        try {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        } catch (_: Exception) {}
+                                        viewModel.setDuration(duration)
+                                    }
                                     .padding(vertical = 10.dp),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -397,6 +435,9 @@ fun FocusScreen(
 
             GlassButton(
                 onClick = {
+                    try {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    } catch (_: Exception) {}
                     if (isFocusActive) {
                         viewModel.endFocusSession(completed = false)
                     } else {
@@ -404,8 +445,8 @@ fun FocusScreen(
                     }
                 },
                 text = when {
-                    !isFocusActive -> "Start Focus Session (${selectedDuration}m)"
-                    isCooldownLocked -> "Cooldown Active ($cooldownFormatted)"
+                    !isFocusActive -> "Let's Lock In 🔒 (${selectedDuration}m)"
+                    isCooldownLocked -> "Locked In • Cooldown ($cooldownFormatted)"
                     else -> "End Focus Session"
                 },
                 icon = when {
@@ -494,18 +535,27 @@ fun FocusScreen(
             containerColor = Color(0xFF101C2E),
             modifier = Modifier.border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(24.dp)),
             title = {
-                Text(
-                    text = "Focus Session Complete! 🎉",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    color = Color.White
-                )
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    SessionCompleteBurstIcon()
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "You're on a roll! 🔥",
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
+                        color = Color.White,
+                        textAlign = TextAlign.Center
+                    )
+                }
             },
             text = {
                 Column {
                     Text(
-                        text = "Great job staying in the zone! What did you accomplish?",
+                        text = "Session complete! Time to touch grass 🌱 What did you lock in on?",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFFB0C0D4)
+                        color = Color(0xFFB0C0D4),
+                        textAlign = TextAlign.Center
                     )
                     Spacer(modifier = Modifier.height(14.dp))
                     OutlinedTextField(

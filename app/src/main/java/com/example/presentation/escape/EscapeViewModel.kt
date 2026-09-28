@@ -7,8 +7,9 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.FocusLockApplication
 import com.example.data.AppRepository
+import com.example.database.EscapeAttempt
 import com.example.database.UserSettings
-import com.example.database.isPremiumActive
+import com.example.service.AppMonitorService
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -24,9 +25,35 @@ class EscapeViewModel(
         initialValue = null
     )
 
+    val escapeAttempts = repository.allEscapeAttempts.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
     fun updateSettings(settings: UserSettings) {
         viewModelScope.launch {
             repository.updateSettings(settings)
+            if (settings.autoServiceRecoveryEnabled || settings.stableLockModeEnabled) {
+                AppMonitorService.startService(getApplication())
+            }
+        }
+    }
+
+    fun recordEscapeAttempt(type: String, packageName: String = "com.example.focuslock") {
+        viewModelScope.launch {
+            repository.insertEscapeAttempt(
+                EscapeAttempt(
+                    packageName = packageName,
+                    type = type
+                )
+            )
+        }
+    }
+
+    fun clearEscapeAttempts() {
+        viewModelScope.launch {
+            repository.clearEscapeAttempts()
         }
     }
 

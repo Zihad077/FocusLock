@@ -7,9 +7,12 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.FocusLockApplication
 import com.example.data.AppRepository
-import com.example.database.Achievement
 import com.example.database.Goal
+import com.example.util.AchievementProgress
+import com.example.util.StreakAndAchievementManager
+import com.example.util.StreakMilestoneInfo
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -18,6 +21,12 @@ class GoalsViewModel(
     application: Application,
     private val repository: AppRepository
 ) : AndroidViewModel(application) {
+
+    init {
+        viewModelScope.launch {
+            StreakAndAchievementManager.evaluateAndSync(repository)
+        }
+    }
 
     val goals = repository.allGoals.stateIn(
         scope = viewModelScope,
@@ -37,6 +46,50 @@ class GoalsViewModel(
         initialValue = null
     )
 
+    val milestoneInfo: StateFlow<StreakMilestoneInfo> = combine(
+        repository.userSettings,
+        repository.allFocusSessions,
+        repository.allGoals
+    ) { settings, sessions, currentGoals ->
+        StreakAndAchievementManager.buildStreakMilestoneInfo(
+            settings = settings,
+            sessions = sessions,
+            goals = currentGoals
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = StreakAndAchievementManager.buildStreakMilestoneInfo(null, emptyList())
+    )
+
+    val achievementProgressList: StateFlow<List<AchievementProgress>> = combine(
+        repository.allAchievements,
+        repository.userSettings,
+        repository.allFocusSessions,
+        repository.allLimits,
+        repository.allGoals
+    ) { achList, settings, sessions, limits, currentGoals ->
+        StreakAndAchievementManager.buildAchievementProgressList(
+            achievements = achList,
+            settings = settings,
+            sessions = sessions,
+            limits = limits,
+            goals = currentGoals
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = StreakAndAchievementManager.buildAchievementProgressList(
+            emptyList(), null, emptyList(), emptyList(), emptyList()
+        )
+    )
+
+    fun refreshStreaksAndAchievements() {
+        viewModelScope.launch {
+            StreakAndAchievementManager.evaluateAndSync(repository)
+        }
+    }
+
     fun addGoal(title: String, target: Int, current: Int, type: String) {
         viewModelScope.launch {
             repository.insertGoal(
@@ -44,9 +97,11 @@ class GoalsViewModel(
                     title = title,
                     targetValue = target,
                     currentValue = current,
-                    type = type
+                    type = type,
+                    isCompleted = current >= target && target > 0
                 )
             )
+            StreakAndAchievementManager.evaluateAndSync(repository)
         }
     }
 
@@ -66,6 +121,7 @@ class GoalsViewModel(
                 newLevel += 1
             }
             repository.updateSettings(settings.copy(xp = newXp, level = newLevel))
+            StreakAndAchievementManager.evaluateAndSync(repository)
         }
     }
 

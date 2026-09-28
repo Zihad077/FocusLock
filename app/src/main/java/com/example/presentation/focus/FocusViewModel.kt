@@ -123,7 +123,7 @@ class FocusViewModel(
                 // Ignore if notifications restricted
             }
 
-            if (settings.focusProtectionEnabled && settings.notificationProtectionEnabled) {
+            if (settings.notificationProtectionEnabled || settings.focusProtectionEnabled) {
                 try {
                     val nm = getApplication<Application>().getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
                     if (nm?.isNotificationPolicyAccessGranted == true) {
@@ -223,21 +223,6 @@ class FocusViewModel(
             
             if (completed) {
                 newXp += 50
-                try {
-                    val achievements = repository.allAchievements.first()
-                    achievements.find { it.id == "first_step" && !it.isUnlocked }?.let {
-                        repository.insertAchievement(it.copy(isUnlocked = true))
-                        newXp += it.xpReward
-                    }
-                    if (_selectedDurationMinutes.value >= 120) {
-                        achievements.find { it.id == "deep_diver" && !it.isUnlocked }?.let {
-                            repository.insertAchievement(it.copy(isUnlocked = true))
-                            newXp += it.xpReward
-                        }
-                    }
-                } catch (e: Exception) {
-                    // Ignore
-                }
                 if (newXp >= newLevel * 100) {
                     newXp -= (newLevel * 100)
                     newLevel += 1
@@ -250,7 +235,6 @@ class FocusViewModel(
                         mode = "DEEP_FOCUS"
                     )
                 )
-                _showJournalDialog.value = true
             }
             
             repository.updateSettings(settings.copy(
@@ -262,7 +246,17 @@ class FocusViewModel(
                 level = newLevel
             ))
 
-            if (settings.focusProtectionEnabled && settings.notificationProtectionEnabled) {
+            if (completed) {
+                try {
+                    com.example.util.StreakAndAchievementManager.evaluateAndSync(
+                        repository = repository,
+                        completedSessionMinutesJustNow = _selectedDurationMinutes.value
+                    )
+                } catch (_: Exception) {}
+                _showJournalDialog.value = true
+            }
+
+            if (settings.notificationProtectionEnabled || settings.focusProtectionEnabled) {
                 try {
                     val nm = getApplication<Application>().getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
                     if (nm?.isNotificationPolicyAccessGranted == true) {

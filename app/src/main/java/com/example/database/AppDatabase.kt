@@ -92,14 +92,9 @@ abstract class AppDatabase : RoomDatabase() {
         }
 
         private suspend fun populateInitialData(dao: FocusDao) {
-            val defaultAchievements = listOf(
-                Achievement(id = "first_step", title = "First Step", description = "Complete your first focus session", isUnlocked = false, xpReward = 50),
-                Achievement(id = "deep_diver", title = "Deep Diver", description = "Focus for 2 hours in a single session", isUnlocked = false, xpReward = 150),
-                Achievement(id = "iron_will", title = "Iron Will", description = "Resist opening a blocked app 10 times", isUnlocked = false, xpReward = 200),
-                Achievement(id = "consistency", title = "Consistency", description = "Achieve a 7-day streak", isUnlocked = false, xpReward = 300)
-            )
+            val defaultAchievements = com.example.util.StreakAndAchievementManager.defaultCatalog()
             dao.insertAchievements(defaultAchievements)
-            
+
             // Add default profiles
             try {
                 val profiles = dao.getAllFocusProfiles()

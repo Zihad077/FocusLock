@@ -152,6 +152,10 @@ class AppRepository(private val focusDao: FocusDao) {
         focusDao.insertEscapeAttempt(attempt)
     }
 
+    suspend fun clearEscapeAttempts() {
+        focusDao.clearEscapeAttempts()
+    }
+
     // Data Backup & Restore
     val allSchedules: Flow<List<AppSchedule>> = focusDao.getAllSchedules()
     val allUsageEvents: Flow<List<UsageEvent>> = focusDao.getAllUsageEvents()

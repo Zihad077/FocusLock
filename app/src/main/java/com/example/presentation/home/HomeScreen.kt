@@ -49,6 +49,7 @@ import com.example.ads.LiquidGlassAdaptiveBanner
 import com.example.ads.LiquidGlassNativeAdCard
 import com.example.database.UserSettings
 import com.example.database.isPremiumActive
+import com.example.presentation.common.FocusStreakMilestonesCard
 import com.example.ui.theme.GlassButton
 import com.example.ui.theme.GlassButtonStyle
 import com.example.ui.theme.GlassEmptyState
@@ -67,13 +68,15 @@ fun HomeScreen(
     onNavigateToFocus: (() -> Unit)? = null,
     onNavigateToStats: (() -> Unit)? = null,
     onNavigateToPermissions: (() -> Unit)? = null,
-    onNavigateToSettings: (() -> Unit)? = null
+    onNavigateToSettings: (() -> Unit)? = null,
+    onNavigateToAchievementShare: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val settings by viewModel.userSettings.collectAsStateWithLifecycle()
     val limits by viewModel.limitsWithUsage.collectAsStateWithLifecycle()
     val stats by viewModel.statsSummary.collectAsStateWithLifecycle()
+    val milestoneInfo by viewModel.milestoneInfo.collectAsStateWithLifecycle()
 
     var editingLimit by remember { mutableStateOf<AppLimitUIModel?>(null) }
 
@@ -107,7 +110,11 @@ fun HomeScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            HeaderSection(settings = settings, onNavigateToSettings = onNavigateToSettings)
+            HeaderSection(
+                settings = settings,
+                onNavigateToSettings = onNavigateToSettings,
+                onStreakClick = onNavigateToAchievementShare ?: onNavigateToStats
+            )
         }
 
         // 320x50 Fixed Mobile Banner (Prominently placed at top from the beginning)
@@ -133,6 +140,14 @@ fun HomeScreen(
                 limits = limits,
                 onNavigateToStats = onNavigateToStats,
                 onNavigateToApps = onNavigateToApps
+            )
+        }
+
+        // Focus Streak & Milestones Card with Share Achievements CTA
+        item(key = "home_streak_milestones") {
+            FocusStreakMilestonesCard(
+                milestoneInfo = milestoneInfo,
+                onShareClick = onNavigateToAchievementShare
             )
         }
 
@@ -238,7 +253,8 @@ fun HomeScreen(
 @Composable
 private fun HeaderSection(
     settings: UserSettings?,
-    onNavigateToSettings: (() -> Unit)? = null
+    onNavigateToSettings: (() -> Unit)? = null,
+    onStreakClick: (() -> Unit)? = null
 ) {
     Row(
         modifier = Modifier
@@ -286,6 +302,7 @@ private fun HeaderSection(
                     .clip(RoundedCornerShape(16.dp))
                     .background(Color(0xE6281C0E))
                     .border(1.dp, Color(0x88FFAB00), RoundedCornerShape(16.dp))
+                    .clickable(enabled = onStreakClick != null) { onStreakClick?.invoke() }
                     .padding(horizontal = 12.dp, vertical = 6.dp)
             ) {
                 Row(
@@ -368,7 +385,7 @@ private fun PrimaryFocusActionCard(onStartFocus: () -> Unit) {
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "Instant 25m distraction block",
+                        text = "Zero distractions. Pure flow state ✨",
                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
                         color = Color.White.copy(alpha = 0.72f)
                     )
@@ -379,7 +396,7 @@ private fun PrimaryFocusActionCard(onStartFocus: () -> Unit) {
 
             GlassButton(
                 onClick = onStartFocus,
-                text = "Start",
+                text = "Lock In",
                 icon = Icons.AutoMirrored.Filled.ArrowForward,
                 style = GlassButtonStyle.PRIMARY
             )

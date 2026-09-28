@@ -42,15 +42,21 @@ import com.example.database.Goal
 import com.example.database.UserSettings
 import com.example.ui.theme.liquidGlass
 
+import com.example.presentation.common.AchievementsSectionHeader
+import com.example.presentation.common.EnhancedAchievementCard
+import com.example.presentation.common.FocusStreakMilestonesCard
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GoalsScreen(
+    onNavigateToAchievementShare: () -> Unit = {},
     viewModel: GoalsViewModel = viewModel(
         factory = GoalsViewModel.Factory(LocalContext.current.applicationContext as Application)
     )
 ) {
     val goals by viewModel.goals.collectAsStateWithLifecycle()
-    val achievements by viewModel.achievements.collectAsStateWithLifecycle()
+    val milestoneInfo by viewModel.milestoneInfo.collectAsStateWithLifecycle()
+    val achievementProgressList by viewModel.achievementProgressList.collectAsStateWithLifecycle()
     val userSettings by viewModel.userSettings.collectAsStateWithLifecycle()
 
     Scaffold(
@@ -82,10 +88,11 @@ fun GoalsScreen(
             contentPadding = PaddingValues(top = 8.dp, bottom = 100.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            userSettings?.let { settings ->
-                item {
-                    StreakGlassSection(settings = settings)
-                }
+            item(key = "goals_streak_milestones") {
+                FocusStreakMilestonesCard(
+                    milestoneInfo = milestoneInfo,
+                    onShareClick = onNavigateToAchievementShare
+                )
             }
 
             item {
@@ -109,14 +116,14 @@ fun GoalsScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "No active focus targets set. Consistency fuels progress.",
+                            text = "No active focus targets set yet — lock in a daily commitment to level up faster 🔒",
                             style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
                             color = Color.White.copy(alpha = 0.65f)
                         )
                     }
                 }
             } else {
-                items(goals) { goal ->
+                items(goals, key = { it.id }) { goal ->
                     GoalGlassCard(
                         goal = goal,
                         onDelete = { viewModel.deleteGoal(goal.id) }
@@ -132,37 +139,17 @@ fun GoalsScreen(
                 )
             }
 
-            item {
-                Text(
-                    text = "Achievements & Badges",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 17.sp
-                    ),
-                    color = Color.White
+            item(key = "goals_achievements_header") {
+                val unlockedCount = achievementProgressList.count { it.achievement.isUnlocked }
+                AchievementsSectionHeader(
+                    unlockedCount = unlockedCount,
+                    totalCount = achievementProgressList.size,
+                    onShareClick = onNavigateToAchievementShare
                 )
             }
 
-            if (achievements.isEmpty()) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .liquidGlass(shape = RoundedCornerShape(24.dp))
-                            .padding(24.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Complete your daily focus routines to earn trophies.",
-                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
-                            color = Color.White.copy(alpha = 0.65f)
-                        )
-                    }
-                }
-            } else {
-                items(achievements) { achievement ->
-                    AchievementGlassCard(achievement = achievement)
-                }
+            items(achievementProgressList, key = { it.achievement.id }) { progressItem ->
+                EnhancedAchievementCard(progressItem = progressItem)
             }
 
             // 320x50 Banner near the bottom (Zero ads for premium)

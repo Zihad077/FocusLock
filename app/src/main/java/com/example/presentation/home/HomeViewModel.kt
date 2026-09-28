@@ -53,6 +53,8 @@ class HomeViewModel(
                 val limits = repository.allLimits.first()
                 val summary = com.example.util.UsageStatsHelper.getScreenTimeSummary(getApplication(), com.example.util.UsageTimeRange.TODAY, limits)
                 _realtimeTotalMinutes.value = summary.totalScreenTimeMinutes
+                // 3. Evaluate & sync focus streaks and achievements
+                com.example.util.StreakAndAchievementManager.evaluateAndSync(repository)
             } catch (e: Exception) {
                 // Ignore
             }
@@ -63,6 +65,22 @@ class HomeViewModel(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = null
+    )
+
+    val milestoneInfo = combine(
+        repository.userSettings,
+        repository.allFocusSessions,
+        repository.allGoals
+    ) { settings, sessions, goals ->
+        com.example.util.StreakAndAchievementManager.buildStreakMilestoneInfo(
+            settings = settings,
+            sessions = sessions,
+            goals = goals
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = com.example.util.StreakAndAchievementManager.buildStreakMilestoneInfo(null, emptyList())
     )
     
     val limitsWithUsage = _currentDateFlow.flatMapLatest { today ->

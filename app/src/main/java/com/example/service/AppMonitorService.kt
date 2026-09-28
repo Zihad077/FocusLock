@@ -1,5 +1,6 @@
 package com.example.service
 
+import android.app.AlarmManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -8,24 +9,35 @@ import android.app.Service
 import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
-import android.graphics.BitmapFactory
-import com.example.R
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.os.Build
 import android.os.IBinder
+import android.os.SystemClock
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.example.FocusLockApplication
 import com.example.MainActivity
-import com.example.database.AppLimit
+import com.example.R
+import com.example.database.EscapeAttempt
+import com.example.database.UsageEvent
+import com.example.database.effectiveAutoServiceRecovery
+import com.example.database.effectiveEscapeAttemptDetection
+import com.example.database.effectiveNotificationProtection
+import com.example.database.effectivePermissionProtection
+import com.example.database.effectiveStableLockMode
+import com.example.database.isFocusActiveNow
 import com.example.presentation.blocking.BlockActivity
+import com.example.util.PermissionHelper
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
-import java.util.Calendar
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * Foreground Service to continuously monitor and restrict access to distracting applications
- * identified in the user-configurable blocklist.
+ * identified in the user-configurable blocklist, as well as enforce Escape Preventions.
  */
 class AppMonitorService : Service() {
 
@@ -59,11 +71,11 @@ class AppMonitorService : Service() {
 
     private val serviceJob = SupervisorJob()
     private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
-    
+
     private val appRepository by lazy {
         (applicationContext as FocusLockApplication).repository
     }
-    
+
     private val usageTracker by lazy {
         UsageTracker(applicationContext, appRepository)
     }
@@ -77,6 +89,10 @@ class AppMonitorService : Service() {
     private var lastBlockedPackage: String? = null
     private var lastBlockTimestamp: Long = 0L
     private val warnedPackages = mutableSetOf<String>()
+
+    // Tracks previously granted permissions to reliably detect revocations
+    private var previousGrantedPermissions: Set<String>? = null
+    private var lastPermissionAlertTimestamp: Long = 0L
 
     override fun onCreate() {
         super.onCreate()
@@ -124,8 +140,10 @@ class AppMonitorService : Service() {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification_logo)
             .apply { largeIcon?.let { setLargeIcon(it) } }
-            .setContentTitle("FocusLock Protection Active")
-            .setContentText("Actively monitoring and enforcing your blocklist limits")
+            .setSubText("Active Shield")
+            .setColor(0xFF24DFEC.toInt())
+            .setContentTitle("FocusLock • Guarding Your Peace 🛡️")
+            .setContentText("Distraction shield is locked in and protecting your daily focus limits.")
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
@@ -139,28 +157,29 @@ class AppMonitorService : Service() {
             while (isActive) {
                 try {
                     loopCount++
-                    if (loopCount % 10 == 0) { // Every ~8 seconds
-                        checkPermissionsAndNotify()
+                    if (loopCount % 8 == 1) { // Every ~6.4 seconds
+                        checkPermissionsAndEnforceProtections()
                     }
 
                     val foregroundPackage = detectForegroundPackage(usageStatsManager)
-                    if (foregroundPackage != null && 
-                        foregroundPackage != packageName && 
+                    if (foregroundPackage != null &&
+                        foregroundPackage != packageName &&
                         foregroundPackage != "com.android.systemui" &&
-                        !foregroundPackage.contains("inputmethod")) {
-                        
+                        !foregroundPackage.contains("inputmethod")
+                    ) {
+
                         if (currentForegroundPackage != foregroundPackage) {
                             if (currentForegroundPackage != null && currentForegroundPackage != packageName) {
                                 val endTime = System.currentTimeMillis()
                                 val elapsedMillis = endTime - sessionStartTime
                                 if (elapsedMillis >= 15000) {
                                     val durationMinutes = maxOf(1, (elapsedMillis / 60000).toInt())
-                                    val event = com.example.database.UsageEvent(
+                                    val event = UsageEvent(
                                         packageName = currentForegroundPackage!!,
                                         startTime = sessionStartTime,
                                         endTime = endTime,
                                         durationMinutes = durationMinutes,
-                                        dateString = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+                                        dateString = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
                                     )
                                     appRepository.insertUsageEvent(event)
                                 }
@@ -168,7 +187,7 @@ class AppMonitorService : Service() {
                             currentForegroundPackage = foregroundPackage
                             sessionStartTime = System.currentTimeMillis()
                         }
-                        
+
                         val sessionElapsed = System.currentTimeMillis() - sessionStartTime
                         checkAppRestriction(foregroundPackage, sessionElapsed)
                     } else if (foregroundPackage == packageName) {
@@ -185,57 +204,119 @@ class AppMonitorService : Service() {
         }
     }
 
-    private var hadAllPermissionsPreviously = false
-
-    private suspend fun checkPermissionsAndNotify() {
+    private suspend fun checkPermissionsAndEnforceProtections() {
         val settings = appRepository.userSettings.first()
-        if (!settings.permissionProtectionEnabled) return
-        
         val context = applicationContext
-        val missingPermissions = mutableListOf<String>()
-        if (!com.example.util.PermissionHelper.hasUsageAccess(context)) missingPermissions.add("Usage Access")
-        if (!com.example.util.PermissionHelper.hasOverlayPermission(context)) missingPermissions.add("Display Over Other Apps")
-        if (!com.example.util.PermissionHelper.hasAccessibilityPermission(context)) missingPermissions.add("Accessibility Service")
 
-        if (missingPermissions.isEmpty()) {
-            hadAllPermissionsPreviously = true
-            return
+        // 1. Enforce Notification Protection (Do Not Disturb) while Focus Mode is active
+        if (settings.isFocusActiveNow && settings.effectiveNotificationProtection) {
+            try {
+                val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+                if (nm?.isNotificationPolicyAccessGranted == true &&
+                    nm.currentInterruptionFilter == NotificationManager.INTERRUPTION_FILTER_ALL
+                ) {
+                    nm.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_PRIORITY)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error enforcing DND during focus session", e)
+            }
         }
 
-        if (hadAllPermissionsPreviously) {
-            hadAllPermissionsPreviously = false
-            if (settings.escapeAttemptDetectionEnabled) {
+        // 2. Permission Protection Check
+        val currentGranted = mutableSetOf<String>()
+        val missingPermissions = mutableListOf<String>()
+
+        if (PermissionHelper.hasUsageAccess(context)) {
+            currentGranted.add("Usage Access")
+        } else {
+            missingPermissions.add("Usage Access")
+        }
+
+        if (PermissionHelper.hasOverlayPermission(context)) {
+            currentGranted.add("Display Over Other Apps")
+        } else {
+            missingPermissions.add("Display Over Other Apps")
+        }
+
+        if (PermissionHelper.hasAccessibilityPermission(context)) {
+            currentGranted.add("Accessibility Service")
+        } else {
+            missingPermissions.add("Accessibility Service")
+        }
+
+        if (settings.effectiveNotificationProtection) {
+            if (PermissionHelper.hasNotificationPolicyAccess(context)) {
+                currentGranted.add("Do Not Disturb Access")
+            } else {
+                missingPermissions.add("Do Not Disturb Access")
+            }
+        }
+
+        val prevGranted = previousGrantedPermissions
+        previousGrantedPermissions = currentGranted
+
+        if (!settings.effectivePermissionProtection) return
+
+        val newlyRevoked = if (prevGranted != null) {
+            prevGranted - currentGranted
+        } else {
+            emptySet()
+        }
+
+        val now = System.currentTimeMillis()
+        val shouldAlertForActiveFocus = settings.isFocusActiveNow &&
+                missingPermissions.isNotEmpty() &&
+                (now - lastPermissionAlertTimestamp > 5 * 60 * 1000L)
+
+        if (newlyRevoked.isNotEmpty() || shouldAlertForActiveFocus) {
+            lastPermissionAlertTimestamp = now
+            val revokedNames = if (newlyRevoked.isNotEmpty()) {
+                newlyRevoked.joinToString()
+            } else {
+                missingPermissions.joinToString()
+            }
+
+            if (settings.effectiveEscapeAttemptDetection) {
                 appRepository.insertEscapeAttempt(
-                    com.example.database.EscapeAttempt(
-                        packageName = "system",
-                        type = "PERMISSION_REVOKED: ${missingPermissions.joinToString()}"
+                    EscapeAttempt(
+                        packageName = "com.android.settings",
+                        type = "PERMISSION_REVOKED: $revokedNames"
                     )
                 )
             }
-            
-            // Show notification to restore permissions
+
+            // Show high-priority notification to restore permissions
             try {
                 val intent = Intent(context, MainActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                 }
                 val pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_IMMUTABLE)
-                
+
                 val largeIcon = try {
                     BitmapFactory.decodeResource(context.resources, R.drawable.ic_custom_logo)
                 } catch (e: Exception) {
                     null
                 }
 
+                val alertTitle = "Heads up! Your Focus Shield needs you 🛡️"
+                val alertBody = "System permission ($revokedNames) was turned off. Tap to lock your shield back in 🔒"
                 val notification = NotificationCompat.Builder(context, CHANNEL_ID)
                     .setSmallIcon(R.drawable.ic_notification_logo)
                     .apply { largeIcon?.let { setLargeIcon(it) } }
-                    .setContentTitle("Protection Compromised")
-                    .setContentText("Required permissions were removed: ${missingPermissions.joinToString()}. Tap to restore.")
+                    .setSubText("FocusLock • Tamper Guard")
+                    .setColor(0xFFFF5252.toInt())
+                    .setContentTitle(alertTitle)
+                    .setContentText(alertBody)
+                    .setStyle(
+                        NotificationCompat.BigTextStyle()
+                            .setBigContentTitle(alertTitle)
+                            .bigText(alertBody)
+                    )
                     .setPriority(NotificationCompat.PRIORITY_HIGH)
                     .setContentIntent(pendingIntent)
                     .setAutoCancel(true)
                     .build()
-                
+
                 val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                 nm.notify(2003, notification)
             } catch (e: Exception) {
@@ -247,7 +328,7 @@ class AppMonitorService : Service() {
     private fun detectForegroundPackage(usageStatsManager: UsageStatsManager?): String? {
         if (usageStatsManager == null) return null
         val now = System.currentTimeMillis()
-        
+
         // Check UsageEvents for recent activity lifecycle transitions
         val events = usageStatsManager.queryEvents(now - 30000, now)
         val event = UsageEvents.Event()
@@ -273,9 +354,11 @@ class AppMonitorService : Service() {
 
     private suspend fun checkAppRestriction(packageName: String, sessionElapsedMillis: Long) {
         val now = System.currentTimeMillis()
+        val settings = appRepository.userSettings.first()
+        val debounceMs = if (settings.effectiveStableLockMode) 800L else 2500L
 
         // Debounce if blocked very recently to avoid looping
-        if (lastBlockedPackage == packageName && (now - lastBlockTimestamp) < 2500) {
+        if (lastBlockedPackage == packageName && (now - lastBlockTimestamp) < debounceMs) {
             return
         }
 
@@ -331,8 +414,8 @@ class AppMonitorService : Service() {
             putExtra("USED_MINUTES", usedMinutes)
             putExtra("LIMIT_MINUTES", limitMinutes)
             putExtra("BLOCK_REASON", blockReason)
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
-                    Intent.FLAG_ACTIVITY_CLEAR_TOP or 
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
                     Intent.FLAG_ACTIVITY_SINGLE_TOP or
                     Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
         }
@@ -354,8 +437,12 @@ class AppMonitorService : Service() {
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
         Log.w(TAG, "AppMonitorService onTaskRemoved (swiped from recents)")
-        serviceScope.launch {
-            handleServiceInterrupt("TASK_REMOVED")
+        runBlocking {
+            try {
+                handleServiceInterrupt("TASK_REMOVED_FROM_RECENTS")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error handling task removal", e)
+            }
         }
     }
 
@@ -363,28 +450,45 @@ class AppMonitorService : Service() {
         super.onDestroy()
         serviceJob.cancel()
         Log.d(TAG, "AppMonitorService destroyed")
-        // Can't run coroutines here easily since job is cancelled, but we could fire a broadcast.
-        val intent = Intent(applicationContext, BootReceiver::class.java).apply {
-            action = "com.example.service.RESTART_MONITOR"
-        }
-        sendBroadcast(intent)
+        scheduleServiceRecoveryBroadcast()
     }
-    
+
     private suspend fun handleServiceInterrupt(reason: String) {
         val settings = appRepository.userSettings.first()
-        if (settings.escapeAttemptDetectionEnabled) {
+        if (settings.effectiveEscapeAttemptDetection) {
             appRepository.insertEscapeAttempt(
-                com.example.database.EscapeAttempt(
+                EscapeAttempt(
                     packageName = "com.android.systemui",
                     type = reason
                 )
             )
         }
-        if (settings.autoServiceRecoveryEnabled) {
-            val intent = Intent(applicationContext, BootReceiver::class.java).apply {
+        if (settings.effectiveAutoServiceRecovery || settings.effectiveStableLockMode) {
+            scheduleServiceRecoveryBroadcast()
+        }
+    }
+
+    private fun scheduleServiceRecoveryBroadcast() {
+        try {
+            val restartIntent = Intent(applicationContext, BootReceiver::class.java).apply {
                 action = "com.example.service.RESTART_MONITOR"
             }
-            sendBroadcast(intent)
+            sendBroadcast(restartIntent)
+
+            val pendingIntent = PendingIntent.getBroadcast(
+                applicationContext,
+                9901,
+                restartIntent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            )
+            val alarmManager = applicationContext.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
+            alarmManager?.set(
+                AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                SystemClock.elapsedRealtime() + 1500L,
+                pendingIntent
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to schedule service recovery broadcast", e)
         }
     }
 }

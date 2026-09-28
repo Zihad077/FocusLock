@@ -43,7 +43,8 @@ import com.example.ui.theme.liquidGlass
 @Composable
 fun FocusLockAboutDialog(
     onDismiss: () -> Unit,
-    onOpenPrivacyPolicy: () -> Unit
+    onOpenPrivacyPolicy: () -> Unit,
+    onOpenTermsOfService: () -> Unit = onOpenPrivacyPolicy
 ) {
     val context = LocalContext.current
     val scrollState = rememberScrollState()
@@ -384,6 +385,39 @@ fun FocusLockAboutDialog(
                     )
                 }
 
+                // Terms of Service Link
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable { onOpenTermsOfService() }
+                        .padding(vertical = 10.dp, horizontal = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Gavel,
+                            contentDescription = null,
+                            tint = Color.White.copy(alpha = 0.7f),
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "Terms of Service & The Focus Pact",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White.copy(alpha = 0.85f)
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        tint = cyanAccent,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(14.dp))
 
                 // Done / Dismiss Button
@@ -489,7 +523,7 @@ private fun shareApp(context: Context) {
             action = Intent.ACTION_SEND
             putExtra(
                 Intent.EXTRA_TEXT,
-                "Check out FocusLock — the privacy-first digital wellbeing companion that helps you overcome doomscrolling and build deep focus: https://play.google.com/store/apps/details?id=${context.packageName}"
+                "Check out FocusLock — the privacy-first digital wellbeing companion that helps you overcome doomscrolling and build deep focus: https://focuslockz.vercel.app"
             )
             type = "text/plain"
         }
@@ -503,16 +537,9 @@ private fun shareApp(context: Context) {
 
 private fun rateApp(context: Context) {
     try {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=${context.packageName}")).apply {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://focuslockz.vercel.app")).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
         context.startActivity(intent)
-    } catch (e: Exception) {
-        try {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=${context.packageName}")).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            }
-            context.startActivity(intent)
-        } catch (_: Exception) {}
-    }
+    } catch (_: Exception) {}
 }

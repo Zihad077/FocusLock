@@ -47,6 +47,9 @@ import com.example.ads.LiquidGlassNativeAdCard
 import com.example.database.Achievement
 import com.example.database.Goal
 import com.example.database.isPremiumActive
+import com.example.presentation.common.AchievementsSectionHeader
+import com.example.presentation.common.EnhancedAchievementCard
+import com.example.presentation.common.FocusStreakMilestonesCard
 import com.example.presentation.goals.GoalsViewModel
 import com.example.presentation.insights.InsightsViewModel
 import com.example.ui.theme.liquidGlass
@@ -58,6 +61,7 @@ import com.example.util.UsageTimeRange
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatsScreen(
+    onNavigateToAchievementShare: () -> Unit = {},
     statsViewModel: StatsViewModel = viewModel(
         factory = StatsViewModel.Factory(LocalContext.current.applicationContext as Application)
     ),
@@ -88,7 +92,8 @@ fun StatsScreen(
 
     val insightsState by insightsViewModel.state.collectAsStateWithLifecycle()
     val goals by goalsViewModel.goals.collectAsStateWithLifecycle()
-    val achievements by goalsViewModel.achievements.collectAsStateWithLifecycle()
+    val milestoneInfo by goalsViewModel.milestoneInfo.collectAsStateWithLifecycle()
+    val achievementProgressList by goalsViewModel.achievementProgressList.collectAsStateWithLifecycle()
     val userSettings by statsViewModel.userSettings.collectAsStateWithLifecycle()
 
     var searchQuery by remember { mutableStateOf("") }
@@ -101,6 +106,7 @@ fun StatsScreen(
             if (event == Lifecycle.Event.ON_RESUME) {
                 statsViewModel.checkPermissionAndSync()
                 insightsViewModel.refresh()
+                goalsViewModel.refreshStreaksAndAchievements()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -355,6 +361,13 @@ fun StatsScreen(
                         }
                     }
 
+                    item(key = "analytics_streak_milestones") {
+                        FocusStreakMilestonesCard(
+                            milestoneInfo = milestoneInfo,
+                            onShareClick = onNavigateToAchievementShare
+                        )
+                    }
+
                     if (summary.dailyStats.isNotEmpty()) {
                         item {
                             WeeklyTrendChartCard(
@@ -566,53 +579,11 @@ fun StatsScreen(
 
                 2 -> {
                     // TAB 2: GOALS & ACHIEVEMENTS
-                    userSettings?.let { settings ->
-                        item {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .liquidGlass(shape = RoundedCornerShape(26.dp))
-                                    .padding(20.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Column {
-                                        Text(
-                                            stringResource(R.string.current_streak),
-                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                                            color = Color.White.copy(alpha = 0.65f)
-                                        )
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Text(
-                                            "${settings.currentStreak} ${stringResource(R.string.days_suffix)}",
-                                            style = MaterialTheme.typography.headlineMedium.copy(
-                                                fontWeight = FontWeight.ExtraBold,
-                                                fontSize = 28.sp
-                                            ),
-                                            color = Color(0xFFFF9100)
-                                        )
-                                    }
-                                    Box(
-                                        modifier = Modifier
-                                            .size(54.dp)
-                                            .clip(CircleShape)
-                                            .background(Color(0x33FF9100))
-                                            .border(1.dp, Color(0xFFFF9100).copy(alpha = 0.4f), CircleShape),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            Icons.Default.LocalFireDepartment,
-                                            contentDescription = null,
-                                            tint = Color(0xFFFF9100),
-                                            modifier = Modifier.size(30.dp)
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                    item(key = "stats_goals_streak_card") {
+                        FocusStreakMilestonesCard(
+                            milestoneInfo = milestoneInfo,
+                            onShareClick = onNavigateToAchievementShare
+                        )
                     }
 
                     item {
@@ -678,16 +649,17 @@ fun StatsScreen(
                         }
                     }
 
-                    item {
-                        Text(
-                            text = stringResource(R.string.achievements_badges),
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = MaterialTheme.colorScheme.onBackground
+                    item(key = "stats_achievements_header") {
+                        val unlockedCount = achievementProgressList.count { it.achievement.isUnlocked }
+                        AchievementsSectionHeader(
+                            unlockedCount = unlockedCount,
+                            totalCount = achievementProgressList.size,
+                            onShareClick = onNavigateToAchievementShare
                         )
                     }
 
-                    items(achievements, key = { it.id }) { ach ->
-                        AchievementGlassCard(achievement = ach)
+                    items(achievementProgressList, key = { it.achievement.id }) { progressItem ->
+                        EnhancedAchievementCard(progressItem = progressItem)
                     }
                 }
             }

@@ -19,6 +19,8 @@ class NotificationHelper(private val context: Context) {
         const val NOTIFICATION_ID = 1001
         const val BLOCK_CHANNEL_ID = "focus_lock_block_channel"
         const val BLOCK_NOTIFICATION_ID = 2002
+        private const val BRAND_CYAN = 0xFF24DFEC.toInt()
+        private const val BRAND_AMBER = 0xFFFFB300.toInt()
     }
 
     init {
@@ -36,6 +38,8 @@ class NotificationHelper(private val context: Context) {
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
                 description = context.getString(R.string.notification_channel_desc)
+                enableLights(true)
+                lightColor = BRAND_CYAN
             }
             notificationManager.createNotificationChannel(generalChannel)
 
@@ -46,6 +50,8 @@ class NotificationHelper(private val context: Context) {
             ).apply {
                 description = context.getString(R.string.block_channel_desc)
                 setBypassDnd(true)
+                enableLights(true)
+                lightColor = BRAND_CYAN
                 lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
             }
             notificationManager.createNotificationChannel(blockChannel)
@@ -79,13 +85,29 @@ class NotificationHelper(private val context: Context) {
             null
         }
 
+        val title = if (limitMinutes == 0) {
+            "Focus mode: ON. Distractions: BYE 🔒"
+        } else {
+            "Time to touch grass 🌱 — $appName paused"
+        }
+
+        val body = if (limitMinutes == 0) {
+            "$appName is locked right now so you can stay in your flow state. Tap to view options."
+        } else {
+            "You've used $usedMinutes/$limitMinutes min on $appName today. Protect your streak or complete a mindful challenge."
+        }
+
         val builder = NotificationCompat.Builder(context, BLOCK_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification_logo)
             .apply { largeIcon?.let { setLargeIcon(it) } }
-            .setContentTitle("$appName is Blocked")
-            .setContentText(
-                if (limitMinutes == 0) "$appName is restricted in FocusLock. Tap to open lock screen."
-                else "Daily limit of $limitMinutes min reached ($usedMinutes min used). Tap to view options."
+            .setSubText("FocusLock • Distraction Shield")
+            .setColor(BRAND_CYAN)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setStyle(
+                NotificationCompat.BigTextStyle()
+                    .setBigContentTitle(title)
+                    .bigText(body)
             )
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
@@ -107,7 +129,7 @@ class NotificationHelper(private val context: Context) {
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
-        
+
         val pendingIntent: PendingIntent = PendingIntent.getActivity(
             context, 0, intent,
             PendingIntent.FLAG_IMMUTABLE
@@ -122,8 +144,15 @@ class NotificationHelper(private val context: Context) {
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification_logo)
             .apply { largeIcon?.let { setLargeIcon(it) } }
+            .setSubText("FocusLock • Stay Locked In")
+            .setColor(BRAND_CYAN)
             .setContentTitle(title)
             .setContentText(message)
+            .setStyle(
+                NotificationCompat.BigTextStyle()
+                    .setBigContentTitle(title)
+                    .bigText(message)
+            )
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
@@ -139,8 +168,8 @@ class NotificationHelper(private val context: Context) {
 
     fun showLimitWarningNotification(appName: String, usedMinutes: Int, limitMinutes: Int) {
         val remaining = (limitMinutes - usedMinutes).coerceAtLeast(0)
-        val title = "Approaching Limit: $appName"
-        val message = "You have $remaining min remaining of your $limitMinutes min daily limit."
+        val title = "Heads up! $remaining min left on $appName ⏳"
+        val message = "You've used $usedMinutes of your $limitMinutes min daily budget. Wrap up soon to keep your streak alive 🔥"
 
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -161,8 +190,15 @@ class NotificationHelper(private val context: Context) {
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification_logo)
             .apply { largeIcon?.let { setLargeIcon(it) } }
+            .setSubText("FocusLock • Mindful Check-In")
+            .setColor(BRAND_AMBER)
             .setContentTitle(title)
             .setContentText(message)
+            .setStyle(
+                NotificationCompat.BigTextStyle()
+                    .setBigContentTitle(title)
+                    .bigText(message)
+            )
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
@@ -177,15 +213,20 @@ class NotificationHelper(private val context: Context) {
     }
 
     fun showFocusModeNotification(isActive: Boolean, remainingMinutes: Int? = null) {
-        val title = if (isActive) "Deep Focus Active" else "Deep Focus Complete!"
-        val message = if (isActive) {
-            "FocusLock is actively blocking distractions. ${remainingMinutes ?: ""} minutes remaining."
+        val title = if (isActive) {
+            "Locked In 🔒 Deep Focus Active"
         } else {
-            "Great job! Your deep focus session is finished. +50 XP earned."
+            "You're on a roll! 🔥 Session Complete"
+        }
+        val message = if (isActive) {
+            "Focus mode: ON. Distractions: BYE. ${remainingMinutes ?: 25} min left in your flow state ✨"
+        } else {
+            "Deep focus crushed! +50 XP earned and your streak is thriving. Time to touch grass 🌱"
         }
 
         val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            putExtra("shortcut_destination", "FOCUS")
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         val pendingIntent = PendingIntent.getActivity(
             context,
@@ -203,8 +244,15 @@ class NotificationHelper(private val context: Context) {
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification_logo)
             .apply { largeIcon?.let { setLargeIcon(it) } }
+            .setSubText(if (isActive) "FocusLock • Flow State" else "FocusLock • +50 XP Earned")
+            .setColor(BRAND_CYAN)
             .setContentTitle(title)
             .setContentText(message)
+            .setStyle(
+                NotificationCompat.BigTextStyle()
+                    .setBigContentTitle(title)
+                    .bigText(message)
+            )
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)

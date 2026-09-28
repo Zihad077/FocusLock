@@ -69,8 +69,8 @@ class SettingsViewModel(
     fun sendTestNotification() {
         val helper = com.example.service.NotificationHelper(getApplication())
         helper.showNotification(
-            "FocusLock Active",
-            "Notifications are working! Your focus sessions and limits are guarded."
+            "Let's Lock In 🔒 FocusLock Ready",
+            "You're all set! Smart reminders and streak shields are active and guarding your flow state ✨"
         )
     }
 

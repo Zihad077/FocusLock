@@ -11,17 +11,17 @@
     <string name="stats">Stats</string>
     <string name="total_focus">Total Focus</string>
     <string name="time_saved">Time Saved</string>
-    <string name="start_focus">Start Focus</string>
+    <string name="start_focus">Let\'s Lock In 🔒</string>
     <string name="focus_score">Focus Score</string>
     <string name="todays_usage">TODAY\'S USAGE</string>
     <string name="time_reclaimed">TIME RECLAIMED</string>
     <string name="blocked_apps">Blocked Apps</string>
-    <string name="current_streak">Current Streak</string>
+    <string name="current_streak">Focus Streak 🔥</string>
     <string name="days_suffix">Days</string>
     <string name="active_limits">Active Limits</string>
     <string name="monitored_suffix">monitored</string>
     <string name="no_limits_set">No limits set yet</string>
-    <string name="no_limits_desc">Configure app restrictions in the Apps tab to start building mindful habits.</string>
+    <string name="no_limits_desc">Set daily boundaries in the Apps tab and lock in your flow state.</string>
     <string name="set_app_limits">Set App Limits</string>
     <string name="active_protection">Active Protection</string>
     <string name="protection_limited">Protection Limited</string>
@@ -40,22 +40,22 @@
     <string name="used_format">%1$d / %2$d min used</string>
 
     <!-- Block Screen -->
-    <string name="app_blocked">%1$s is Blocked</string>
-    <string name="app_restricted">APP RESTRICTED</string>
-    <string name="times_up">TIME\'S UP</string>
-    <string name="restricted_reason">\"%1$s\" is restricted to protect your productivity. Focus on what truly matters.</string>
-    <string name="quota_reached_reason">You\'ve reached your daily quota for \"%1$s\". Step back, breathe, and reset.</string>
+    <string name="app_blocked">Focus mode: ON. Distractions: BYE.</string>
+    <string name="app_restricted">FOCUS MODE: ON</string>
+    <string name="times_up">TIME TO TOUCH GRASS 🌱</string>
+    <string name="restricted_reason">\"%1$s\" is paused right now so you can stay locked in 🔒</string>
+    <string name="quota_reached_reason">Daily quota reached for \"%1$s\". Time to touch grass 🌱 and reset.</string>
     <string name="usage_today">USAGE TODAY</string>
-    <string name="limit_reached">You\'ve reached your daily limit of %1$d minutes.</string>
-    <string name="strict_block_0m">Strict Block (0m limit)</string>
-    <string name="return_to_home">Return to Home</string>
+    <string name="limit_reached">You\'ve hit your %1$d min limit for today. Step back &amp; recharge ✨</string>
+    <string name="strict_block_0m">Strict Lock (0m limit)</string>
+    <string name="return_to_home">Stay Locked In 🔒</string>
     <string name="complete_challenge_to_unlock">Complete Challenge to Unlock</string>
     <string name="emergency_bypass_left">Emergency Bypass (%1$d left)</string>
     <string name="no_emergency_passes_left">No Emergency Passes Left</string>
     <string name="wait_and_breathe">Wait &amp; Breathe</string>
     <string name="earn_more_time">Earn More Time</string>
     <string name="emergency_unlock">Emergency Unlock</string>
-    <string name="take_a_deep_breath">Take a deep breath.</string>
+    <string name="take_a_deep_breath">Take a deep breath. You got this.</string>
     <string name="challenge_instructions">Type the sentence below to unlock 5 extra minutes.</string>
     
     <!-- Challenge Screen -->
@@ -138,10 +138,10 @@
     <string name="block_channel_desc">Displays the mindful blocking screen when restricted apps are opened</string>
     <string name="approaching_limit_title">Approaching Limit: %1$s</string>
     <string name="approaching_limit_desc">You have %1$d min remaining of your %2$d min daily limit.</string>
-    <string name="deep_focus_active_title">Deep Focus Active</string>
-    <string name="deep_focus_active_desc">FocusLock is actively blocking distractions. %1$d minutes remaining.</string>
-    <string name="deep_focus_complete_title">Deep Focus Complete!</string>
-    <string name="deep_focus_complete_desc">Great job! Your deep focus session is finished. +50 XP earned.</string>
+    <string name="deep_focus_active_title">Focus Mode: ON 🔒</string>
+    <string name="deep_focus_active_desc">Distractions: BYE. You\'re locked in — %1$d minutes remaining.</string>
+    <string name="deep_focus_complete_title">You\'re on a roll! 🔥</string>
+    <string name="deep_focus_complete_desc">Session complete! Time to touch grass 🌱 (+50 XP earned)</string>
 
     <!-- General -->
     <string name="unknown_app">Unknown App</string>
@@ -187,10 +187,22 @@
     <string name="premium_inactive">Remove ads forever and support development</string>
     <string name="data_backup">Data &amp; Backup</string>
     <string name="data_backup_subtitle">Export, import, and backup your data</string>
-    <string name="privacy_policy">Privacy &amp; Data Safety</string>
-    <string name="privacy_policy_subtitle">100% on-device &amp; private</string>
+    <string name="privacy_policy">Privacy &amp; Terms</string>
+    <string name="privacy_policy_subtitle">100% on-device privacy &amp; user commitment</string>
+    <string name="terms_of_service">Terms of Service</string>
+    <string name="terms_of_service_subtitle">Fair use, strict mode &amp; safety guarantees</string>
     <string name="about_app">About FocusLock</string>
     <string name="about_app_subtitle">Version 1.3.0 (Build 25)</string>
+
+    <!-- Launcher App Shortcuts (Long-Press Icon Options) -->
+    <string name="shortcut_focus_short">Lock In 🔒</string>
+    <string name="shortcut_focus_long">Let\'s Lock In (Deep Focus)</string>
+    <string name="shortcut_apps_short">Block Apps</string>
+    <string name="shortcut_apps_long">Manage App Limits &amp; Shields</string>
+    <string name="shortcut_stats_short">My Streak 🔥</string>
+    <string name="shortcut_stats_long">View Streaks &amp; Focus Stats</string>
+    <string name="shortcut_share_short">Share Badges</string>
+    <string name="shortcut_share_long">Share Achievement Card 🏆</string>
 
     <!-- Welcome & Onboarding Hooking Texts -->
     <string name="welcome_badge">✦ SMART MINDFULNESS &amp; PRODUCTIVITY</string>

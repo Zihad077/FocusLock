@@ -173,10 +173,21 @@
     <string name="premium_inactive">আজীবন বিজ্ঞাপনমুক্ত করুন ও ডেভেলপমেন্টে সহায়তা করুন</string>
     <string name="data_backup">ডেটা ব্যাকআপ ও এক্সপোর্ট</string>
     <string name="data_backup_subtitle">আপনার ডেটা এক্সপোর্ট, ইম্পোর্ট ও ব্যাকআপ করুন</string>
-    <string name="privacy_policy">গোপনীয়তা ও ডেটা সুরক্ষা</string>
-    <string name="privacy_policy_subtitle">১০০% অন-ডিভাইস ও সম্পূর্ণ ব্যক্তিগত</string>
+    <string name="privacy_policy">গোপনীয়তা ও শর্তাবলী</string>
+    <string name="privacy_policy_subtitle">১০০% অন-ডিভাইস গোপনীয়তা ও ব্যবহার নীতিমালা</string>
+    <string name="terms_of_service">ব্যবহারের শর্তাবলী (Terms)</string>
+    <string name="terms_of_service_subtitle">স্ট্রিক্ট মোড, চ্যালেঞ্জ ও নিরাপত্তা প্রতিশ্রুতি</string>
     <string name="about_app">ফোকাসলক সম্পর্কে</string>
-    <string name="about_app_subtitle">সংস্করণ ১.০.০ (বিল্ড ১)</string>
+    <string name="about_app_subtitle">সংস্করণ ১.৩.০ (বিল্ড ২৫)</string>
+
+    <string name="shortcut_focus_short">লক ইন 🔒</string>
+    <string name="shortcut_focus_long">ফোকাস সেশন শুরু করুন 🔒</string>
+    <string name="shortcut_apps_short">অ্যাপ ব্লক</string>
+    <string name="shortcut_apps_long">অ্যাপ লিমিট ও শিল্ড</string>
+    <string name="shortcut_stats_short">আমার স্ট্রিক 🔥</string>
+    <string name="shortcut_stats_long">স্ট্রিক ও পরিসংখ্যান দেখুন</string>
+    <string name="shortcut_share_short">ব্যাজ শেয়ার</string>
+    <string name="shortcut_share_long">অ্যাচিভমেন্ট কার্ড শেয়ার 🏆</string>
 
     <!-- Notifications -->
     <string name="notification_channel_name">ফোকাসলক নোটিফিকেশন</string>

@@ -158,6 +158,9 @@ interface FocusDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertEscapeAttempt(attempt: EscapeAttempt)
 
+    @Query("DELETE FROM escape_attempts")
+    suspend fun clearEscapeAttempts()
+
     // Data Backup & Restore queries
     @Query("SELECT * FROM app_schedules")
     fun getAllSchedules(): Flow<List<AppSchedule>>
