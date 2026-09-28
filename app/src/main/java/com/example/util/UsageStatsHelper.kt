@@ -219,6 +219,7 @@ object UsageStatsHelper {
             totalForegroundMillis += totalTime
             val category = getAppCategory(packageManager, pkg)
             val limit = limitMap[pkg]
+            val isLimitActive = limit?.isEnabled == true
 
             rawList.add(
                 AppUsageInfo(
@@ -228,15 +229,48 @@ object UsageStatsHelper {
                     usedMillis = totalTime,
                     lastTimeUsed = stats.lastTimeUsed,
                     category = category,
-                    isLimitActive = limit?.isEnabled == true,
-                    dailyLimitMinutes = limit?.dailyLimitMinutes ?: 0,
+                    isLimitActive = isLimitActive,
+                    dailyLimitMinutes = if (isLimitActive) (limit?.dailyLimitMinutes ?: 0) else 0,
                     isDistracting = isAppDistracting(category, pkg)
                 )
             )
         }
 
-        // Sort descending by screen time
-        rawList.sortByDescending { it.usedMillis }
+        // Also include apps that have an active limit (e.g. strictly blocked 0m apps with 0 usage today)
+        if (timeRange == UsageTimeRange.TODAY) {
+            val existingPackages = rawList.map { it.packageName }.toSet()
+            for (limit in limits) {
+                if (limit.isEnabled && limit.packageName != selfPackage && !existingPackages.contains(limit.packageName)) {
+                    val appName = try {
+                        val appInfo = packageManager.getApplicationInfo(limit.packageName, 0)
+                        packageManager.getApplicationLabel(appInfo).toString()
+                    } catch (e: Exception) {
+                        if (limit.appName.isNotEmpty()) limit.appName else continue
+                    }
+                    val category = getAppCategory(packageManager, limit.packageName)
+                    rawList.add(
+                        AppUsageInfo(
+                            packageName = limit.packageName,
+                            appName = appName,
+                            usedMinutes = 0,
+                            usedMillis = 0L,
+                            lastTimeUsed = 0L,
+                            category = category,
+                            isLimitActive = true,
+                            dailyLimitMinutes = limit.dailyLimitMinutes,
+                            isDistracting = isAppDistracting(category, limit.packageName)
+                        )
+                    )
+                }
+            }
+        }
+
+        // Sort descending by screen time (with active limits prioritized when usage is 0)
+        rawList.sortWith(
+            compareByDescending<AppUsageInfo> { it.usedMillis }
+                .thenByDescending { it.isLimitActive }
+                .thenBy { it.appName.lowercase() }
+        )
 
         // Compute percentage of total screen time
         return if (totalForegroundMillis > 0L) {
@@ -399,7 +433,7 @@ object UsageStatsHelper {
                 val dailyUsages = mutableListOf<DailyUsage>()
                 for ((pkg, stats) in statsMap) {
                     val foregroundMillis = stats.totalTimeInForeground
-                    val minutes = if (foregroundMillis >= 30000L) maxOf(1, ((foregroundMillis + 30000L) / 60000L).toInt()) else (foregroundMillis / 60000L).toInt()
+                    val minutes = if (foregroundMillis >= 15000L) maxOf(1, ((foregroundMillis + 30000L) / 60000L).toInt()) else 0
                     if (minutes > 0 && pkg != selfPkg && pkg != "com.android.systemui") {
                         dailyUsages.add(
                             DailyUsage(
@@ -411,6 +445,7 @@ object UsageStatsHelper {
                     }
                 }
 
+                repository.deleteUsageForDate(dateStr)
                 if (dailyUsages.isNotEmpty()) {
                     repository.insertUsages(dailyUsages)
                 }

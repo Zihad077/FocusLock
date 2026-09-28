@@ -117,8 +117,11 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Top 320x50 Banner (Visible immediately from the start)
-            item {
-                LiquidGlassAdaptiveBanner(isPremium = settings.isPremiumActive)
+            item(key = "settings_ad_banner_top") {
+                LiquidGlassAdaptiveBanner(
+                    isPremium = settings.isPremiumActive,
+                    slotKey = "banner_top"
+                )
             }
 
             item {
@@ -236,8 +239,11 @@ fun SettingsScreen(
             }
 
             // 320x50 Banner near bottom (Zero ads for premium)
-            item {
-                LiquidGlassAdaptiveBanner(isPremium = settings.isPremiumActive)
+            item(key = "settings_ad_banner_bottom") {
+                LiquidGlassAdaptiveBanner(
+                    isPremium = settings.isPremiumActive,
+                    slotKey = "banner_bottom"
+                )
             }
 
             item { Spacer(modifier = Modifier.height(32.dp)) }

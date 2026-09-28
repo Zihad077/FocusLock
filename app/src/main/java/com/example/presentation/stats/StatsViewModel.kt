@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -75,11 +76,86 @@ class StatsViewModel(
         initialValue = 0
     )
 
+    private fun getTodayDateString(): String =
+        java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+
+    private val _currentDateFlow = MutableStateFlow(getTodayDateString())
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private val limitsStatusFlow = _currentDateFlow.flatMapLatest { today ->
+        combine(
+            repository.allLimits,
+            repository.getUsageForDate(today),
+            _screenTimeSummary,
+            _selectedTimeRange
+        ) { limits, todayDbUsages, summary, timeRange ->
+            val selfPkg = getApplication<Application>().packageName
+            val enabledLimits = limits.filter { it.isEnabled && it.packageName != selfPkg }
+            val dbUsageMap = todayDbUsages
+                .groupBy { it.packageName }
+                .mapValues { (_, list) -> list.maxOfOrNull { it.usedMinutes } ?: 0 }
+            val liveUsageMap = if (timeRange == UsageTimeRange.TODAY) {
+                summary.appUsageList.associate { it.packageName to it.usedMinutes }
+            } else {
+                emptyMap()
+            }
+
+            val calendar = java.util.Calendar.getInstance()
+            val dayOfWeek = calendar.get(java.util.Calendar.DAY_OF_WEEK)
+
+            val blockedCount = enabledLimits.count { limit ->
+                val effectiveLimit = when (dayOfWeek) {
+                    java.util.Calendar.MONDAY -> limit.mondayLimitMinutes
+                    java.util.Calendar.TUESDAY -> limit.tuesdayLimitMinutes
+                    java.util.Calendar.WEDNESDAY -> limit.wednesdayLimitMinutes
+                    java.util.Calendar.THURSDAY -> limit.thursdayLimitMinutes
+                    java.util.Calendar.FRIDAY -> limit.fridayLimitMinutes
+                    java.util.Calendar.SATURDAY -> limit.saturdayLimitMinutes
+                    java.util.Calendar.SUNDAY -> limit.sundayLimitMinutes
+                    else -> null
+                } ?: limit.dailyLimitMinutes
+
+                val usedToday = maxOf(
+                    dbUsageMap[limit.packageName] ?: 0,
+                    liveUsageMap[limit.packageName] ?: 0
+                )
+
+                effectiveLimit <= 0 || usedToday >= effectiveLimit
+            }
+
+            Pair(blockedCount, enabledLimits.size)
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = Pair(0, 0)
+    )
+
+    val blockedAppsCount: StateFlow<Int> = limitsStatusFlow.map { it.first }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = 0
+    )
+
+    val activeLimitsCount: StateFlow<Int> = limitsStatusFlow.map { it.second }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = 0
+    )
+
     init {
         checkPermissionAndSync()
+        viewModelScope.launch {
+            repository.allLimits.collect {
+                if (_isUsageAccessGranted.value) {
+                    loadUsageData()
+                }
+            }
+        }
     }
 
     fun checkPermissionAndSync() {
+        _currentDateFlow.value = getTodayDateString()
         val hasAccess = PermissionHelper.hasUsageAccess(getApplication())
         _isUsageAccessGranted.value = hasAccess
 

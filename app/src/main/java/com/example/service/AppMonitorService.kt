@@ -185,6 +185,8 @@ class AppMonitorService : Service() {
         }
     }
 
+    private var hadAllPermissionsPreviously = false
+
     private suspend fun checkPermissionsAndNotify() {
         val settings = appRepository.userSettings.first()
         if (!settings.permissionProtectionEnabled) return
@@ -195,7 +197,13 @@ class AppMonitorService : Service() {
         if (!com.example.util.PermissionHelper.hasOverlayPermission(context)) missingPermissions.add("Display Over Other Apps")
         if (!com.example.util.PermissionHelper.hasAccessibilityPermission(context)) missingPermissions.add("Accessibility Service")
 
-        if (missingPermissions.isNotEmpty()) {
+        if (missingPermissions.isEmpty()) {
+            hadAllPermissionsPreviously = true
+            return
+        }
+
+        if (hadAllPermissionsPreviously) {
+            hadAllPermissionsPreviously = false
             if (settings.escapeAttemptDetectionEnabled) {
                 appRepository.insertEscapeAttempt(
                     com.example.database.EscapeAttempt(

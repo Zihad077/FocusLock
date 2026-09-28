@@ -83,7 +83,8 @@ fun StatsScreen(
     val summary by statsViewModel.screenTimeSummary.collectAsStateWithLifecycle()
     val totalFocusSessions by statsViewModel.totalFocusSessions.collectAsStateWithLifecycle()
     val totalFocusTime by statsViewModel.totalFocusTime.collectAsStateWithLifecycle()
-    val totalEscapeAttempts by statsViewModel.totalEscapeAttempts.collectAsStateWithLifecycle()
+    val blockedAppsCount by statsViewModel.blockedAppsCount.collectAsStateWithLifecycle()
+    val activeLimitsCount by statsViewModel.activeLimitsCount.collectAsStateWithLifecycle()
 
     val insightsState by insightsViewModel.state.collectAsStateWithLifecycle()
     val goals by goalsViewModel.goals.collectAsStateWithLifecycle()
@@ -200,9 +201,10 @@ fun StatsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Top 320x50 Banner Ad (Visible immediately from the start)
-            item {
+            item(key = "stats_ad_banner_top") {
                 LiquidGlassAdaptiveBanner(
-                    isPremium = userSettings?.isPremiumActive ?: false
+                    isPremium = userSettings?.isPremiumActive ?: false,
+                    slotKey = "banner_top"
                 )
             }
 
@@ -290,7 +292,7 @@ fun StatsScreen(
                                 }
                             }
 
-                            // Deflected Stops
+                            // Blocked Apps
                             val errorColor = Color(0xFFFF5252)
                             Box(
                                 modifier = Modifier
@@ -324,14 +326,30 @@ fun StatsScreen(
                                         )
                                     }
                                     Spacer(modifier = Modifier.height(8.dp))
-                                    Text(
-                                        "$totalEscapeAttempts",
-                                        style = MaterialTheme.typography.titleLarge.copy(
-                                            fontWeight = FontWeight.ExtraBold,
-                                            fontSize = 20.sp
-                                        ),
-                                        color = errorColor
-                                    )
+                                    Row(
+                                        verticalAlignment = Alignment.Bottom,
+                                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                    ) {
+                                        Text(
+                                            "$blockedAppsCount",
+                                            style = MaterialTheme.typography.titleLarge.copy(
+                                                fontWeight = FontWeight.ExtraBold,
+                                                fontSize = 20.sp
+                                            ),
+                                            color = errorColor
+                                        )
+                                        if (activeLimitsCount > blockedAppsCount) {
+                                            Text(
+                                                "of $activeLimitsCount limited",
+                                                style = MaterialTheme.typography.bodySmall.copy(
+                                                    fontSize = 11.5.sp,
+                                                    fontWeight = FontWeight.Medium
+                                                ),
+                                                color = Color.White.copy(alpha = 0.55f),
+                                                modifier = Modifier.padding(bottom = 2.dp)
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -675,23 +693,26 @@ fun StatsScreen(
             }
 
             // Native Ad Card
-            item {
+            item(key = "stats_ad_native_main") {
                 LiquidGlassNativeAdCard(
-                    isPremium = userSettings?.isPremiumActive ?: false
+                    isPremium = userSettings?.isPremiumActive ?: false,
+                    slotKey = "native_main"
                 )
             }
 
             // Bottom 320x50 Banner & Social Bar
-            item {
+            item(key = "stats_ad_banner_bottom") {
                 LiquidGlassAdaptiveBanner(
-                    isPremium = userSettings?.isPremiumActive ?: false
+                    isPremium = userSettings?.isPremiumActive ?: false,
+                    slotKey = "banner_bottom"
                 )
             }
 
-            item {
+            item(key = "stats_ad_social_bar") {
                 AdsterraSocialBar(
                     isPremium = userSettings?.isPremiumActive ?: false,
-                    isFocusActive = userSettings?.isFocusModeActive ?: false
+                    isFocusActive = userSettings?.isFocusModeActive ?: false,
+                    slotKey = "social_bar"
                 )
             }
         }
@@ -1154,14 +1175,8 @@ private fun AppUsageRowItem(
     onSetLimitClick: () -> Unit
 ) {
     val progress = (appInfo.usedMinutes.toFloat() / maxUsageMinutes.coerceAtLeast(1).toFloat()).coerceIn(0f, 1f)
-    val context = LocalContext.current
-    val appIcon: Drawable? = remember(appInfo.packageName) {
-        try {
-            context.packageManager.getApplicationIcon(appInfo.packageName)
-        } catch (_: Exception) {
-            null
-        }
-    }
+    val isAppBlocked = appInfo.isLimitActive &&
+            (appInfo.dailyLimitMinutes == 0 || appInfo.usedMinutes >= appInfo.dailyLimitMinutes)
 
     Box(
         modifier = Modifier
@@ -1180,30 +1195,11 @@ private fun AppUsageRowItem(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.weight(1f)
                 ) {
-                    if (appIcon != null) {
-                        Image(
-                            bitmap = appIcon.toBitmap().asImageBitmap(),
-                            contentDescription = appInfo.appName,
-                            modifier = Modifier
-                                .size(38.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                        )
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .size(38.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(primaryCyan.copy(alpha = 0.2f))
-                                .border(1.dp, primaryCyan.copy(alpha = 0.4f), RoundedCornerShape(12.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = appInfo.appName.take(1).uppercase(),
-                                fontWeight = FontWeight.Bold,
-                                color = primaryCyan
-                            )
-                        }
-                    }
+                    com.example.presentation.common.RealAppIcon(
+                        packageName = appInfo.packageName,
+                        appName = appInfo.appName,
+                        size = 38.dp
+                    )
 
                     Column {
                         Text(
@@ -1228,13 +1224,17 @@ private fun AppUsageRowItem(
                     onClick = onSetLimitClick,
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = primaryCyan.copy(alpha = 0.18f),
-                        contentColor = primaryCyan
+                        containerColor = if (isAppBlocked) Color(0xFFFF5252).copy(alpha = 0.2f) else primaryCyan.copy(alpha = 0.18f),
+                        contentColor = if (isAppBlocked) Color(0xFFFF5252) else primaryCyan
                     ),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                 ) {
                     Text(
-                        text = if (appInfo.dailyLimitMinutes > 0) "${appInfo.dailyLimitMinutes}m limit" else stringResource(R.string.set_limit),
+                        text = when {
+                            !appInfo.isLimitActive -> stringResource(R.string.set_limit)
+                            appInfo.dailyLimitMinutes == 0 -> stringResource(R.string.blocked_status)
+                            else -> "${appInfo.dailyLimitMinutes}m limit"
+                        },
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
                     )
                 }
@@ -1246,7 +1246,7 @@ private fun AppUsageRowItem(
                     .fillMaxWidth()
                     .height(6.dp)
                     .clip(RoundedCornerShape(3.dp)),
-                color = if (appInfo.dailyLimitMinutes > 0 && appInfo.usedMinutes >= appInfo.dailyLimitMinutes) Color(0xFFFF5252) else primaryCyan,
+                color = if (isAppBlocked) Color(0xFFFF5252) else primaryCyan,
                 trackColor = Color.White.copy(alpha = 0.1f)
             )
         }

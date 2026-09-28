@@ -171,9 +171,10 @@ fun InsightsScreen(
             }
 
             // Native ad after main insight cards (Zero ads for premium)
-            item {
+            item(key = "insights_ad_native_main") {
                 LiquidGlassNativeAdCard(
-                    isPremium = userSettings?.isPremiumActive ?: false
+                    isPremium = userSettings?.isPremiumActive ?: false,
+                    slotKey = "native_main"
                 )
             }
 
@@ -266,17 +267,19 @@ fun InsightsScreen(
             }
 
             // 320x50 Banner near the bottom (Zero ads for premium)
-            item {
+            item(key = "insights_ad_banner_bottom") {
                 LiquidGlassAdaptiveBanner(
-                    isPremium = userSettings?.isPremiumActive ?: false
+                    isPremium = userSettings?.isPremiumActive ?: false,
+                    slotKey = "banner_bottom"
                 )
             }
 
             // Social Bar format (cooldown protected, zero ads for premium)
-            item {
+            item(key = "insights_ad_social_bar") {
                 AdsterraSocialBar(
                     isPremium = userSettings?.isPremiumActive ?: false,
-                    isFocusActive = userSettings?.isFocusModeActive ?: false
+                    isFocusActive = userSettings?.isFocusModeActive ?: false,
+                    slotKey = "social_bar"
                 )
             }
         }

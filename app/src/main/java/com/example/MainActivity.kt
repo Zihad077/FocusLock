@@ -25,9 +25,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Start foreground monitoring service for blocklist enforcement
-        com.example.service.AppMonitorService.startService(this)
-
         setContent {
             FocusLockTheme(darkTheme = true) {
                 Surface(
@@ -37,6 +34,11 @@ class MainActivity : ComponentActivity() {
                     FocusLockApp()
                 }
             }
+        }
+
+        // Start foreground monitoring service after the initial window frame completes
+        window.decorView.post {
+            com.example.service.AppMonitorService.startService(this)
         }
     }
 }

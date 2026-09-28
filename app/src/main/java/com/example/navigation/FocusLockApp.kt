@@ -59,6 +59,7 @@ import com.example.presentation.onboarding.PermissionsScreen
 import com.example.presentation.onboarding.WelcomeScreen
 import com.example.presentation.settings.SettingsScreen
 import com.example.presentation.stats.StatsScreen
+import com.example.database.isPremiumActive
 import com.example.ui.theme.LiquidBackground
 import com.example.util.PermissionHelper
 
@@ -157,6 +158,42 @@ fun MainTabScreen() {
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
+    val isPremiumActive = userSettings.isPremiumActive
+
+    val activeScreenKey = when {
+        currentDestination?.hasRoute(Route.Home::class) == true -> "HOME"
+        currentDestination?.hasRoute(Route.Apps::class) == true -> "APPS"
+        currentDestination?.hasRoute(Route.Focus::class) == true -> "FOCUS"
+        currentDestination?.hasRoute(Route.Stats::class) == true -> "STATS"
+        currentDestination?.hasRoute(Route.Settings::class) == true -> "SETTINGS"
+        currentDestination?.hasRoute(Route.Goals::class) == true -> "GOALS"
+        currentDestination?.hasRoute(Route.Insights::class) == true -> "INSIGHTS"
+        else -> "NONE"
+    }
+
+    // Immediately stop & remove previous tab's ads when switching tabs, then preload all ads for the active tab
+    LaunchedEffect(activeScreenKey, isPremiumActive, isFocusActive) {
+        com.example.ads.AdsterraManager.deactivateOtherScreens(
+            newScreenKey = activeScreenKey,
+            isPremium = isPremiumActive,
+            isFocusActive = isFocusActive
+        )
+        if (!isPremiumActive && activeScreenKey != "NONE" && !(activeScreenKey == "FOCUS" && isFocusActive)) {
+            kotlinx.coroutines.delay(250)
+            com.example.ads.AdsterraManager.activateAndPreloadScreen(
+                context = context,
+                screenKey = activeScreenKey,
+                isPremium = isPremiumActive,
+                isFocusActive = isFocusActive
+            )
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            com.example.ads.AdsterraManager.destroyAll()
+        }
+    }
 
     // Strictly redirect and lock to Route.Focus when focus session is running
     LaunchedEffect(isFocusActive) {
@@ -229,97 +266,119 @@ fun MainTabScreen() {
                 }
             ) {
                 composable<Route.Home> {
-                    HomeScreen(
-                        onNavigateToApps = {
-                            navController.navigate(Route.Apps) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+                    CompositionLocalProvider(com.example.ads.LocalAdScreenKey provides "HOME") {
+                        HomeScreen(
+                            onNavigateToApps = {
+                                navController.navigate(Route.Apps) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        onNavigateToFocus = {
-                            navController.navigate(Route.Focus) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+                            },
+                            onNavigateToFocus = {
+                                navController.navigate(Route.Focus) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        onNavigateToStats = {
-                            navController.navigate(Route.Stats) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+                            },
+                            onNavigateToStats = {
+                                navController.navigate(Route.Stats) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        onNavigateToPermissions = {
-                            navController.navigate(Route.Permissions)
-                        },
-                        onNavigateToSettings = {
-                            navController.navigate(Route.Settings) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+                            },
+                            onNavigateToPermissions = {
+                                navController.navigate(Route.Permissions)
+                            },
+                            onNavigateToSettings = {
+                                navController.navigate(Route.Settings) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
                             }
-                        }
-                    )
+                        )
+                    }
                 }
-                composable<Route.Apps> { AppsScreen() }
+                composable<Route.Apps> {
+                    CompositionLocalProvider(com.example.ads.LocalAdScreenKey provides "APPS") {
+                        AppsScreen()
+                    }
+                }
                 composable<Route.Focus> { 
-                    FocusScreen(
-                        onNavigateToHome = {
-                            navController.navigate(Route.Home) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    inclusive = false
+                    CompositionLocalProvider(com.example.ads.LocalAdScreenKey provides "FOCUS") {
+                        FocusScreen(
+                            onNavigateToHome = {
+                                navController.navigate(Route.Home) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        inclusive = false
+                                    }
+                                    launchSingleTop = true
                                 }
-                                launchSingleTop = true
                             }
-                        }
-                    ) 
+                        )
+                    }
                 }
-                composable<Route.Goals> { GoalsScreen() }
-                composable<Route.Insights> { InsightsScreen() }
-                composable<Route.Stats> { StatsScreen() }
+                composable<Route.Goals> {
+                    CompositionLocalProvider(com.example.ads.LocalAdScreenKey provides "GOALS") {
+                        GoalsScreen()
+                    }
+                }
+                composable<Route.Insights> {
+                    CompositionLocalProvider(com.example.ads.LocalAdScreenKey provides "INSIGHTS") {
+                        InsightsScreen()
+                    }
+                }
+                composable<Route.Stats> {
+                    CompositionLocalProvider(com.example.ads.LocalAdScreenKey provides "STATS") {
+                        StatsScreen()
+                    }
+                }
                 composable<Route.Settings> { 
-                    SettingsScreen(
-                        onNavigateToApps = {
-                            navController.navigate(Route.Apps) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+                    CompositionLocalProvider(com.example.ads.LocalAdScreenKey provides "SETTINGS") {
+                        SettingsScreen(
+                            onNavigateToApps = {
+                                navController.navigate(Route.Apps) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        onNavigateToFocus = {
-                            navController.navigate(Route.Focus) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+                            },
+                            onNavigateToFocus = {
+                                navController.navigate(Route.Focus) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
+                            },
+                            onNavigateToEscapePrevention = {
+                                navController.navigate(Route.EscapePrevention)
+                            },
+                            onNavigateToPermissions = {
+                                navController.navigate(Route.Permissions)
+                            },
+                            onNavigateToDataBackup = {
+                                navController.navigate(Route.DataBackup)
+                            },
+                            onNavigateToPremium = {
+                                navController.navigate(Route.Premium)
                             }
-                        },
-                        onNavigateToEscapePrevention = {
-                            navController.navigate(Route.EscapePrevention)
-                        },
-                        onNavigateToPermissions = {
-                            navController.navigate(Route.Permissions)
-                        },
-                        onNavigateToDataBackup = {
-                            navController.navigate(Route.DataBackup)
-                        },
-                        onNavigateToPremium = {
-                            navController.navigate(Route.Premium)
-                        }
-                    ) 
+                        )
+                    }
                 }
                 composable<Route.DataBackup> {
                     val ctx = androidx.compose.ui.platform.LocalContext.current

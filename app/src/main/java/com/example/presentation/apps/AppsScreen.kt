@@ -64,6 +64,7 @@ fun AppsScreen(
             if (event == Lifecycle.Event.ON_RESUME) {
                 hasAccessibility = PermissionHelper.hasAccessibilityPermission(context)
                 hasOverlay = PermissionHelper.hasOverlayPermission(context)
+                viewModel.syncAndLoad()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -210,9 +211,10 @@ fun AppsScreen(
             }
 
             // Top 320x50 Banner Ad (Visible immediately from the start)
-            item {
+            item(key = "apps_ad_banner_top") {
                 LiquidGlassAdaptiveBanner(
-                    isPremium = userSettings?.isPremiumActive ?: false
+                    isPremium = userSettings?.isPremiumActive ?: false,
+                    slotKey = "banner_top"
                 )
             }
 
@@ -405,9 +407,10 @@ fun AppsScreen(
                 }
 
                 // Native Ad Card
-                item {
+                item(key = "apps_ad_native_main") {
                     LiquidGlassNativeAdCard(
-                        isPremium = userSettings?.isPremiumActive ?: false
+                        isPremium = userSettings?.isPremiumActive ?: false,
+                        slotKey = "native_main"
                     )
                 }
 
@@ -431,17 +434,19 @@ fun AppsScreen(
             }
 
             // Banner Ad
-            item {
+            item(key = "apps_ad_banner_bottom") {
                 LiquidGlassAdaptiveBanner(
-                    isPremium = userSettings?.isPremiumActive ?: false
+                    isPremium = userSettings?.isPremiumActive ?: false,
+                    slotKey = "banner_bottom"
                 )
             }
 
             // Social Bar
-            item {
+            item(key = "apps_ad_social_bar") {
                 AdsterraSocialBar(
                     isPremium = userSettings?.isPremiumActive ?: false,
-                    isFocusActive = userSettings?.isFocusModeActive ?: false
+                    isFocusActive = userSettings?.isFocusModeActive ?: false,
+                    slotKey = "social_bar"
                 )
             }
         }

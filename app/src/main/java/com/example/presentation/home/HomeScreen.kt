@@ -111,9 +111,10 @@ fun HomeScreen(
         }
 
         // 320x50 Fixed Mobile Banner (Prominently placed at top from the beginning)
-        item {
+        item(key = "home_ad_banner_top") {
             LiquidGlassAdaptiveBanner(
-                isPremium = settings?.isPremiumActive ?: false
+                isPremium = settings?.isPremiumActive ?: false,
+                slotKey = "banner_top"
             )
         }
 
@@ -161,9 +162,10 @@ fun HomeScreen(
         }
 
         // Native Ad (Premium users see zero ads)
-        item {
+        item(key = "home_ad_native_main") {
             LiquidGlassNativeAdCard(
-                isPremium = settings?.isPremiumActive ?: false
+                isPremium = settings?.isPremiumActive ?: false,
+                slotKey = "native_main"
             )
         }
 
@@ -205,16 +207,18 @@ fun HomeScreen(
         }
 
         // Bottom 320x50 Banner & Social Bar (Zero for premium)
-        item {
+        item(key = "home_ad_banner_bottom") {
             LiquidGlassAdaptiveBanner(
-                isPremium = settings?.isPremiumActive ?: false
+                isPremium = settings?.isPremiumActive ?: false,
+                slotKey = "banner_bottom"
             )
         }
 
-        item {
+        item(key = "home_ad_social_bar") {
             AdsterraSocialBar(
                 isPremium = settings?.isPremiumActive ?: false,
-                isFocusActive = settings?.isFocusModeActive ?: false
+                isFocusActive = settings?.isFocusModeActive ?: false,
+                slotKey = "social_bar"
             )
         }
     }

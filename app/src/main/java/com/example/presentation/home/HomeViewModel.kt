@@ -10,6 +10,7 @@ import com.example.FocusLockApplication
 import com.example.data.AppRepository
 import com.example.database.AppLimit
 import com.example.database.DailyUsage
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -43,11 +45,11 @@ class HomeViewModel(
 
     fun syncUsageData() {
         _currentDateFlow.value = getTodayDateString()
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 // 1. Sync historical data to database
                 com.example.util.UsageStatsHelper.syncHistoricalUsageToDatabase(getApplication(), repository, 7)
-                // 2. Query today's live screen time summary directly so Home and Stats are in exact alignment
+                // 2. Query today's live screen time summary directly off the main thread
                 val limits = repository.allLimits.first()
                 val summary = com.example.util.UsageStatsHelper.getScreenTimeSummary(getApplication(), com.example.util.UsageTimeRange.TODAY, limits)
                 _realtimeTotalMinutes.value = summary.totalScreenTimeMinutes
@@ -68,10 +70,13 @@ class HomeViewModel(
             repository.allLimits,
             repository.getUsageForDate(today)
         ) { limits, usageList ->
+            val usageMap = usageList
+                .groupBy { it.packageName }
+                .mapValues { (_, list) -> list.maxOfOrNull { it.usedMinutes } ?: 0 }
             limits.map { limit ->
-                val usage = usageList.find { it.packageName == limit.packageName }?.usedMinutes ?: 0
+                val usage = usageMap[limit.packageName] ?: 0
                 
-                // Always retrieve real original device app name directly from PackageManager
+                // Always retrieve real original device app name directly from PackageManager on IO thread
                 val appName = try {
                     val appInfo = packageManager.getApplicationInfo(limit.packageName, 0)
                     packageManager.getApplicationLabel(appInfo).toString()
@@ -88,7 +93,7 @@ class HomeViewModel(
                 )
             }.sortedByDescending { it.usedMinutes }
         }
-    }.stateIn(
+    }.flowOn(Dispatchers.IO).stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
@@ -100,7 +105,10 @@ class HomeViewModel(
             repository.getUsageForDate(today),
             _realtimeTotalMinutes
         ) { limits, allTodayUsage, liveTotalMinutes ->
-            val dbTotalToday = allTodayUsage.sumOf { it.usedMinutes }
+            val dbTotalToday = allTodayUsage
+                .groupBy { it.packageName }
+                .values
+                .sumOf { list -> list.maxOfOrNull { it.usedMinutes } ?: 0 }
             val totalTodayScreenTime = liveTotalMinutes ?: dbTotalToday
             val totalLimit = limits.sumOf { it.dailyLimitMinutes }
             val totalUsedOnLimitedApps = limits.sumOf { it.usedMinutes }

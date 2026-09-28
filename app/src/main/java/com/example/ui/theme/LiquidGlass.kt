@@ -4,6 +4,8 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.os.BatteryManager
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.*
@@ -36,8 +38,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
@@ -45,12 +49,15 @@ import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
+import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -983,8 +990,45 @@ private val staticOceanBubbles = listOf(
 )
 
 /**
+ * Process-wide thread-safe cache for decoded wallpaper ImageBitmaps.
+ * Decodes off the UI thread on Dispatchers.IO so MainActivity window sync (SurfaceSyncGroup)
+ * never stalls waiting for large PNG decoding.
+ */
+private val wallpaperBitmapCache = ConcurrentHashMap<String, ImageBitmap>()
+
+@Composable
+private fun rememberCachedWallpaperBitmap(
+    context: Context,
+    @DrawableRes drawableRes: Int,
+    isThumbnail: Boolean
+): ImageBitmap? {
+    val cacheKey = "${drawableRes}_${if (isThumbnail) "thumb" else "full"}"
+    var bitmap by remember(cacheKey) { mutableStateOf(wallpaperBitmapCache[cacheKey]) }
+
+    if (bitmap == null) {
+        LaunchedEffect(cacheKey) {
+            val decoded = withContext(Dispatchers.IO) {
+                wallpaperBitmapCache[cacheKey] ?: runCatching {
+                    val options = BitmapFactory.Options().apply {
+                        inSampleSize = if (isThumbnail) 4 else 2
+                        inPreferredConfig = Bitmap.Config.RGB_565
+                    }
+                    BitmapFactory.decodeResource(context.resources, drawableRes, options)?.asImageBitmap()
+                }.getOrNull()?.also { img ->
+                    wallpaperBitmapCache[cacheKey] = img
+                }
+            }
+            if (decoded != null) {
+                bitmap = decoded
+            }
+        }
+    }
+    return bitmap
+}
+
+/**
  * Observes real-time device battery level and returns true ONLY when battery is below 20%.
- * Ensures animations always run smoothly unless battery charge drops under 20%.
+ * Avoids synchronous Binder IPC during initial composition so MainActivity startup never blocks.
  */
 @Composable
 private fun rememberIsBatteryBelow20Percent(context: Context): Boolean {
@@ -1006,23 +1050,25 @@ private fun rememberIsBatteryBelow20Percent(context: Context): Boolean {
         }
     }
 
-    var isBelow20 by remember {
-        val stickyIntent = runCatching {
-            context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-        }.getOrNull()
-        mutableStateOf(checkBatteryBelow20(stickyIntent))
+    var isBelow20 by remember { mutableStateOf(false) }
+
+    LaunchedEffect(context) {
+        isBelow20 = withContext(Dispatchers.IO) {
+            checkBatteryBelow20(null)
+        }
     }
 
     DisposableEffect(context) {
+        val appContext = context.applicationContext
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(ctx: Context?, intent: Intent?) {
                 isBelow20 = checkBatteryBelow20(intent)
             }
         }
         val filter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
-        runCatching { context.registerReceiver(receiver, filter) }
+        runCatching { appContext.registerReceiver(receiver, filter) }
         onDispose {
-            runCatching { context.unregisterReceiver(receiver) }
+            runCatching { appContext.unregisterReceiver(receiver) }
         }
     }
 
@@ -1033,7 +1079,8 @@ private fun rememberIsBatteryBelow20Percent(context: Context): Boolean {
  * Shared animated canvas for rendering the living wallpaper with physics-based particles,
  * falling petals, autumn leaves, cyber rain, aurora waves, or ocean bubbles.
  *
- * - Runs continuously and smoothly at native VSYNC frame rate (never stutters, jumps, or gets stuck).
+ * - Reads continuousTime strictly inside .drawBehind {} (Draw Phase only) so Jetpack Compose
+ *   never recomposes the Composable tree on frame ticks and never stalls SurfaceSyncGroup.
  * - Only pauses animation when device battery is strictly below 20%, displaying a beautifully arranged
  *   static composition of leaves/petals over the scenic background.
  */
@@ -1045,12 +1092,15 @@ fun AnimatedThemeCanvas(
 ) {
     val context = LocalContext.current
     val isBatteryLow = rememberIsBatteryBelow20Percent(context)
+    val cachedBitmap = rememberCachedWallpaperBitmap(context, theme.drawableRes, isThumbnail)
 
     // Monotonic continuous time in seconds (curated static arrangement at 4.2s when battery < 20%)
     var continuousTime by remember { mutableFloatStateOf(4.2f) }
 
     LaunchedEffect(isBatteryLow) {
         if (!isBatteryLow) {
+            // Allow initial window SurfaceSyncGroup transaction to complete cleanly first
+            delay(48)
             var lastFrameNanos = 0L
             while (true) {
                 withFrameNanos { frameTimeNanos ->
@@ -1058,7 +1108,6 @@ fun AnimatedThemeCanvas(
                         val deltaSec = ((frameTimeNanos - lastFrameNanos) / 1_000_000_000f)
                             .coerceIn(0f, 0.05f)
                         continuousTime += deltaSec
-                        // Keep float precision high over many hours while avoiding visible wrap
                         if (continuousTime > 86400f) {
                             continuousTime -= 86400f
                         }
@@ -1072,34 +1121,24 @@ fun AnimatedThemeCanvas(
         }
     }
 
-    val driftPhase = (continuousTime * 0.3927f) % (2f * Math.PI.toFloat())
-    val pulseGlow = if (isBatteryLow) {
-        1.0f
-    } else {
-        1.01f + 0.13f * sin((continuousTime * 0.52f).toDouble()).toFloat()
-    }
-    val particleTwinkle = if (isBatteryLow) {
-        0.95f
-    } else {
-        0.70f + 0.30f * sin((continuousTime * 0.90f).toDouble()).toFloat()
-    }
-
     // Reusable Path instance to prevent per-frame object allocations and GC stutters
     val reusablePath = remember { Path() }
 
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(theme.baseGradient.first())
+            .background(Brush.verticalGradient(theme.baseGradient))
     ) {
-        // 1. High-Res Scenic Wallpaper Image (Crisp & Vivid)
-        Image(
-            painter = painterResource(id = theme.drawableRes),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            alpha = if (isThumbnail) 0.95f else 0.90f,
-            modifier = Modifier.fillMaxSize()
-        )
+        // 1. Scenic Wallpaper Image (Decoded off-thread & cached in memory)
+        if (cachedBitmap != null) {
+            Image(
+                bitmap = cachedBitmap,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                alpha = if (isThumbnail) 0.95f else 0.90f,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
 
         // 2. Subtle Atmospheric Vignette Scrim (Underneath particles so leaves/petals shine brightly)
         Box(
@@ -1125,19 +1164,32 @@ fun AnimatedThemeCanvas(
                 )
         )
 
-        // 3. Dynamic Animated Canvas Overlay (Luminous Orbs + Physics Petals/Leaves/Rain/Bubbles)
+        // 3. Dynamic Animated Canvas Overlay (Draw-phase only: zero recomposition overhead)
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .drawBehind {
+                    val t = continuousTime
+                    val driftPhase = (t * 0.3927f) % (2f * Math.PI.toFloat())
+                    val pulseGlow = if (isBatteryLow) {
+                        1.0f
+                    } else {
+                        1.01f + 0.13f * sin((t * 0.52f).toDouble()).toFloat()
+                    }
+                    val particleTwinkle = if (isBatteryLow) {
+                        0.95f
+                    } else {
+                        0.70f + 0.30f * sin((t * 0.90f).toDouble()).toFloat()
+                    }
+
                     val w = size.width
                     val h = size.height
                     val scaleFactor = if (isThumbnail) (w / 360f).coerceIn(0.35f, 1f) else 1f
 
-                    // Undulating ambient lighting glows
+                    // Undulating ambient lighting glows (drawn across full rect so no circle boundary appears)
                     val orb1X = w * (0.82f + 0.10f * cos(driftPhase.toDouble()).toFloat())
                     val orb1Y = h * (0.14f + 0.08f * sin(driftPhase.toDouble()).toFloat())
-                    drawCircle(
+                    drawRect(
                         brush = Brush.radialGradient(
                             colors = theme.orb1Colors,
                             center = Offset(orb1X, orb1Y),
@@ -1147,7 +1199,7 @@ fun AnimatedThemeCanvas(
 
                     val orb2X = w * (0.15f + 0.10f * sin(driftPhase.toDouble()).toFloat())
                     val orb2Y = h * (0.55f + 0.09f * cos(driftPhase.toDouble()).toFloat())
-                    drawCircle(
+                    drawRect(
                         brush = Brush.radialGradient(
                             colors = theme.orb2Colors,
                             center = Offset(orb2X, orb2Y),
@@ -1157,7 +1209,7 @@ fun AnimatedThemeCanvas(
 
                     val orb3X = w * (0.78f + 0.08f * sin((driftPhase + 1.8f).toDouble()).toFloat())
                     val orb3Y = h * (0.88f + 0.06f * cos((driftPhase + 1.8f).toDouble()).toFloat())
-                    drawCircle(
+                    drawRect(
                         brush = Brush.radialGradient(
                             colors = theme.orb3Colors,
                             center = Offset(orb3X, orb3Y),
@@ -1185,13 +1237,6 @@ fun AnimatedThemeCanvas(
 
                                 val pw = petal.width.dp.toPx() * scaleFactor
                                 val ph = petal.height.dp.toPx() * scaleFactor
-
-                                // Soft glowing aura behind each cherry blossom petal
-                                drawCircle(
-                                    color = petal.petalColor.copy(alpha = 0.22f),
-                                    radius = ph * 0.7f,
-                                    center = Offset(px, py)
-                                )
 
                                 rotate(degrees = rotationDeg, pivot = Offset(px, py)) {
                                     scale(scaleX = scaleX, scaleY = 1f, pivot = Offset(px, py)) {
@@ -1247,13 +1292,6 @@ fun AnimatedThemeCanvas(
 
                                 val rotationDeg = leaf.phase * 50f + t * leaf.rotationSpeed
                                 val s = leaf.size.dp.toPx() * scaleFactor
-
-                                // Warm amber glow behind leaf
-                                drawCircle(
-                                    color = leaf.color.copy(alpha = 0.25f),
-                                    radius = s * 0.75f,
-                                    center = Offset(px, py)
-                                )
 
                                 rotate(degrees = rotationDeg, pivot = Offset(px, py)) {
                                     reusablePath.reset()
@@ -1318,13 +1356,6 @@ fun AnimatedThemeCanvas(
                                     end = Offset(px, py),
                                     strokeWidth = streakWidth
                                 )
-
-                                // Glowing raindrop tip
-                                drawCircle(
-                                    color = rain.color.copy(alpha = 0.55f),
-                                    radius = streakWidth * 2.2f,
-                                    center = Offset(px, py)
-                                )
                             }
                         }
 
@@ -1347,24 +1378,28 @@ fun AnimatedThemeCanvas(
 
                             val particles = if (isThumbnail) staticParticles.take(12) else staticParticles
                             particles.forEach { p ->
-                                val particlePhase = driftPhase * p.speed + p.phaseOffset
-                                val offsetY = 18f * sin(particlePhase.toDouble()).toFloat()
-                                val offsetX = 10f * cos(particlePhase.toDouble()).toFloat()
-                                val px = (p.relX * w + offsetX).coerceIn(0f, w)
-                                val py = (p.relY * h + offsetY).coerceIn(0f, h)
+                                val t = continuousTime
+                                val normalizedY = (p.relY + t * (0.04f * p.speed)) % 1.0f
+                                val py = normalizedY * h
+                                val swayPhase = t * p.speed + p.phaseOffset
+                                val px = (p.relX * w + sin(swayPhase.toDouble()).toFloat() * (14f * scaleFactor)).coerceIn(0f, w)
 
-                                val alphaMod = ((sin(particlePhase.toDouble()).toFloat() + 1f) / 2f)
+                                val alphaMod = ((sin(swayPhase.toDouble()).toFloat() + 1f) / 2f)
                                 val alpha = (0.35f + 0.65f * alphaMod) * particleTwinkle
+                                val s = p.baseRadius * 2.2f * scaleFactor
 
-                                drawCircle(
-                                    color = theme.particleColor.copy(alpha = alpha * 0.45f),
-                                    radius = p.baseRadius * 3.0f * scaleFactor,
-                                    center = Offset(px, py)
+                                // Crisp 4-point star sparkle (no outer circle)
+                                drawLine(
+                                    color = theme.particleColor.copy(alpha = alpha * 0.90f),
+                                    start = Offset(px - s, py),
+                                    end = Offset(px + s, py),
+                                    strokeWidth = (1.2f * scaleFactor).dp.toPx()
                                 )
-                                drawCircle(
+                                drawLine(
                                     color = Color.White.copy(alpha = alpha * 0.95f),
-                                    radius = p.baseRadius * 1.1f * scaleFactor,
-                                    center = Offset(px, py)
+                                    start = Offset(px, py - s),
+                                    end = Offset(px, py + s),
+                                    strokeWidth = (1.2f * scaleFactor).dp.toPx()
                                 )
                             }
                         }
@@ -1383,12 +1418,6 @@ fun AnimatedThemeCanvas(
 
                                 val r = bubble.radius.dp.toPx() * scaleFactor
 
-                                // Outer bioluminescent halo
-                                drawCircle(
-                                    color = bubble.color.copy(alpha = 0.25f),
-                                    radius = r * 1.4f,
-                                    center = Offset(px, py)
-                                )
                                 // Bubble rim
                                 drawCircle(
                                     color = Color.White.copy(alpha = 0.65f),
