@@ -13,8 +13,17 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import com.example.navigation.FocusLockApp
 import com.example.ui.theme.FocusLockTheme
 import com.example.util.LocaleHelper
@@ -29,21 +38,45 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        LocaleHelper.getSavedLanguage(this)
         enableEdgeToEdge()
 
         extractShortcutDestination(intent)
         registerDynamicLauncherShortcuts()
 
         setContent {
-            FocusLockTheme(darkTheme = true) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    FocusLockApp(
-                        shortcutDestination = shortcutDestinationState.value,
-                        onShortcutConsumed = { shortcutDestinationState.value = null }
-                    )
+            val currentLanguage by LocaleHelper.languageFlow.collectAsState()
+            val localizedContext = remember(currentLanguage) {
+                LocaleHelper.createLocalizedContextWrapper(this@MainActivity, currentLanguage)
+            }
+            val localizedConfiguration = remember(currentLanguage, localizedContext) {
+                localizedContext.resources.configuration
+            }
+            val layoutDirection = if (currentLanguage == "ar") {
+                LayoutDirection.Rtl
+            } else {
+                LayoutDirection.Ltr
+            }
+
+            LaunchedEffect(currentLanguage) {
+                registerDynamicLauncherShortcuts(localizedContext)
+            }
+
+            CompositionLocalProvider(
+                LocalContext provides localizedContext,
+                LocalConfiguration provides localizedConfiguration,
+                LocalLayoutDirection provides layoutDirection
+            ) {
+                FocusLockTheme(darkTheme = true) {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background
+                    ) {
+                        FocusLockApp(
+                            shortcutDestination = shortcutDestinationState.value,
+                            onShortcutConsumed = { shortcutDestinationState.value = null }
+                        )
+                    }
                 }
             }
         }
@@ -70,9 +103,9 @@ class MainActivity : ComponentActivity() {
 
     /**
      * Registers launcher long-press shortcuts dynamically (in addition to static xml/shortcuts.xml)
-     * so every launcher (MIUI, OneUI, Pixel, etc.) displays the 4 quick actions with crisp icons.
+     * so every launcher displays the 4 quick actions with localized labels.
      */
-    private fun registerDynamicLauncherShortcuts() {
+    private fun registerDynamicLauncherShortcuts(resContext: Context = this) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N_MR1) return
         try {
             val shortcutManager = getSystemService(ShortcutManager::class.java) ?: return
@@ -92,8 +125,8 @@ class MainActivity : ComponentActivity() {
                 }
                 return ShortcutInfo.Builder(this, id)
                     .setRank(rank)
-                    .setShortLabel(getString(shortLabelRes))
-                    .setLongLabel(getString(longLabelRes))
+                    .setShortLabel(resContext.getString(shortLabelRes))
+                    .setLongLabel(resContext.getString(longLabelRes))
                     .setIcon(Icon.createWithResource(this, iconRes))
                     .setIntent(shortcutIntent)
                     .build()

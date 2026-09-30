@@ -16,24 +16,24 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.GppMaybe
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -50,12 +50,16 @@ import com.example.ads.LiquidGlassNativeAdCard
 import com.example.database.UserSettings
 import com.example.database.isPremiumActive
 import com.example.presentation.common.FocusStreakMilestonesCard
+import com.example.service.AppMonitorService
+import com.example.ui.theme.FocusLockSemanticColors
 import com.example.ui.theme.GlassButton
 import com.example.ui.theme.GlassButtonStyle
 import com.example.ui.theme.GlassEmptyState
 import com.example.ui.theme.GlassIconBubble
+import com.example.ui.theme.GlassProgressBar
 import com.example.ui.theme.GlassSectionHeader
 import com.example.ui.theme.GlassStatusBadge
+import com.example.ui.theme.SemanticTone
 import com.example.ui.theme.liquidGlass
 import com.example.util.PermissionHelper
 
@@ -73,31 +77,54 @@ fun HomeScreen(
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val semantic = FocusLockSemanticColors
+
     val settings by viewModel.userSettings.collectAsStateWithLifecycle()
     val limits by viewModel.limitsWithUsage.collectAsStateWithLifecycle()
     val stats by viewModel.statsSummary.collectAsStateWithLifecycle()
     val milestoneInfo by viewModel.milestoneInfo.collectAsStateWithLifecycle()
 
     var editingLimit by remember { mutableStateOf<AppLimitUIModel?>(null) }
+    var pendingEditPackage by rememberSaveable { mutableStateOf<String?>(null) }
 
-    var isAccessibilityActive by remember {
-        mutableStateOf(PermissionHelper.hasAccessibilityPermission(context))
-    }
-    var isOverlayActive by remember {
-        mutableStateOf(PermissionHelper.hasOverlayPermission(context))
+    var hasUsageAccess by remember { mutableStateOf(PermissionHelper.hasUsageAccess(context)) }
+    var isAccessibilityActive by remember { mutableStateOf(PermissionHelper.hasAccessibilityPermission(context)) }
+    var isOverlayActive by remember { mutableStateOf(PermissionHelper.hasOverlayPermission(context)) }
+
+    val allRequiredPermissionsGranted = hasUsageAccess && isAccessibilityActive && isOverlayActive
+    val missingPermissionNames = remember(hasUsageAccess, isAccessibilityActive, isOverlayActive) {
+        PermissionHelper.getMissingRequiredPermissionNames(context)
     }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
+                hasUsageAccess = PermissionHelper.hasUsageAccess(context)
                 isAccessibilityActive = PermissionHelper.hasAccessibilityPermission(context)
                 isOverlayActive = PermissionHelper.hasOverlayPermission(context)
+                if (hasUsageAccess && isAccessibilityActive && isOverlayActive) {
+                    AppMonitorService.startService(context)
+                }
                 viewModel.syncUsageData()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    // Automatically resume editing the selected limit once all required permissions are granted
+    LaunchedEffect(allRequiredPermissionsGranted, limits, pendingEditPackage) {
+        if (allRequiredPermissionsGranted) {
+            val pkg = pendingEditPackage
+            if (pkg != null && limits.isNotEmpty()) {
+                val found = limits.find { it.packageName == pkg }
+                if (found != null) {
+                    pendingEditPackage = null
+                    editingLimit = found
+                }
+            }
         }
     }
 
@@ -125,19 +152,20 @@ fun HomeScreen(
             )
         }
 
-        // Primary Hero Action: Quick Focus Session
+        // Primary Hero Action: Quick Focus Session (Blue/Teal active focus psychology)
         item {
             PrimaryFocusActionCard(
                 onStartFocus = { onNavigateToFocus?.invoke() }
             )
         }
 
-        // 3-4 Core Metrics Dashboard
+        // 4 Core Metrics Dashboard with Context-Based Color Psychology
         item {
             CoreMetricsSection(
                 settings = settings,
                 stats = stats,
                 limits = limits,
+                allRequiredPermissionsGranted = allRequiredPermissionsGranted,
                 onNavigateToStats = onNavigateToStats,
                 onNavigateToApps = onNavigateToApps
             )
@@ -151,12 +179,15 @@ fun HomeScreen(
             )
         }
 
-        // Permission Banner (only if needed or compact)
-        if (!isAccessibilityActive || !isOverlayActive) {
+        // Permission Status Banner when any of the 3 required permissions is missing
+        if (!allRequiredPermissionsGranted) {
             item {
                 ProtectionStatusBanner(
                     isAccessibilityActive = isAccessibilityActive,
                     isOverlayActive = isOverlayActive,
+                    hasUsageAccess = hasUsageAccess,
+                    hasConfiguredLimits = limits.isNotEmpty(),
+                    missingNames = missingPermissionNames,
                     onOpenPermissionCenter = onNavigateToPermissions,
                     onEnableAccessibility = {
                         try {
@@ -176,7 +207,7 @@ fun HomeScreen(
             }
         }
 
-        // Native Ad (Premium users see zero ads)
+        // 1:1 Square Native Banner Ad (Premium users see zero ads)
         item(key = "home_ad_native_main") {
             LiquidGlassNativeAdCard(
                 isPremium = settings?.isPremiumActive ?: false,
@@ -193,8 +224,17 @@ fun HomeScreen(
             ) {
                 GlassSectionHeader(
                     title = stringResource(R.string.active_limits),
-                    subtitle = "${limits.size} ${stringResource(R.string.monitored_suffix)}",
-                    isCritical = true
+                    subtitle = if (!allRequiredPermissionsGranted && limits.isNotEmpty()) {
+                        "${limits.size} saved • Enforcement paused (permissions missing)"
+                    } else {
+                        "${limits.size} ${stringResource(R.string.monitored_suffix)}"
+                    },
+                    semanticTone = when {
+                        !allRequiredPermissionsGranted && limits.isNotEmpty() -> SemanticTone.RED
+                        limits.any { it.remainingMinutes <= 0 } -> SemanticTone.RED
+                        limits.isNotEmpty() -> SemanticTone.GREEN
+                        else -> SemanticTone.INFO
+                    }
                 )
                 if (limits.isNotEmpty()) {
                     GlassButton(
@@ -212,10 +252,18 @@ fun HomeScreen(
                 EmptyLimitsCard(onNavigateToApps = onNavigateToApps)
             }
         } else {
-            items(limits) { limit ->
+            items(limits, key = { it.packageName }) { limit ->
                 AppLimitCard(
                     limit = limit,
-                    onEditClick = { editingLimit = limit },
+                    arePermissionsGranted = allRequiredPermissionsGranted,
+                    onEditClick = {
+                        if (PermissionHelper.areAllRequiredPermissionsGranted(context)) {
+                            editingLimit = limit
+                        } else {
+                            pendingEditPackage = limit.packageName
+                            onNavigateToPermissions?.invoke()
+                        }
+                    },
                     onDeleteClick = { viewModel.removeLimit(limit.packageName) }
                 )
             }
@@ -243,8 +291,13 @@ fun HomeScreen(
             limit = limit,
             onDismiss = { editingLimit = null },
             onConfirm = { minutes ->
-                viewModel.updateLimit(limit.packageName, limit.appName, minutes)
                 editingLimit = null
+                if (PermissionHelper.areAllRequiredPermissionsGranted(context)) {
+                    viewModel.updateLimit(limit.packageName, limit.appName, minutes)
+                } else {
+                    pendingEditPackage = limit.packageName
+                    onNavigateToPermissions?.invoke()
+                }
             }
         )
     }
@@ -256,6 +309,8 @@ private fun HeaderSection(
     onNavigateToSettings: (() -> Unit)? = null,
     onStreakClick: (() -> Unit)? = null
 ) {
+    val semantic = FocusLockSemanticColors
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -270,14 +325,14 @@ private fun HeaderSection(
                     fontWeight = FontWeight.ExtraBold,
                     fontSize = 28.sp
                 ),
-                color = Color.White
+                color = semantic.textPrimary
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
                         .size(6.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF24DFEC))
+                        .background(semantic.info.primary)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
@@ -287,7 +342,7 @@ private fun HeaderSection(
                         letterSpacing = 1.2.sp,
                         fontSize = 11.sp
                     ),
-                    color = Color(0xFF24DFEC)
+                    color = semantic.info.text
                 )
             }
         }
@@ -296,12 +351,12 @@ private fun HeaderSection(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Streak Flame Chip
+            // Streak Flame Chip (Amber/Orange warm energy badge)
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(16.dp))
-                    .background(Color(0xE6281C0E))
-                    .border(1.dp, Color(0x88FFAB00), RoundedCornerShape(16.dp))
+                    .background(semantic.amber.container)
+                    .border(1.dp, semantic.amber.border, RoundedCornerShape(16.dp))
                     .clickable(enabled = onStreakClick != null) { onStreakClick?.invoke() }
                     .padding(horizontal = 12.dp, vertical = 6.dp)
             ) {
@@ -312,13 +367,13 @@ private fun HeaderSection(
                     Icon(
                         imageVector = Icons.Default.LocalFireDepartment,
                         contentDescription = "Streak",
-                        tint = Color(0xFFFFAB00),
+                        tint = semantic.amber.primary,
                         modifier = Modifier.size(17.dp)
                     )
                     Text(
                         text = "${settings?.currentStreak ?: 0}d",
                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                        color = Color(0xFFFFAB00)
+                        color = semantic.amber.text
                     )
                 }
             }
@@ -330,12 +385,12 @@ private fun HeaderSection(
                         .size(40.dp)
                         .clip(CircleShape)
                         .background(Color(0xE6142238))
-                        .border(1.dp, Color.White.copy(alpha = 0.16f), CircleShape)
+                        .border(1.dp, semantic.outlineSubtle, CircleShape)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Settings,
                         contentDescription = "Settings",
-                        tint = Color(0xFFF8FAFC),
+                        tint = semantic.textPrimary,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -346,13 +401,16 @@ private fun HeaderSection(
 
 @Composable
 private fun PrimaryFocusActionCard(onStartFocus: () -> Unit) {
+    val semantic = FocusLockSemanticColors
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .liquidGlass(
                 shape = RoundedCornerShape(26.dp),
                 isElevated = true,
-                isHighlight = true
+                isHighlight = true,
+                semanticTone = SemanticTone.INFO
             )
             .clickable { onStartFocus() }
             .padding(18.dp)
@@ -371,7 +429,7 @@ private fun PrimaryFocusActionCard(onStartFocus: () -> Unit) {
                     icon = Icons.Default.PlayArrow,
                     size = 50.dp,
                     iconSize = 28.dp,
-                    isHighlight = true
+                    semanticTone = SemanticTone.INFO
                 )
 
                 Column {
@@ -381,13 +439,13 @@ private fun PrimaryFocusActionCard(onStartFocus: () -> Unit) {
                             fontWeight = FontWeight.Bold,
                             fontSize = 17.sp
                         ),
-                        color = Color.White
+                        color = semantic.textPrimary
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = "Zero distractions. Pure flow state ✨",
                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
-                        color = Color.White.copy(alpha = 0.72f)
+                        color = semantic.textSecondary
                     )
                 }
             }
@@ -409,16 +467,18 @@ private fun CoreMetricsSection(
     settings: UserSettings?,
     stats: StatsSummary,
     limits: List<AppLimitUIModel>,
+    allRequiredPermissionsGranted: Boolean = true,
     onNavigateToStats: (() -> Unit)? = null,
     onNavigateToApps: (() -> Unit)? = null
 ) {
-    // 4 Clean Core Metrics
+    val semantic = FocusLockSemanticColors
+
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Metric 1: Today's Usage
+            // Metric 1: Today's Usage (Neutral / Informational)
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -434,7 +494,7 @@ private fun CoreMetricsSection(
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 0.8.sp
                         ),
-                        color = Color.White.copy(alpha = 0.65f)
+                        color = semantic.textSecondary
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
@@ -443,16 +503,20 @@ private fun CoreMetricsSection(
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 22.sp
                         ),
-                        color = Color.White
+                        color = semantic.textPrimary
                     )
                 }
             }
 
-            // Metric 2: Focus Score
+            // Metric 2: Focus Score (Blue/Teal active focus metric)
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .liquidGlass(shape = RoundedCornerShape(22.dp), isHighlight = true)
+                    .liquidGlass(
+                        shape = RoundedCornerShape(22.dp),
+                        isHighlight = true,
+                        semanticTone = SemanticTone.INFO
+                    )
                     .clickable { onNavigateToStats?.invoke() }
                     .padding(16.dp)
             ) {
@@ -464,7 +528,7 @@ private fun CoreMetricsSection(
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 0.8.sp
                         ),
-                        color = Color.White.copy(alpha = 0.65f)
+                        color = semantic.textSecondary
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
@@ -473,7 +537,7 @@ private fun CoreMetricsSection(
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 22.sp
                         ),
-                        color = Color(0xFF24DFEC)
+                        color = semantic.info.primary
                     )
                 }
             }
@@ -483,11 +547,14 @@ private fun CoreMetricsSection(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Metric 3: Time Saved
+            // Metric 3: Time Saved (Green positive achievement metric)
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .liquidGlass(shape = RoundedCornerShape(22.dp))
+                    .liquidGlass(
+                        shape = RoundedCornerShape(22.dp),
+                        semanticTone = SemanticTone.GREEN
+                    )
                     .clickable { onNavigateToStats?.invoke() }
                     .padding(16.dp)
             ) {
@@ -499,7 +566,7 @@ private fun CoreMetricsSection(
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 0.8.sp
                         ),
-                        color = Color.White.copy(alpha = 0.65f)
+                        color = semantic.green.text
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
@@ -508,7 +575,7 @@ private fun CoreMetricsSection(
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 22.sp
                         ),
-                        color = Color(0xFF24DFEC)
+                        color = semantic.green.text
                     )
                 }
             }
@@ -516,22 +583,43 @@ private fun CoreMetricsSection(
             // Metric 4: Active Limits & Real Blocked Apps
             val activeLimits = limits.filter { it.isEnabled }
             val blockedCount = activeLimits.count { it.remainingMinutes <= 0 }
+            val isPausedByPermissions = activeLimits.isNotEmpty() && !allRequiredPermissionsGranted
+
+            val metric4Tone: SemanticTone? = when {
+                isPausedByPermissions -> SemanticTone.RED
+                blockedCount > 0 -> SemanticTone.RED
+                activeLimits.isNotEmpty() -> SemanticTone.GREEN
+                else -> null
+            }
+
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .liquidGlass(shape = RoundedCornerShape(22.dp), isHighlight = blockedCount > 0)
+                    .liquidGlass(
+                        shape = RoundedCornerShape(22.dp),
+                        isHighlight = blockedCount > 0 || isPausedByPermissions,
+                        semanticTone = metric4Tone
+                    )
                     .clickable { onNavigateToApps?.invoke() }
                     .padding(16.dp)
             ) {
                 Column {
                     Text(
-                        text = if (blockedCount > 0) "BLOCKED NOW" else "ACTIVE LIMITS",
+                        text = when {
+                            isPausedByPermissions -> "LIMITS PAUSED"
+                            blockedCount > 0 -> "BLOCKED NOW"
+                            else -> "ACTIVE LIMITS"
+                        },
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 0.8.sp
                         ),
-                        color = if (blockedCount > 0) Color(0xFFFF5252) else Color.White.copy(alpha = 0.65f)
+                        color = when {
+                            isPausedByPermissions || blockedCount > 0 -> semantic.red.text
+                            activeLimits.isNotEmpty() -> semantic.green.text
+                            else -> semantic.textSecondary
+                        }
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Row(
@@ -544,15 +632,23 @@ private fun CoreMetricsSection(
                                 fontWeight = FontWeight.ExtraBold,
                                 fontSize = 22.sp
                             ),
-                            color = if (blockedCount > 0) Color(0xFFFF5252) else Color.White
+                            color = when {
+                                isPausedByPermissions || blockedCount > 0 -> semantic.red.text
+                                activeLimits.isNotEmpty() -> semantic.green.text
+                                else -> semantic.textPrimary
+                            }
                         )
                         Text(
-                            text = if (blockedCount > 0) "of ${activeLimits.size}" else "monitored",
+                            text = when {
+                                isPausedByPermissions -> "missing perm"
+                                blockedCount > 0 -> "of ${activeLimits.size}"
+                                else -> "monitored"
+                            },
                             style = MaterialTheme.typography.bodySmall.copy(
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Medium
                             ),
-                            color = Color.White.copy(alpha = 0.55f),
+                            color = semantic.textSecondary,
                             modifier = Modifier.padding(bottom = 2.dp)
                         )
                     }
@@ -576,18 +672,31 @@ private fun EmptyLimitsCard(onNavigateToApps: (() -> Unit)? = null) {
 @Composable
 private fun AppLimitCard(
     limit: AppLimitUIModel,
+    arePermissionsGranted: Boolean = true,
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit
 ) {
+    val semantic = FocusLockSemanticColors
     val isExceeded = limit.remainingMinutes <= 0
     val progress = limit.progress.coerceIn(0f, 1f)
+    val isApproaching = !isExceeded && progress >= 0.75f
+    val isEnforcementPaused = !arePermissionsGranted
+
     val animatedProgress by animateFloatAsState(
         targetValue = progress,
         animationSpec = tween(durationMillis = 400),
         label = "progress"
     )
 
-    val progressColor = if (isExceeded) Color(0xFFFF5252) else Color(0xFF24DFEC)
+    // Semantic Tone per limit state:
+    // - RED: Enforcement paused due to revoked/missing permissions OR limit expired/blocked
+    // - AMBER: Approaching time limit (>= 75% used)
+    // - GREEN: Healthy active limit (< 75% used)
+    val cardTone = when {
+        isEnforcementPaused || isExceeded -> SemanticTone.RED
+        isApproaching -> SemanticTone.AMBER
+        else -> SemanticTone.GREEN
+    }
 
     Box(
         modifier = Modifier
@@ -595,7 +704,8 @@ private fun AppLimitCard(
             .liquidGlass(
                 shape = RoundedCornerShape(22.dp),
                 isElevated = false,
-                isHighlight = isExceeded
+                isHighlight = isExceeded || isEnforcementPaused,
+                semanticTone = cardTone
             )
             .padding(16.dp)
     ) {
@@ -619,25 +729,38 @@ private fun AppLimitCard(
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp
                         ),
-                        color = Color.White
+                        color = semantic.textPrimary
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = stringResource(R.string.used_format, limit.usedMinutes, limit.dailyLimitMinutes),
+                        text = if (isEnforcementPaused) {
+                            "Saved (${limit.dailyLimitMinutes}m) • Enforcement paused until permissions granted"
+                        } else {
+                            stringResource(R.string.used_format, limit.usedMinutes, limit.dailyLimitMinutes)
+                        },
                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.5.sp),
-                        color = Color.White.copy(alpha = 0.65f)
+                        color = when {
+                            isEnforcementPaused || isExceeded -> semantic.red.text
+                            isApproaching -> semantic.amber.text
+                            else -> semantic.textSecondary
+                        }
                     )
                 }
 
-                val statusText = if (isExceeded) {
-                    stringResource(R.string.blocked_status)
-                } else {
-                    stringResource(R.string.min_left, limit.remainingMinutes)
+                val statusText = when {
+                    isEnforcementPaused -> "PAUSED"
+                    isExceeded -> stringResource(R.string.blocked_status)
+                    else -> stringResource(R.string.min_left, limit.remainingMinutes)
                 }
 
                 GlassStatusBadge(
                     text = statusText,
-                    isWarning = isExceeded
+                    semanticTone = cardTone,
+                    icon = when (cardTone) {
+                        SemanticTone.RED -> Icons.Default.ErrorOutline
+                        SemanticTone.AMBER -> Icons.Default.WarningAmber
+                        else -> Icons.Default.CheckCircle
+                    }
                 )
 
                 Spacer(modifier = Modifier.width(4.dp))
@@ -649,7 +772,7 @@ private fun AppLimitCard(
                     Icon(
                         imageVector = Icons.Default.Edit,
                         contentDescription = "Edit Limit",
-                        tint = Color(0xFF24DFEC),
+                        tint = semantic.info.primary,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -661,29 +784,18 @@ private fun AppLimitCard(
                     Icon(
                         imageVector = Icons.Default.Delete,
                         contentDescription = "Remove Limit",
-                        tint = Color(0xFFFF5252).copy(alpha = 0.85f),
+                        tint = semantic.red.primary.copy(alpha = 0.90f),
                         modifier = Modifier.size(18.dp)
                     )
                 }
             }
 
-            // Clean recessed progress bar
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(7.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFF09111E))
-                    .border(0.5.dp, Color.White.copy(alpha = 0.12f), CircleShape)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(animatedProgress)
-                        .fillMaxHeight()
-                        .clip(CircleShape)
-                        .background(progressColor)
-                )
-            }
+            // Semantic progress bar (Green -> Amber -> Red)
+            GlassProgressBar(
+                progress = animatedProgress,
+                height = 7.dp,
+                semanticTone = cardTone
+            )
         }
     }
 }
@@ -694,18 +806,19 @@ private fun EditLimitDialog(
     onDismiss: () -> Unit,
     onConfirm: (Int) -> Unit
 ) {
-    var sliderValue by remember { mutableStateOf(limit.dailyLimitMinutes.toFloat()) }
+    val semantic = FocusLockSemanticColors
+    var sliderValue by remember { mutableStateOf(limit.dailyLimitMinutes.toFloat().coerceAtLeast(5f)) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         shape = RoundedCornerShape(24.dp),
-        containerColor = Color(0xFF101C2E),
-        modifier = Modifier.border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(24.dp)),
+        containerColor = semantic.surfaceElevated,
+        modifier = Modifier.border(1.dp, semantic.info.border, RoundedCornerShape(24.dp)),
         title = {
             Text(
                 text = stringResource(R.string.adjust_limit_title, limit.appName),
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                color = Color.White
+                color = semantic.textPrimary
             )
         },
         text = {
@@ -713,7 +826,7 @@ private fun EditLimitDialog(
                 Text(
                     text = stringResource(R.string.daily_allowance, sliderValue.toInt()),
                     style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
-                    color = Color(0xFF00E5FF)
+                    color = semantic.info.primary
                 )
                 Slider(
                     value = sliderValue,
@@ -721,8 +834,8 @@ private fun EditLimitDialog(
                     valueRange = 5f..240f,
                     steps = 46,
                     colors = SliderDefaults.colors(
-                        thumbColor = Color(0xFF00E5FF),
-                        activeTrackColor = Color(0xFF00E5FF),
+                        thumbColor = semantic.info.primary,
+                        activeTrackColor = semantic.info.primary,
                         inactiveTrackColor = Color(0xFF1E2F47)
                     )
                 )
@@ -733,12 +846,12 @@ private fun EditLimitDialog(
                     Text(
                         text = stringResource(R.string.min_5),
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF94A3B8)
+                        color = semantic.textSecondary
                     )
                     Text(
                         text = stringResource(R.string.hours_4),
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF94A3B8)
+                        color = semantic.textSecondary
                     )
                 }
             }
@@ -747,7 +860,7 @@ private fun EditLimitDialog(
             GlassButton(
                 onClick = { onConfirm(sliderValue.toInt()) },
                 text = stringResource(R.string.save),
-                style = GlassButtonStyle.PRIMARY
+                style = GlassButtonStyle.SUCCESS
             )
         },
         dismissButton = {
@@ -764,19 +877,34 @@ private fun EditLimitDialog(
 fun ProtectionStatusBanner(
     isAccessibilityActive: Boolean,
     isOverlayActive: Boolean,
+    hasUsageAccess: Boolean = true,
+    hasConfiguredLimits: Boolean = false,
+    missingNames: List<String> = emptyList(),
     onOpenPermissionCenter: (() -> Unit)? = null,
     onEnableAccessibility: () -> Unit,
     onEnableOverlay: () -> Unit
 ) {
-    val isFullyActive = isAccessibilityActive && isOverlayActive
-    val bannerColor = if (isFullyActive) Color(0xFF24DFEC) else Color(0xFFFF5252)
+    val semantic = FocusLockSemanticColors
+    val isFullyActive = isAccessibilityActive && isOverlayActive && hasUsageAccess
+
+    // Semantic Tone:
+    // - GREEN when all required permissions are active
+    // - RED when user has configured limits and a required permission is missing/revoked
+    // - AMBER when permissions are pending initial setup
+    val bannerTone = when {
+        isFullyActive -> SemanticTone.GREEN
+        hasConfiguredLimits -> SemanticTone.RED
+        else -> SemanticTone.AMBER
+    }
+    val palette = semantic.forTone(bannerTone)
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .liquidGlass(
                 shape = RoundedCornerShape(22.dp),
-                isHighlight = !isFullyActive
+                isHighlight = !isFullyActive,
+                semanticTone = bannerTone
             )
             .clickable(enabled = onOpenPermissionCenter != null) {
                 onOpenPermissionCenter?.invoke()
@@ -788,38 +916,42 @@ fun ProtectionStatusBanner(
             verticalAlignment = Alignment.CenterVertically
         ) {
             GlassIconBubble(
-                icon = if (isFullyActive) Icons.Default.Shield else Icons.Default.WarningAmber,
+                icon = when {
+                    isFullyActive -> Icons.Default.Shield
+                    hasConfiguredLimits -> Icons.Default.GppMaybe
+                    else -> Icons.Default.WarningAmber
+                },
                 size = 46.dp,
                 iconSize = 24.dp,
-                isHighlight = isFullyActive
+                semanticTone = bannerTone
             )
 
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = if (isFullyActive) {
-                        stringResource(R.string.active_protection)
-                    } else {
-                        stringResource(R.string.protection_limited)
+                    text = when {
+                        isFullyActive -> stringResource(R.string.active_protection)
+                        hasConfiguredLimits -> "Enforcement Paused • Permission Missing"
+                        else -> stringResource(R.string.protection_limited)
                     },
                     style = MaterialTheme.typography.titleSmall.copy(
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.ExtraBold,
                         fontSize = 15.sp
                     ),
-                    color = Color.White
+                    color = palette.accent
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = if (isFullyActive) {
-                        stringResource(R.string.protection_active_desc)
-                    } else if (!isAccessibilityActive) {
-                        stringResource(R.string.accessibility_needed_desc)
-                    } else {
-                        stringResource(R.string.overlay_needed_desc)
+                    text = when {
+                        isFullyActive -> stringResource(R.string.protection_active_desc)
+                        missingNames.isNotEmpty() ->
+                            "Missing: ${missingNames.joinToString(", ")}. Tap to grant required permissions."
+                        !isAccessibilityActive -> stringResource(R.string.accessibility_needed_desc)
+                        else -> stringResource(R.string.overlay_needed_desc)
                     },
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.5.sp),
-                    color = Color.White.copy(alpha = 0.72f)
+                    color = semantic.textPrimary.copy(alpha = 0.88f)
                 )
             }
 
@@ -835,8 +967,8 @@ fun ProtectionStatusBanner(
                             onEnableOverlay()
                         }
                     },
-                    text = if (onOpenPermissionCenter != null) "Manage" else stringResource(R.string.enable_btn),
-                    style = GlassButtonStyle.PRIMARY
+                    text = if (onOpenPermissionCenter != null) "Grant" else stringResource(R.string.enable_btn),
+                    style = if (hasConfiguredLimits) GlassButtonStyle.DESTRUCTIVE else GlassButtonStyle.WARNING
                 )
             }
         }

@@ -52,8 +52,9 @@ object PermissionHelper {
                 for (service in enabledServices) {
                     val serviceInfo = service.resolveInfo?.serviceInfo
                     if (serviceInfo != null) {
-                        if (serviceInfo.packageName == context.packageName || 
-                            serviceInfo.name.contains("FocusLockAccessibilityService")) {
+                        if (serviceInfo.packageName == context.packageName ||
+                            serviceInfo.name.contains("FocusLockAccessibilityService")
+                        ) {
                             return true
                         }
                     }
@@ -102,25 +103,16 @@ object PermissionHelper {
         return notificationManager?.isNotificationPolicyAccessGranted == true
     }
 
-    fun hasLocationPermission(context: Context): Boolean {
-        val fine = ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-        val coarse = ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.ACCESS_COARSE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-        return fine || coarse
-    }
-
     fun isIgnoringBatteryOptimizations(context: Context): Boolean {
         val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
         return powerManager?.isIgnoringBatteryOptimizations(context.packageName) == true
     }
 
     /**
-     * Core REQUIRED permissions for app blocking, overlay protection, and usage tracking.
+     * Core REQUIRED permissions for app usage monitoring, limit enforcement, and overlay blocking.
+     * 1. Usage Data Access (PACKAGE_USAGE_STATS)
+     * 2. Accessibility Service (FocusLockAccessibilityService)
+     * 3. Display Over Other Apps (SYSTEM_ALERT_WINDOW)
      */
     fun areAllRequiredPermissionsGranted(context: Context): Boolean {
         return hasUsageAccess(context) && hasOverlayPermission(context) && hasAccessibilityPermission(context)
@@ -128,5 +120,27 @@ object PermissionHelper {
 
     fun areAllCorePermissionsGranted(context: Context): Boolean {
         return areAllRequiredPermissionsGranted(context)
+    }
+
+    /**
+     * Returns the human-readable names of any required app-limit permissions currently missing.
+     */
+    fun getMissingRequiredPermissionNames(context: Context): List<String> {
+        val missing = mutableListOf<String>()
+        if (!hasUsageAccess(context)) missing.add("Usage Data Access")
+        if (!hasAccessibilityPermission(context)) missing.add("Accessibility Service")
+        if (!hasOverlayPermission(context)) missing.add("Display Over Other Apps")
+        return missing
+    }
+
+    /**
+     * Count of granted required permissions out of 3.
+     */
+    fun getGrantedRequiredPermissionCount(context: Context): Int {
+        var count = 0
+        if (hasUsageAccess(context)) count++
+        if (hasAccessibilityPermission(context)) count++
+        if (hasOverlayPermission(context)) count++
+        return count
     }
 }

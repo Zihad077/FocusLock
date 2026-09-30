@@ -81,10 +81,13 @@ object LiquidGlass {
     val GlassSurfaceElevatedDark = Color(0xEB142238) // Elevated card / modal surface (92% opacity)
     val GlassInputSurface = Color(0xD90A121F)        // Search bar / input field recessed surface
 
-    // Primary & Accent Highlights
-    val GlassHighlightCyan = Color(0xFF00E5FF)       // Primary electric cyan
+    // Semantic & Accent Highlights
+    val GlassHighlightCyan = Color(0xFF00E5FF)       // Blue/Teal: Active focus, info, normal interactive
     val GlassHighlightTurquoise = Color(0xFF24DFEC)  // Secondary turquoise accent
-    val GlassHighlightPurple = Color(0xFF9D4EDD)     // Ambient violet accent
+    val GlassHighlightGreen = Color(0xFF10B981)      // Green: Success, completed sessions, achievements, granted
+    val GlassHighlightAmber = Color(0xFFFFAB00)      // Amber/Orange: Cautions, approaching limits, pending
+    val GlassHighlightRed = Color(0xFFFF5252)        // Red: Errors, critical warnings, expired limits, destructive
+    val GlassHighlightPurple = Color(0xFFA855F7)     // Purple: Premium features, exclusive content, special badges
     val GlassHighlightBlue = Color(0xFF2979FF)       // Ambient azure accent
 
     // Subtle Borders & Dividers
@@ -138,32 +141,104 @@ object LiquidGlass {
 /**
  * Primary surface modifier for all cards and containers in FocusLock.
  *
- * Uses a consistent dark navy-charcoal tinted glass surface (86%-92% opacity) so text, icons,
- * and controls remain effortlessly readable over any wallpaper, with a subtle 1dp border
- * and soft top-edge glass sheen.
+ * Supports optional [semanticTone] so cards automatically reflect context-based color psychology
+ * (Red for error/expired/blocked, Green for success/granted, Amber for approaching/pending,
+ * Blue/Teal for active/info, Purple for premium/special, or Neutral).
  */
 fun Modifier.liquidGlass(
     shape: Shape = RoundedCornerShape(22.dp),
     isElevated: Boolean = false,
     isHighlight: Boolean = false,
     alphaMultiplier: Float = 1.0f,
-    borderWidth: Dp = 1.dp
+    borderWidth: Dp = 1.dp,
+    semanticTone: SemanticTone? = null
 ): Modifier {
     val clampedScale = alphaMultiplier.coerceIn(0.85f, 1.10f)
-    val topColor = when {
-        isHighlight -> Color(0xFF13283F).copy(alpha = (0.76f * clampedScale).coerceIn(0.68f, 0.88f))
-        isElevated -> Color(0xFF152338).copy(alpha = (0.80f * clampedScale).coerceIn(0.72f, 0.90f))
-        else -> Color(0xFF101B2D).copy(alpha = (0.72f * clampedScale).coerceIn(0.64f, 0.85f))
+    val effectiveTone = semanticTone ?: if (isHighlight) SemanticTone.INFO else null
+
+    val topColor = when (effectiveTone) {
+        SemanticTone.SUCCESS -> Color(0xFF0D2B24).copy(alpha = (0.78f * clampedScale).coerceIn(0.68f, 0.90f))
+        SemanticTone.WARNING -> Color(0xFF2A1E11).copy(alpha = (0.78f * clampedScale).coerceIn(0.68f, 0.90f))
+        SemanticTone.ERROR -> Color(0xFF2C131B).copy(alpha = (0.78f * clampedScale).coerceIn(0.68f, 0.90f))
+        SemanticTone.PREMIUM -> Color(0xFF221436).copy(alpha = (0.78f * clampedScale).coerceIn(0.68f, 0.90f))
+        SemanticTone.INFO -> Color(0xFF13283F).copy(alpha = (0.76f * clampedScale).coerceIn(0.68f, 0.88f))
+        else -> if (isElevated) {
+            Color(0xFF152338).copy(alpha = (0.80f * clampedScale).coerceIn(0.72f, 0.90f))
+        } else {
+            Color(0xFF101B2D).copy(alpha = (0.72f * clampedScale).coerceIn(0.64f, 0.85f))
+        }
     }
-    val midColor = when {
-        isHighlight -> Color(0xFF0E1F33).copy(alpha = (0.76f * clampedScale).coerceIn(0.68f, 0.88f))
-        isElevated -> Color(0xFF101C2E).copy(alpha = (0.80f * clampedScale).coerceIn(0.72f, 0.90f))
-        else -> Color(0xFF0C1524).copy(alpha = (0.72f * clampedScale).coerceIn(0.64f, 0.85f))
+    val midColor = when (effectiveTone) {
+        SemanticTone.SUCCESS -> Color(0xFF0A221C).copy(alpha = (0.78f * clampedScale).coerceIn(0.68f, 0.90f))
+        SemanticTone.WARNING -> Color(0xFF22170D).copy(alpha = (0.78f * clampedScale).coerceIn(0.68f, 0.90f))
+        SemanticTone.ERROR -> Color(0xFF230F16).copy(alpha = (0.78f * clampedScale).coerceIn(0.68f, 0.90f))
+        SemanticTone.PREMIUM -> Color(0xFF1B102B).copy(alpha = (0.78f * clampedScale).coerceIn(0.68f, 0.90f))
+        SemanticTone.INFO -> Color(0xFF0E1F33).copy(alpha = (0.76f * clampedScale).coerceIn(0.68f, 0.88f))
+        else -> if (isElevated) {
+            Color(0xFF101C2E).copy(alpha = (0.80f * clampedScale).coerceIn(0.72f, 0.90f))
+        } else {
+            Color(0xFF0C1524).copy(alpha = (0.72f * clampedScale).coerceIn(0.64f, 0.85f))
+        }
     }
-    val bottomColor = when {
-        isHighlight -> Color(0xFF0B1828).copy(alpha = (0.78f * clampedScale).coerceIn(0.70f, 0.90f))
-        isElevated -> Color(0xFF0D1726).copy(alpha = (0.82f * clampedScale).coerceIn(0.74f, 0.92f))
-        else -> Color(0xFF09111E).copy(alpha = (0.75f * clampedScale).coerceIn(0.66f, 0.88f))
+    val bottomColor = when (effectiveTone) {
+        SemanticTone.SUCCESS -> Color(0xFF081B16).copy(alpha = (0.80f * clampedScale).coerceIn(0.70f, 0.92f))
+        SemanticTone.WARNING -> Color(0xFF1A120A).copy(alpha = (0.80f * clampedScale).coerceIn(0.70f, 0.92f))
+        SemanticTone.ERROR -> Color(0xFF1B0B11).copy(alpha = (0.80f * clampedScale).coerceIn(0.70f, 0.92f))
+        SemanticTone.PREMIUM -> Color(0xFF150C22).copy(alpha = (0.80f * clampedScale).coerceIn(0.70f, 0.92f))
+        SemanticTone.INFO -> Color(0xFF0B1828).copy(alpha = (0.78f * clampedScale).coerceIn(0.70f, 0.90f))
+        else -> if (isElevated) {
+            Color(0xFF0D1726).copy(alpha = (0.82f * clampedScale).coerceIn(0.74f, 0.92f))
+        } else {
+            Color(0xFF09111E).copy(alpha = (0.75f * clampedScale).coerceIn(0.66f, 0.88f))
+        }
+    }
+
+    val topSheenColor = when (effectiveTone) {
+        SemanticTone.SUCCESS -> Color(0x2410B981)
+        SemanticTone.WARNING -> Color(0x24FFAB00)
+        SemanticTone.ERROR -> Color(0x24FF5252)
+        SemanticTone.PREMIUM -> Color(0x24A855F7)
+        SemanticTone.INFO -> Color(0x2400E5FF)
+        else -> Color(0x12FFFFFF)
+    }
+
+    val borderGradientColors = when (effectiveTone) {
+        SemanticTone.SUCCESS -> listOf(
+            Color(0xFF10B981).copy(alpha = 0.65f),
+            Color(0xFF34D399).copy(alpha = 0.38f),
+            Color.White.copy(alpha = 0.16f),
+            Color(0xFF10B981).copy(alpha = 0.28f)
+        )
+        SemanticTone.WARNING -> listOf(
+            Color(0xFFFFAB00).copy(alpha = 0.65f),
+            Color(0xFFFFB74D).copy(alpha = 0.38f),
+            Color.White.copy(alpha = 0.16f),
+            Color(0xFFFF9100).copy(alpha = 0.28f)
+        )
+        SemanticTone.ERROR -> listOf(
+            Color(0xFFFF5252).copy(alpha = 0.65f),
+            Color(0xFFFF6E6E).copy(alpha = 0.38f),
+            Color.White.copy(alpha = 0.16f),
+            Color(0xFFEF4444).copy(alpha = 0.28f)
+        )
+        SemanticTone.PREMIUM -> listOf(
+            Color(0xFFA855F7).copy(alpha = 0.65f),
+            Color(0xFFC084FC).copy(alpha = 0.38f),
+            Color.White.copy(alpha = 0.16f),
+            Color(0xFF9D4EDD).copy(alpha = 0.28f)
+        )
+        SemanticTone.INFO -> listOf(
+            Color(0xFF00E5FF).copy(alpha = 0.60f),
+            Color(0xFF24DFEC).copy(alpha = 0.35f),
+            Color.White.copy(alpha = 0.16f),
+            Color(0xFF00E5FF).copy(alpha = 0.28f)
+        )
+        else -> listOf(
+            Color.White.copy(alpha = 0.20f),
+            Color(0xFF94A3B8).copy(alpha = 0.12f),
+            Color.White.copy(alpha = 0.07f),
+            Color(0xFF94A3B8).copy(alpha = 0.14f)
+        )
     }
 
     return this
@@ -175,11 +250,10 @@ fun Modifier.liquidGlass(
         )
         .drawWithContent {
             drawContent()
-            // Subtle top glass edge highlight
             drawRect(
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        if (isHighlight) Color(0x2400E5FF) else Color(0x12FFFFFF),
+                        topSheenColor,
                         Color.Transparent
                     ),
                     startY = 0f,
@@ -189,29 +263,11 @@ fun Modifier.liquidGlass(
         }
         .border(
             width = borderWidth,
-            brush = if (isHighlight) {
-                Brush.linearGradient(
-                    colors = listOf(
-                        Color(0xFF00E5FF).copy(alpha = 0.60f),
-                        Color(0xFF24DFEC).copy(alpha = 0.35f),
-                        Color.White.copy(alpha = 0.16f),
-                        Color(0xFF00E5FF).copy(alpha = 0.28f)
-                    ),
-                    start = Offset(0f, 0f),
-                    end = Offset(500f, 500f)
-                )
-            } else {
-                Brush.linearGradient(
-                    colors = listOf(
-                        Color.White.copy(alpha = 0.20f),
-                        Color(0xFF94A3B8).copy(alpha = 0.12f),
-                        Color.White.copy(alpha = 0.07f),
-                        Color(0xFF94A3B8).copy(alpha = 0.14f)
-                    ),
-                    start = Offset(0f, 0f),
-                    end = Offset(500f, 500f)
-                )
-            },
+            brush = Brush.linearGradient(
+                colors = borderGradientColors,
+                start = Offset(0f, 0f),
+                end = Offset(500f, 500f)
+            ),
             shape = shape
         )
 }
@@ -267,6 +323,7 @@ fun LiquidGlassCard(
     shape: Shape = RoundedCornerShape(22.dp),
     isElevated: Boolean = false,
     isHighlight: Boolean = false,
+    semanticTone: SemanticTone? = null,
     onClick: (() -> Unit)? = null,
     content: @Composable BoxScope.() -> Unit
 ) {
@@ -275,7 +332,8 @@ fun LiquidGlassCard(
     val baseModifier = modifier.liquidGlass(
         shape = shape,
         isElevated = isElevated,
-        isHighlight = isHighlight
+        isHighlight = isHighlight,
+        semanticTone = semanticTone
     )
 
     val finalModifier = if (onClick != null) {
@@ -294,17 +352,25 @@ fun LiquidGlassCard(
 }
 
 /**
- * Button styles supported by the global Glass Design System.
+ * Button styles supported by the global Glass Design System, aligned with Context-Based Color Psychology:
+ * - PRIMARY (Blue/Teal): Active focus sessions, informational actions, normal primary CTAs
+ * - SUCCESS (Green): Positive confirmations, completed sessions, granted permissions
+ * - WARNING (Amber/Orange): Cautions, approaching limits, pending setup actions
+ * - DESTRUCTIVE (Red): Errors, critical warnings, removing limits, stopping sessions
+ * - PREMIUM (Purple): Premium features, exclusive content, special achievements
+ * - SECONDARY (Neutral): General secondary actions, cancel/dismiss buttons
  */
 enum class GlassButtonStyle {
-    PRIMARY,     // Bright cyan/turquoise fill with dark navy text
-    SECONDARY,   // Dark navy tinted glass with subtle border and crisp white text
-    WARNING,     // Warm amber tinted glass
-    DESTRUCTIVE  // Crimson tinted glass for irreversible actions
+    PRIMARY,     // Blue/Teal fill with dark navy text
+    SECONDARY,   // Neutral dark navy tinted glass with subtle border and crisp white text
+    SUCCESS,     // Emerald green fill/tinted glass for positive confirmations
+    WARNING,     // Warm amber/orange tinted glass for cautions & pending setup
+    DESTRUCTIVE, // Crimson red tinted glass for destructive/critical actions
+    PREMIUM      // Vibrant purple gradient for premium/exclusive actions
 }
 
 /**
- * Unified Glass Button matching the Permission Center reference design.
+ * Unified Glass Button matching FocusLock's semantic color system.
  */
 @Composable
 fun GlassButton(
@@ -338,26 +404,56 @@ fun GlassButton(
                     )
                 } else {
                     Brush.horizontalGradient(
-                        colors = listOf(Color(0x5500E5FF), Color(0x5524DFEC))
+                        colors = listOf(Color(0x38283A4E), Color(0x38202F42))
+                    )
+                }
+            )
+            .then(
+                if (!enabled) Modifier.border(1.dp, Color.White.copy(alpha = 0.14f), shape)
+                else Modifier
+            )
+        GlassButtonStyle.SUCCESS -> Modifier
+            .background(
+                brush = if (enabled) {
+                    Brush.horizontalGradient(
+                        colors = listOf(Color(0xFF10B981), Color(0xFF34D399))
+                    )
+                } else {
+                    Brush.horizontalGradient(
+                        colors = listOf(Color(0x3810B981), Color(0x3834D399))
                     )
                 }
             )
         GlassButtonStyle.SECONDARY -> Modifier
-            .background(Color(0xE6162438))
-            .border(1.dp, Color.White.copy(alpha = 0.18f), shape)
+            .background(if (enabled) Color(0xE6162438) else Color(0x80121D2E))
+            .border(1.dp, Color.White.copy(alpha = if (enabled) 0.18f else 0.08f), shape)
         GlassButtonStyle.WARNING -> Modifier
-            .background(Color(0xE62B1D10))
+            .background(if (enabled) Color(0xE62B1D10) else Color(0x802B1D10))
             .border(1.dp, Color(0x90FFA726), shape)
         GlassButtonStyle.DESTRUCTIVE -> Modifier
-            .background(Color(0xE62D1219))
+            .background(if (enabled) Color(0xE62D1219) else Color(0x802D1219))
             .border(1.dp, Color(0x90EF4444), shape)
+        GlassButtonStyle.PREMIUM -> Modifier
+            .background(
+                brush = if (enabled) {
+                    Brush.horizontalGradient(
+                        colors = listOf(Color(0xFFA855F7), Color(0xFF7C3AED))
+                    )
+                } else {
+                    Brush.horizontalGradient(
+                        colors = listOf(Color(0x44A855F7), Color(0x447C3AED))
+                    )
+                }
+            )
     }
 
     val textColor = when (style) {
-        GlassButtonStyle.PRIMARY -> if (enabled) Color(0xFF04151F) else Color(0x9904151F)
+        GlassButtonStyle.PRIMARY -> if (enabled) Color(0xFF04151F) else Color(0xFF7E92AA)
+        GlassButtonStyle.SUCCESS -> if (enabled) Color(0xFF032217) else Color(0xFF7E92AA)
         GlassButtonStyle.SECONDARY -> if (enabled) Color(0xFFF8FAFC) else Color(0x80F8FAFC)
-        GlassButtonStyle.WARNING -> Color(0xFFFFB74D)
-        GlassButtonStyle.DESTRUCTIVE -> Color(0xFFFF6E6E)
+        GlassButtonStyle.WARNING -> if (enabled) Color(0xFFFFB74D) else Color(0x88FFB74D)
+        GlassButtonStyle.DESTRUCTIVE -> if (enabled) Color(0xFFFF6E6E) else Color(0x88FF6E6E)
+        GlassButtonStyle.PREMIUM -> if (enabled) Color(0xFFFFFFFF) else Color(0x99FFFFFF)
     }
 
     Box(
@@ -477,7 +573,7 @@ fun LiquidGlassButton(
 }
 
 /**
- * Frosted Glass Circular Icon Bubble (48-50dp).
+ * Frosted Glass Circular Icon Bubble (48-50dp) with SemanticTone support.
  */
 @Composable
 fun GlassIconBubble(
@@ -487,23 +583,41 @@ fun GlassIconBubble(
     iconSize: Dp = 24.dp,
     isHighlight: Boolean = false,
     tint: Color? = null,
+    semanticTone: SemanticTone? = null,
     contentDescription: String? = null
 ) {
-    val effectiveTint = tint ?: if (isHighlight) Color(0xFF00E5FF) else Color(0xFFF1F5F9)
+    val effectiveTone = semanticTone ?: if (isHighlight) SemanticTone.INFO else SemanticTone.NEUTRAL
+    val bgColor = when (effectiveTone) {
+        SemanticTone.SUCCESS -> Color(0x2910B981)
+        SemanticTone.WARNING -> Color(0x29FFAB00)
+        SemanticTone.ERROR -> Color(0x29FF5252)
+        SemanticTone.PREMIUM -> Color(0x29A855F7)
+        SemanticTone.INFO -> Color(0x2600E5FF)
+        SemanticTone.NEUTRAL -> Color(0xE617263B)
+    }
+    val borderColor = when (effectiveTone) {
+        SemanticTone.SUCCESS -> Color(0x7010B981)
+        SemanticTone.WARNING -> Color(0x75FFA726)
+        SemanticTone.ERROR -> Color(0x75FF5252)
+        SemanticTone.PREMIUM -> Color(0x70A855F7)
+        SemanticTone.INFO -> Color(0x6600E5FF)
+        SemanticTone.NEUTRAL -> Color.White.copy(alpha = 0.16f)
+    }
+    val effectiveTint = tint ?: when (effectiveTone) {
+        SemanticTone.SUCCESS -> Color(0xFF34D399)
+        SemanticTone.WARNING -> Color(0xFFFFB74D)
+        SemanticTone.ERROR -> Color(0xFFFF6E6E)
+        SemanticTone.PREMIUM -> Color(0xFFC084FC)
+        SemanticTone.INFO -> Color(0xFF00E5FF)
+        SemanticTone.NEUTRAL -> Color(0xFFF1F5F9)
+    }
+
     Box(
         modifier = modifier
             .size(size)
             .clip(CircleShape)
-            .background(
-                if (isHighlight) Color(0x2600E5FF)
-                else Color(0xE617263B)
-            )
-            .border(
-                1.dp,
-                if (isHighlight) Color(0x6600E5FF)
-                else Color.White.copy(alpha = 0.16f),
-                CircleShape
-            ),
+            .background(bgColor)
+            .border(1.dp, borderColor, CircleShape),
         contentAlignment = Alignment.Center
     ) {
         Icon(
@@ -516,16 +630,25 @@ fun GlassIconBubble(
 }
 
 /**
- * Section Header with cyan/white dot indicator.
+ * Section Header with semantic dot indicator.
  */
 @Composable
 fun GlassSectionHeader(
     title: String,
     subtitle: String? = null,
     isCritical: Boolean = false,
+    semanticTone: SemanticTone? = null,
     modifier: Modifier = Modifier
 ) {
-    val primaryCyan = Color(0xFF00E5FF)
+    val effectiveTone = semanticTone ?: if (isCritical) SemanticTone.INFO else SemanticTone.NEUTRAL
+    val accentColor = when (effectiveTone) {
+        SemanticTone.SUCCESS -> Color(0xFF34D399)
+        SemanticTone.WARNING -> Color(0xFFFFB74D)
+        SemanticTone.ERROR -> Color(0xFFFF6E6E)
+        SemanticTone.PREMIUM -> Color(0xFFC084FC)
+        SemanticTone.INFO -> Color(0xFF00E5FF)
+        SemanticTone.NEUTRAL -> Color(0xFFE2E8F0)
+    }
 
     Column(modifier = modifier.padding(vertical = 4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -533,7 +656,7 @@ fun GlassSectionHeader(
                 modifier = Modifier
                     .size(7.dp)
                     .clip(CircleShape)
-                    .background(if (isCritical) primaryCyan else Color(0xFF38BDF8))
+                    .background(if (effectiveTone == SemanticTone.NEUTRAL) Color(0xFF38BDF8) else accentColor)
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
@@ -543,7 +666,7 @@ fun GlassSectionHeader(
                     letterSpacing = 1.1.sp,
                     fontSize = 12.sp
                 ),
-                color = if (isCritical) primaryCyan else Color(0xFFE2E8F0)
+                color = accentColor
             )
         }
         if (subtitle != null) {
@@ -560,27 +683,47 @@ fun GlassSectionHeader(
 }
 
 /**
- * Status Badge matching SETUP NEEDED / PROTECTED from Permission Center reference.
+ * Status Badge supporting full Context-Based Color Psychology via [semanticTone].
  */
 @Composable
 fun GlassStatusBadge(
     text: String,
     isWarning: Boolean = false,
     isHighlight: Boolean = false,
+    semanticTone: SemanticTone? = null,
     icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
     modifier: Modifier = Modifier
 ) {
-    val bgColor = when {
-        isWarning -> Color(0xE62D141C)
-        isHighlight -> Color(0x2900E5FF)
-        else -> Color(0xE6142538)
+    val effectiveTone = semanticTone ?: when {
+        isWarning -> SemanticTone.ERROR
+        isHighlight -> SemanticTone.INFO
+        else -> SemanticTone.INFO
     }
-    val strokeColor = when {
-        isWarning -> Color(0x88FF5252)
-        isHighlight -> Color(0x8000E5FF)
-        else -> Color(0x5500E5FF)
+
+    val bgColor = when (effectiveTone) {
+        SemanticTone.SUCCESS -> Color(0xE60B2922)
+        SemanticTone.WARNING -> Color(0xE62B1E10)
+        SemanticTone.ERROR -> Color(0xE62D141C)
+        SemanticTone.PREMIUM -> Color(0xE6221336)
+        SemanticTone.INFO -> if (isHighlight) Color(0x2900E5FF) else Color(0xE6142538)
+        SemanticTone.NEUTRAL -> Color(0xE6152236)
     }
-    val contentColor = if (isWarning) Color(0xFFFF6E6E) else Color(0xFF00E5FF)
+    val strokeColor = when (effectiveTone) {
+        SemanticTone.SUCCESS -> Color(0x8810B981)
+        SemanticTone.WARNING -> Color(0x88FFA726)
+        SemanticTone.ERROR -> Color(0x88FF5252)
+        SemanticTone.PREMIUM -> Color(0x88A855F7)
+        SemanticTone.INFO -> if (isHighlight) Color(0x8000E5FF) else Color(0x5500E5FF)
+        SemanticTone.NEUTRAL -> Color(0x38FFFFFF)
+    }
+    val contentColor = when (effectiveTone) {
+        SemanticTone.SUCCESS -> Color(0xFF34D399)
+        SemanticTone.WARNING -> Color(0xFFFFB74D)
+        SemanticTone.ERROR -> Color(0xFFFF6E6E)
+        SemanticTone.PREMIUM -> Color(0xFFC084FC)
+        SemanticTone.INFO -> Color(0xFF00E5FF)
+        SemanticTone.NEUTRAL -> Color(0xFFCBD5E1)
+    }
 
     Box(
         modifier = modifier
@@ -613,16 +756,33 @@ fun GlassStatusBadge(
 }
 
 /**
- * Standardized Progress Bar with deep recessed track and cyan-turquoise gradient indicator.
+ * Standardized Progress Bar with deep recessed track and semantic gradient indicator.
  */
 @Composable
 fun GlassProgressBar(
     progress: Float,
     modifier: Modifier = Modifier,
     height: Dp = 8.dp,
-    isWarning: Boolean = false
+    isWarning: Boolean = false,
+    semanticTone: SemanticTone? = null
 ) {
     val clamped = progress.coerceIn(0f, 1f)
+    val effectiveTone = semanticTone ?: when {
+        isWarning -> SemanticTone.ERROR
+        clamped >= 1.0f -> SemanticTone.ERROR
+        clamped >= 0.75f -> SemanticTone.WARNING
+        else -> SemanticTone.INFO
+    }
+
+    val barBrush = when (effectiveTone) {
+        SemanticTone.SUCCESS -> Brush.horizontalGradient(listOf(Color(0xFF10B981), Color(0xFF34D399)))
+        SemanticTone.WARNING -> Brush.horizontalGradient(listOf(Color(0xFFFFAB00), Color(0xFFFF6D00)))
+        SemanticTone.ERROR -> Brush.horizontalGradient(listOf(Color(0xFFFF6D00), Color(0xFFFF5252)))
+        SemanticTone.PREMIUM -> Brush.horizontalGradient(listOf(Color(0xFFA855F7), Color(0xFF7C3AED)))
+        SemanticTone.INFO -> Brush.horizontalGradient(listOf(Color(0xFF00E5FF), Color(0xFF2979FF)))
+        SemanticTone.NEUTRAL -> Brush.horizontalGradient(listOf(Color(0xFF64748B), Color(0xFF94A3B8)))
+    }
+
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -637,17 +797,7 @@ fun GlassProgressBar(
                     .fillMaxHeight()
                     .fillMaxWidth(clamped)
                     .clip(CircleShape)
-                    .background(
-                        brush = if (isWarning) {
-                            Brush.horizontalGradient(
-                                listOf(Color(0xFFFF9100), Color(0xFFFF5252))
-                            )
-                        } else {
-                            Brush.horizontalGradient(
-                                listOf(Color(0xFF00E5FF), Color(0xFF10B981))
-                            )
-                        }
-                    )
+                    .background(brush = barBrush)
             )
         }
     }

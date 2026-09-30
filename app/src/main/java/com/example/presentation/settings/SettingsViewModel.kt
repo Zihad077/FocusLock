@@ -31,8 +31,10 @@ class SettingsViewModel(
     }
     
     fun updateLanguage(language: String) {
+        val validCode = com.example.util.LocaleHelper.normalizeLanguageCode(language)
+        com.example.util.LocaleHelper.applyLocale(getApplication(), validCode, recreateActivity = false)
         viewModelScope.launch {
-            repository.updateSettings(userSettings.value.copy(language = language))
+            repository.updateSettings(userSettings.value.copy(language = validCode))
         }
     }
 

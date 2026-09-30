@@ -77,15 +77,9 @@ fun SettingsScreen(
     val currentBgTheme = remember(settings.theme) { BackgroundThemeType.fromKey(settings.theme) }
     val themeLabel = "${currentBgTheme.titleEn} • ${currentBgTheme.titleBn}"
 
-    val languageLabel = when (settings.language) {
-        "es" -> "Español"
-        "fr" -> "Français"
-        "de" -> "Deutsch"
-        "pt" -> "Português"
-        "hi" -> "हिन्दी (Hindi)"
-        "bn" -> "বাংলা (Bengali)"
-        "ar" -> "العربية (Arabic)"
-        else -> "English"
+    val activeLanguageCode by com.example.util.LocaleHelper.languageFlow.collectAsStateWithLifecycle()
+    val languageLabel = remember(activeLanguageCode) {
+        com.example.util.LocaleHelper.getLanguageDisplayName(activeLanguageCode)
     }
 
     Scaffold(
@@ -356,16 +350,7 @@ fun SettingsScreen(
                 }
             },
             text = {
-                val languages = listOf(
-                    Triple("bn", "বাংলা", "Bengali"),
-                    Triple("en", "English", "English (US/UK)"),
-                    Triple("es", "Español", "Spanish"),
-                    Triple("fr", "Français", "French"),
-                    Triple("de", "Deutsch", "German"),
-                    Triple("pt", "Português", "Portuguese"),
-                    Triple("hi", "हिन्दी", "Hindi"),
-                    Triple("ar", "العربية", "Arabic")
-                )
+                val languages = com.example.util.LocaleHelper.SUPPORTED_LANGUAGES
 
                 LazyColumn(
                     modifier = Modifier
@@ -374,13 +359,13 @@ fun SettingsScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(languages.size) { index ->
-                        val (code, nativeName, englishName) = languages[index]
-                        val isSelected = (settings.language == code)
+                        val lang = languages[index]
+                        val isSelected = (activeLanguageCode == lang.code)
 
                         Surface(
                             onClick = {
-                                viewModel.updateLanguage(code)
-                                com.example.util.LocaleHelper.applyLocale(context, code, recreateActivity = true)
+                                viewModel.updateLanguage(lang.code)
+                                com.example.util.LocaleHelper.applyLocale(context, lang.code, recreateActivity = false)
                                 showLanguageDialog = false
                             },
                             shape = RoundedCornerShape(16.dp),
@@ -399,16 +384,16 @@ fun SettingsScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Column {
+                                Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = nativeName,
+                                        text = "${lang.nativeName} • ${lang.englishName}",
                                         style = MaterialTheme.typography.titleMedium.copy(
                                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                                         ),
                                         color = if (isSelected) Color(0xFF00E5FF) else MaterialTheme.colorScheme.onBackground
                                     )
                                     Text(
-                                        text = englishName,
+                                        text = lang.regionsSummary,
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f)
                                     )
@@ -417,8 +402,8 @@ fun SettingsScreen(
                                 RadioButton(
                                     selected = isSelected,
                                     onClick = {
-                                        viewModel.updateLanguage(code)
-                                        com.example.util.LocaleHelper.applyLocale(context, code, recreateActivity = true)
+                                        viewModel.updateLanguage(lang.code)
+                                        com.example.util.LocaleHelper.applyLocale(context, lang.code, recreateActivity = false)
                                         showLanguageDialog = false
                                     },
                                     colors = RadioButtonDefaults.colors(
@@ -936,7 +921,7 @@ fun SettingsScreen(
     if (showPrivacyDialog) {
         FocusLockLegalDialog(
             initialTab = legalInitialTab,
-            defaultLanguageCode = settings.language,
+            defaultLanguageCode = activeLanguageCode,
             onDismiss = { showPrivacyDialog = false }
         )
     }

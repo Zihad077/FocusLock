@@ -111,33 +111,35 @@ fun FocusLockApp(
         composable<Route.Welcome> {
             WelcomeScreen(
                 onNavigateToPermissions = {
-                    // Mark first-launch welcome experience as completed so it doesn't replay on every launch
+                    // Mark first-launch welcome experience as completed and enter the main app directly
                     sharedPrefs.edit().putBoolean(KEY_ONBOARDING_COMPLETED, true).apply()
                     isOnboardingCompleted = true
 
-                    if (PermissionHelper.areAllRequiredPermissionsGranted(context)) {
-                        navController.navigate(Route.MainTab) {
-                            popUpTo(Route.Welcome) { inclusive = true }
-                        }
-                    } else {
-                        navController.navigate(Route.Permissions) {
-                            popUpTo(Route.Welcome) { inclusive = true }
-                        }
+                    navController.navigate(Route.MainTab) {
+                        popUpTo(Route.Welcome) { inclusive = true }
                     }
                 }
             )
         }
         composable<Route.Permissions> {
             PermissionsScreen(
-                isFromSettings = false,
+                isFromSettings = true,
+                onNavigateBack = {
+                    if (!navController.popBackStack()) {
+                        navController.navigate(Route.MainTab) {
+                            popUpTo(Route.Permissions) { inclusive = true }
+                        }
+                    }
+                },
                 onPermissionsGranted = {
-                    // Mark onboarding complete in persistent storage synchronously
                     sharedPrefs.edit().putBoolean(KEY_ONBOARDING_COMPLETED, true).commit()
                     isOnboardingCompleted = true
                     allRequiredPermissionsGranted = true
-                    
-                    navController.navigate(Route.MainTab) {
-                        popUpTo(Route.Permissions) { inclusive = true }
+
+                    if (!navController.popBackStack()) {
+                        navController.navigate(Route.MainTab) {
+                            popUpTo(Route.Permissions) { inclusive = true }
+                        }
                     }
                 }
             )
@@ -253,6 +255,10 @@ fun MainTabScreen(
         }
     }
 
+    val allLimits by app.repository.allLimits.collectAsState(initial = emptyList())
+    var isPermissionGateForLimit by remember { mutableStateOf(false) }
+    var pendingPermissionGateAppName by remember { mutableStateOf<String?>(null) }
+
     // 5 primary tabs with localized labels (Goals & Insights integrated into Home/Stats)
     val items = listOf(
         BottomNavItem(androidx.compose.ui.res.stringResource(com.example.R.string.nav_home), Route.Home, Icons.Default.Home),
@@ -331,7 +337,11 @@ fun MainTabScreen(
                                 }
                             },
                             onNavigateToPermissions = {
-                                navController.navigate(Route.Permissions)
+                                isPermissionGateForLimit = true
+                                pendingPermissionGateAppName = null
+                                navController.navigate(Route.Permissions) {
+                                    launchSingleTop = true
+                                }
                             },
                             onNavigateToSettings = {
                                 navController.navigate(Route.Settings) {
@@ -352,7 +362,15 @@ fun MainTabScreen(
                 }
                 composable<Route.Apps> {
                     CompositionLocalProvider(com.example.ads.LocalAdScreenKey provides "APPS") {
-                        AppsScreen()
+                        AppsScreen(
+                            onNavigateToPermissions = { targetApp ->
+                                isPermissionGateForLimit = true
+                                pendingPermissionGateAppName = targetApp
+                                navController.navigate(Route.Permissions) {
+                                    launchSingleTop = true
+                                }
+                            }
+                        )
                     }
                 }
                 composable<Route.Focus> { 
@@ -426,6 +444,8 @@ fun MainTabScreen(
                                 navController.navigate(Route.EscapePrevention)
                             },
                             onNavigateToPermissions = {
+                                isPermissionGateForLimit = false
+                                pendingPermissionGateAppName = null
                                 navController.navigate(Route.Permissions)
                             },
                             onNavigateToDataBackup = {
@@ -468,8 +488,19 @@ fun MainTabScreen(
                 composable<Route.Permissions> {
                     PermissionsScreen(
                         isFromSettings = true,
-                        onNavigateBack = { navController.popBackStack() },
-                        onPermissionsGranted = { navController.popBackStack() }
+                        isForLimitSetup = isPermissionGateForLimit,
+                        targetAppName = pendingPermissionGateAppName,
+                        hasExistingConfiguredLimits = allLimits.any { it.isEnabled },
+                        onNavigateBack = {
+                            isPermissionGateForLimit = false
+                            pendingPermissionGateAppName = null
+                            navController.popBackStack()
+                        },
+                        onPermissionsGranted = {
+                            isPermissionGateForLimit = false
+                            pendingPermissionGateAppName = null
+                            navController.popBackStack()
+                        }
                     )
                 }
             }

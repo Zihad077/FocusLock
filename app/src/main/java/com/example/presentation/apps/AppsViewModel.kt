@@ -1,129 +1,287 @@
 package com.example.presentation.apps
 
 import android.app.Application
-import android.content.pm.PackageManager
+import android.content.Intent
+import android.content.pm.ApplicationInfo
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.FocusLockApplication
-import com.example.data.AppRepository
 import com.example.database.AppLimit
+import com.example.database.AppSchedule
+import com.example.database.UserSettings
+import com.example.service.AppMonitorService
+import com.example.util.PermissionHelper
+import com.example.util.UsageStatsHelper
+import com.example.util.UsageTimeRange
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
-class AppsViewModel(
-    application: Application,
-    private val repository: AppRepository
-) : AndroidViewModel(application) {
+data class AppItem(
+    val packageName: String,
+    val appName: String,
+    val category: String = "Other",
+    val isLimited: Boolean = false,
+    val dailyLimitMinutes: Int = 0,
+    val sessionLimitMinutes: Int? = null,
+    val usedTodayMinutes: Int = 0,
+    val isHighImpact: Boolean = false
+)
 
-    private val packageManager: PackageManager = application.packageManager
+class AppsViewModel(application: Application) : AndroidViewModel(application) {
+    private val repository = (application as FocusLockApplication).repository
 
-    val userSettings = repository.userSettings
+    private val _installedBaseApps = MutableStateFlow<List<AppItem>>(emptyList())
+    private val _usageMap = MutableStateFlow<Map<String, Int>>(emptyMap())
 
-    private val _installedApps = MutableStateFlow<List<AppItem>>(emptyList())
-    
-    private fun getTodayDateString(): String = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
-    private val _currentDateFlow = MutableStateFlow(getTodayDateString())
+    // Live permission states validated by ViewModel
+    private val _areRequiredPermissionsGranted = MutableStateFlow(
+        PermissionHelper.areAllRequiredPermissionsGranted(application)
+    )
+    val areRequiredPermissionsGranted: StateFlow<Boolean> = _areRequiredPermissionsGranted.asStateFlow()
 
-    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    val appsList: StateFlow<List<AppItem>> = _currentDateFlow.flatMapLatest { today ->
-        combine(
-            _installedApps,
-            repository.allLimits,
-            repository.allTemporaryUnlocks,
-            repository.getUsageForDate(today)
-        ) { installed, limits, tempUnlocks, todayUsages ->
-            val limitMap = limits.associateBy { it.packageName }
-            val usageMap = todayUsages.associate { it.packageName to it.usedMinutes }
-            val currentMillis = System.currentTimeMillis()
-            val tempUnlockMap = tempUnlocks
-                .filter { it.startTime + (it.durationMinutes * 60 * 1000L) > currentMillis }
-                .associateBy { it.packageName }
-                
-            installed.map { app ->
-                val limit = limitMap[app.packageName]
-                val isHigh = isHighImpactApp(app.packageName, app.appName)
-                val unlock = tempUnlockMap[app.packageName]
-                val usedMins = usageMap[app.packageName] ?: 0
-                app.copy(
-                    isLimited = limit != null && limit.isEnabled,
-                    dailyLimitMinutes = limit?.dailyLimitMinutes ?: 0,
-                    sessionLimitMinutes = limit?.sessionLimitMinutes,
-                    usedTodayMinutes = usedMins,
-                    isHighImpact = isHigh,
-                    activeUnlockMethod = unlock?.type,
-                    activeUnlockRemainingMinutes = if (unlock != null) {
-                        ((unlock.startTime + (unlock.durationMinutes * 60 * 1000L) - currentMillis) / (60 * 1000L)).toInt().coerceAtLeast(1)
-                    } else null
-                )
-            }.sortedWith(
-                compareByDescending<AppItem> { it.activeUnlockMethod != null }
-                    .thenByDescending { it.isLimited }
-                    .thenByDescending { it.usedTodayMinutes }
-                    .thenByDescending { it.isHighImpact }
-                    .thenBy { it.appName.lowercase() }
-            )
-        }
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = emptyList()
+    private val _missingPermissionNames = MutableStateFlow(
+        PermissionHelper.getMissingRequiredPermissionNames(application)
+    )
+    val missingPermissionNames: StateFlow<List<String>> = _missingPermissionNames.asStateFlow()
+
+    // Emitted whenever a limit creation or activation attempt is rejected due to missing permissions
+    private val _permissionGateRequired = MutableSharedFlow<String?>(extraBufferCapacity = 1)
+    val permissionGateRequired: SharedFlow<String?> = _permissionGateRequired.asSharedFlow()
+
+    val userSettings: StateFlow<UserSettings> = repository.userSettings.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        UserSettings()
     )
 
+    val appsList: StateFlow<List<AppItem>> = combine(
+        _installedBaseApps,
+        repository.allLimits,
+        _usageMap
+    ) { installed, limits, usage ->
+        val limitMap = limits.associateBy { it.packageName }
+        installed.map { base ->
+            val limit = limitMap[base.packageName]
+            base.copy(
+                isLimited = limit?.isEnabled == true,
+                dailyLimitMinutes = limit?.dailyLimitMinutes ?: 0,
+                sessionLimitMinutes = limit?.sessionLimitMinutes,
+                usedTodayMinutes = usage[base.packageName] ?: 0
+            )
+        }.sortedWith(
+            compareByDescending<AppItem> { it.isLimited }
+                .thenByDescending { it.usedTodayMinutes }
+                .thenByDescending { it.isHighImpact }
+                .thenBy { it.appName.lowercase() }
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     init {
+        refreshPermissions()
+        loadInstalledApps()
         syncAndLoad()
     }
 
+    /**
+     * Rechecks all required permissions from Android system services.
+     * Restores AppMonitorService automatically when permissions are granted.
+     */
+    fun refreshPermissions(): Boolean {
+        val ctx = getApplication<Application>()
+        val granted = PermissionHelper.areAllRequiredPermissionsGranted(ctx)
+        _areRequiredPermissionsGranted.value = granted
+        _missingPermissionNames.value = PermissionHelper.getMissingRequiredPermissionNames(ctx)
+        if (granted) {
+            AppMonitorService.startService(ctx)
+        }
+        return granted
+    }
+
     fun syncAndLoad() {
-        _currentDateFlow.value = getTodayDateString()
-        viewModelScope.launch {
-            com.example.util.UsageStatsHelper.syncHistoricalUsageToDatabase(getApplication(), repository, 7)
-            loadInstalledApps()
+        viewModelScope.launch(Dispatchers.IO) {
+            refreshPermissions()
+            try {
+                UsageStatsHelper.syncHistoricalUsageToDatabase(getApplication(), repository, 3)
+                val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+                val todayDbList = repository.getUsageForDate(todayStr).first()
+                val dbMap = todayDbList
+                    .groupBy { it.packageName }
+                    .mapValues { (_, list) -> list.maxOfOrNull { it.usedMinutes } ?: 0 }
+
+                val limits = repository.allLimits.first()
+                val liveSummary = UsageStatsHelper.getScreenTimeSummary(
+                    getApplication(),
+                    UsageTimeRange.TODAY,
+                    limits
+                )
+                val merged = dbMap.toMutableMap()
+                liveSummary.appUsageList.forEach { breakdown ->
+                    val current = merged[breakdown.packageName] ?: 0
+                    if (breakdown.usedMinutes > current) {
+                        merged[breakdown.packageName] = breakdown.usedMinutes
+                    }
+                }
+                _usageMap.value = merged
+            } catch (e: Exception) {
+                // Ignore if usage permission not granted yet
+            }
         }
     }
 
     private fun loadInstalledApps() {
-        viewModelScope.launch {
-            val apps = withContext(Dispatchers.IO) {
-                val intent = android.content.Intent(android.content.Intent.ACTION_MAIN, null)
-                intent.addCategory(android.content.Intent.CATEGORY_LAUNCHER)
-                val resolveInfoList = packageManager.queryIntentActivities(intent, 0)
-                
-                resolveInfoList.map { resolveInfo ->
-                    val pkg = resolveInfo.activityInfo.packageName
-                    val name = resolveInfo.loadLabel(packageManager).toString()
-                    AppItem(
-                        packageName = pkg,
-                        appName = name,
-                        isHighImpact = isHighImpactApp(pkg, name)
-                    )
-                }.distinctBy { it.packageName }
-                 .filter { it.packageName != getApplication<Application>().packageName }
+        viewModelScope.launch(Dispatchers.IO) {
+            val pm = getApplication<Application>().packageManager
+            val myPackageName = getApplication<Application>().packageName
+
+            val mainIntent = Intent(Intent.ACTION_MAIN, null).apply {
+                addCategory(Intent.CATEGORY_LAUNCHER)
             }
-            _installedApps.value = apps
+            val resolveInfos = pm.queryIntentActivities(mainIntent, 0)
+
+            val list = resolveInfos
+                .mapNotNull { it.activityInfo?.applicationInfo }
+                .distinctBy { it.packageName }
+                .filter { it.packageName != myPackageName }
+                .map { appInfo ->
+                    val name = pm.getApplicationLabel(appInfo).toString()
+                    val category = determineCategory(appInfo, name)
+                    val isHighImpact = category == "Social" || category == "Games" || category == "Entertainment"
+                    AppItem(
+                        packageName = appInfo.packageName,
+                        appName = name,
+                        category = category,
+                        isHighImpact = isHighImpact
+                    )
+                }
+            _installedBaseApps.value = list
         }
     }
-    
-    fun setCustomLimit(app: AppItem, minutes: Int, sessionMinutes: Int? = null, isEnabled: Boolean = true) {
+
+    private fun determineCategory(appInfo: ApplicationInfo, name: String): String {
+        val pkg = appInfo.packageName.lowercase()
+        val lowerName = name.lowercase()
+        return when {
+            pkg.contains("instagram") || pkg.contains("facebook") || pkg.contains("tiktok") ||
+            pkg.contains("twitter") || pkg.contains("snapchat") || pkg.contains("whatsapp") ||
+            pkg.contains("reddit") || pkg.contains("threads") || pkg.contains("discord") ||
+            pkg.contains("telegram") -> "Social"
+            pkg.contains("youtube") || pkg.contains("netflix") || pkg.contains("spotify") ||
+            pkg.contains("twitch") || pkg.contains("disney") || pkg.contains("primevideo") -> "Entertainment"
+            appInfo.category == ApplicationInfo.CATEGORY_GAME || pkg.contains("game") ||
+            lowerName.contains("game") || pkg.contains("supercell") || pkg.contains("roblox") -> "Games"
+            appInfo.category == ApplicationInfo.CATEGORY_PRODUCTIVITY || pkg.contains("docs") ||
+            pkg.contains("notion") || pkg.contains("slack") || pkg.contains("calendar") ||
+            pkg.contains("gmail") -> "Productivity"
+            else -> "Other"
+        }
+    }
+
+    /**
+     * Validates required permissions before creating or updating an active app limit.
+     * Prevents new app limits from being activated when required permissions are missing.
+     */
+    fun setCustomLimit(
+        app: AppItem,
+        dailyMinutes: Int,
+        sessionMinutes: Int?,
+        isEnabled: Boolean = true
+    ): Boolean {
+        if (isEnabled && !refreshPermissions()) {
+            _permissionGateRequired.tryEmit(app.appName)
+            return false
+        }
         viewModelScope.launch {
-            repository.insertLimit(
-                AppLimit(
+            val existing = repository.getLimit(app.packageName)
+            val limit = existing?.copy(
+                appName = app.appName,
+                dailyLimitMinutes = dailyMinutes,
+                sessionLimitMinutes = sessionMinutes,
+                isEnabled = isEnabled
+            ) ?: AppLimit(
+                packageName = app.packageName,
+                appName = app.appName,
+                dailyLimitMinutes = dailyMinutes,
+                sessionLimitMinutes = sessionMinutes,
+                isEnabled = isEnabled
+            )
+            repository.insertLimit(limit)
+            if (isEnabled) {
+                AppMonitorService.startService(getApplication())
+            }
+        }
+        return true
+    }
+
+    /**
+     * Validates required permissions before enabling an app limit.
+     * Existing configured limits are never deleted if permissions are revoked.
+     */
+    fun toggleLimit(app: AppItem, isEnabled: Boolean): Boolean {
+        if (isEnabled && !refreshPermissions()) {
+            _permissionGateRequired.tryEmit(app.appName)
+            return false
+        }
+        viewModelScope.launch {
+            val existing = repository.getLimit(app.packageName)
+            if (existing != null) {
+                repository.insertLimit(existing.copy(isEnabled = isEnabled))
+            } else if (isEnabled) {
+                repository.insertLimit(
+                    AppLimit(
+                        packageName = app.packageName,
+                        appName = app.appName,
+                        dailyLimitMinutes = if (app.dailyLimitMinutes > 0) app.dailyLimitMinutes else 30,
+                        sessionLimitMinutes = app.sessionLimitMinutes,
+                        isEnabled = true
+                    )
+                )
+            }
+            if (isEnabled) {
+                AppMonitorService.startService(getApplication())
+            }
+        }
+        return true
+    }
+
+    /**
+     * Applies a quick restriction template only if required permissions are granted.
+     */
+    fun applyTemplate(templateTitle: String): Boolean {
+        if (!refreshPermissions()) {
+            _permissionGateRequired.tryEmit(templateTitle)
+            return false
+        }
+        viewModelScope.launch {
+            val currentApps = _installedBaseApps.value
+            val (targetCategory, limitMinutes) = when (templateTitle) {
+                "Social Media" -> "Social" to 30
+                "Gaming" -> "Games" to 45
+                "Entertainment" -> "Entertainment" to 60
+                else -> "Social" to 30
+            }
+            val matchingApps = currentApps.filter { it.category == targetCategory }
+            matchingApps.forEach { app ->
+                val existing = repository.getLimit(app.packageName)
+                val updated = existing?.copy(
+                    dailyLimitMinutes = limitMinutes,
+                    isEnabled = true
+                ) ?: AppLimit(
                     packageName = app.packageName,
                     appName = app.appName,
-                    isEnabled = isEnabled,
-                    dailyLimitMinutes = minutes,
-                    sessionLimitMinutes = sessionMinutes
+                    dailyLimitMinutes = limitMinutes,
+                    isEnabled = true
                 )
-            )
+                repository.insertLimit(updated)
+            }
+            AppMonitorService.startService(getApplication())
         }
+        return true
     }
 
     fun removeLimit(packageName: String) {
@@ -132,88 +290,32 @@ class AppsViewModel(
         }
     }
 
-    fun toggleLimit(app: AppItem, isEnabled: Boolean) {
-        viewModelScope.launch {
-            if (isEnabled) {
-                val limit = repository.getLimit(app.packageName)
-                if (limit != null) {
-                    repository.insertLimit(limit.copy(isEnabled = true))
-                } else {
-                    // Default to 30 mins if none exists
-                    repository.insertLimit(
-                        AppLimit(
-                            packageName = app.packageName,
-                            appName = app.appName,
-                            isEnabled = true,
-                            dailyLimitMinutes = 30
-                        )
-                    )
-                }
-            } else {
-                val limit = repository.getLimit(app.packageName)
-                if (limit != null) {
-                    repository.insertLimit(limit.copy(isEnabled = false))
-                }
-            }
-        }
+    fun getSchedules(packageName: String): Flow<List<AppSchedule>> {
+        return repository.getSchedulesForApp(packageName)
     }
 
-    companion object {
-        private val HIGH_IMPACT_PACKAGES = setOf(
-            "com.google.android.youtube",
-            "com.google.android.apps.youtube.music",
-            "com.instagram.android",
-            "com.zhiliaoapp.musically",
-            "com.ss.android.ugc.trill",
-            "com.facebook.katana",
-            "com.facebook.lite",
-            "com.facebook.orca",
-            "com.twitter.android",
-            "com.snapchat.android",
-            "com.reddit.frontpage",
-            "com.netflix.mediaclient",
-            "tv.twitch.android.app",
-            "com.discord",
-            "com.whatsapp",
-            "com.whatsapp.w4b",
-            "org.telegram.messenger",
-            "com.android.chrome",
-            "com.pinterest",
-            "com.tiktok.android"
-        )
-
-        fun isHighImpactApp(packageName: String, appName: String): Boolean {
-            if (HIGH_IMPACT_PACKAGES.contains(packageName)) return true
-            val lowerName = appName.lowercase()
-            val keywords = listOf(
-                "youtube", "instagram", "tiktok", "facebook", "twitter", "reddit",
-                "netflix", "snapchat", "twitch", "discord", "game", "browser"
+    fun addSchedule(packageName: String, startMinute: Int, endMinute: Int, days: String): Boolean {
+        if (!refreshPermissions()) {
+            _permissionGateRequired.tryEmit(null)
+            return false
+        }
+        viewModelScope.launch {
+            repository.insertSchedule(
+                AppSchedule(
+                    packageName = packageName,
+                    startTimeMinuteOfDay = startMinute,
+                    endTimeMinuteOfDay = endMinute,
+                    daysOfWeek = days
+                )
             )
-            return keywords.any { lowerName.contains(it) }
+            AppMonitorService.startService(getApplication())
         }
+        return true
     }
 
-    fun applyTemplate(templateName: String) {
+    fun deleteSchedule(scheduleId: Int) {
         viewModelScope.launch {
-            val installedApps = _installedApps.value
-            val limitsToApply = mutableListOf<com.example.database.AppLimit>()
-            when (templateName) {
-                "Social Media" -> {
-                    installedApps.filter { it.packageName.contains("facebook") || it.packageName.contains("instagram") || it.packageName.contains("twitter") || it.packageName.contains("tiktok") }
-                        .forEach { limitsToApply.add(com.example.database.AppLimit(it.packageName, it.appName, true, 30)) }
-                }
-                "Gaming" -> {
-                    installedApps.filter { it.packageName.contains("game") || it.packageName.contains("pubg") || it.packageName.contains("minecraft") }
-                        .forEach { limitsToApply.add(com.example.database.AppLimit(it.packageName, it.appName, true, 45)) }
-                }
-                "Entertainment" -> {
-                    installedApps.filter { it.packageName.contains("youtube") || it.packageName.contains("netflix") || it.packageName.contains("spotify") }
-                        .forEach { limitsToApply.add(com.example.database.AppLimit(it.packageName, it.appName, true, 60)) }
-                }
-            }
-            limitsToApply.forEach {
-                repository.insertLimit(it)
-            }
+            repository.deleteSchedule(scheduleId)
         }
     }
 
@@ -221,24 +323,9 @@ class AppsViewModel(
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(AppsViewModel::class.java)) {
                 @Suppress("UNCHECKED_CAST")
-                return AppsViewModel(
-                    application,
-                    (application as FocusLockApplication).repository
-                ) as T
+                return AppsViewModel(application) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }
     }
 }
-
-data class AppItem(
-    val packageName: String,
-    val appName: String,
-    val isLimited: Boolean = false,
-    val dailyLimitMinutes: Int = 0,
-    val sessionLimitMinutes: Int? = null,
-    val usedTodayMinutes: Int = 0,
-    val isHighImpact: Boolean = false,
-    val activeUnlockMethod: String? = null,
-    val activeUnlockRemainingMinutes: Int? = null
-)

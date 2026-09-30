@@ -1,12 +1,11 @@
 package com.example.util
 
-import android.content.Context
 import java.util.Locale
 import kotlin.random.Random
 
 /**
- * Curated repository of 20 inspiring focus affirmations and sentences
- * for mindful unlock typing challenges.
+ * Curated repository of inspiring focus affirmations and sentences
+ * for mindful unlock typing challenges across all supported multi-country languages.
  */
 object TypingChallengePhrases {
 
@@ -79,19 +78,57 @@ object TypingChallengePhrases {
         "Mi atención es mi mayor riqueza; la uso con sabiduría."
     )
 
+    val FRENCH_PHRASES = listOf(
+        "Je choisis d'être présent et concentré maintenant.",
+        "Mon temps et mon énergie sont précieux et intentionnels.",
+        "Le travail profond crée des résultats durables.",
+        "Je contrôle ma technologie, elle ne me contrôle pas.",
+        "Une respiration consciente me ramène à la clarté.",
+        "De petits pas de discipline mènent à la réussite.",
+        "Je résiste aux distractions pour ma croissance future.",
+        "La concentration révèle mon véritable potentiel.",
+        "Je maîtrise pleinement mes habitudes numériques.",
+        "Esprit clair, concentration stable et action réfléchie."
+    )
+
+    val ARABIC_PHRASES = listOf(
+        "أختار أن أكون حاضراً ومركزاً في هذه اللحظة.",
+        "وقتي وطاقتي ثمينان وأستخدمهما بوعي.",
+        "العمل العميق يصنع نتائج حقيقية ومستدامة.",
+        "أنا أتحكم في التكنولوجيا ولا أدعها تتحكم بي.",
+        "نفس عميق واحد يعيد إليّ صفاء الذهن والتركيز.",
+        "خطوات الانضباط الصغيرة تقود إلى النجاح الكبير.",
+        "سأقاوم التشتت المؤقت من أجل مستقبلي وأهدافي.",
+        "التركيز هو القوة التي تطلق إمكاناتي الحقيقية.",
+        "أنا أتحكم بشكل كامل في عاداتي الرقمية اليومية.",
+        "ذهن صافٍ وتركيز ثابت وعمل هادف ومثمر."
+    )
+
+    val PORTUGUESE_PHRASES = listOf(
+        "Eu escolho estar presente e focado agora mesmo.",
+        "Meu tempo e minha energia são valiosos e intencionais.",
+        "O trabalho profundo cria resultados duradouros.",
+        "Eu controlo minha tecnologia, ela não me controla.",
+        "Uma respiração consciente me traz de volta à clareza.",
+        "Pequenos passos de disciplina levam ao grande sucesso.",
+        "Vou resistir à distração temporária pelo meu crescimento.",
+        "O foco é o superpoder que libera meu potencial.",
+        "Tenho controle total sobre meus hábitos digitais.",
+        "Mente clara, foco firme e ação com propósito."
+    )
+
     fun getRandomPhrase(languageCode: String): String {
-        val list = when (languageCode.lowercase(Locale.ROOT)) {
-            "bn" -> BENGALI_PHRASES
-            "es" -> SPANISH_PHRASES
-            else -> ENGLISH_PHRASES
-        }
+        val list = getAllPhrases(languageCode)
         return list[Random.nextInt(list.size)]
     }
 
     fun getAllPhrases(languageCode: String): List<String> {
-        return when (languageCode.lowercase(Locale.ROOT)) {
+        return when (languageCode.lowercase(Locale.ROOT).substringBefore("-")) {
             "bn" -> BENGALI_PHRASES
             "es" -> SPANISH_PHRASES
+            "fr" -> FRENCH_PHRASES
+            "ar" -> ARABIC_PHRASES
+            "pt" -> PORTUGUESE_PHRASES
             else -> ENGLISH_PHRASES
         }
     }

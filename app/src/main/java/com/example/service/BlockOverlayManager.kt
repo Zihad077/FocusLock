@@ -204,7 +204,10 @@ class BlockOverlayManager private constructor(private val context: Context) : Li
                     setViewTreeSavedStateRegistryOwner(this@BlockOverlayManager)
                 }
 
-                val localizedContext = com.example.util.LocaleHelper.wrapContext(context)
+                val localizedContext = com.example.util.LocaleHelper.createLocalizedContextWrapper(
+                    context,
+                    com.example.util.LocaleHelper.getSavedLanguage(context)
+                )
                 val composeView = ComposeView(localizedContext).apply {
                     layoutParams = ViewGroup.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,

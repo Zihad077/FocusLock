@@ -32,6 +32,7 @@ fun LiquidGlassAdaptiveBanner(
     val screenKey = LocalAdScreenKey.current
     val compositeKey = "$screenKey::$slotKey"
     val readySlots by AdsterraManager.readySlots.collectAsState()
+    val reloadGen by AdsterraManager.reloadGeneration.collectAsState()
     val isSlotReady = compositeKey in readySlots
 
     Box(
@@ -57,7 +58,7 @@ fun LiquidGlassAdaptiveBanner(
             )
 
             if (isSlotReady) {
-                val webView = remember(compositeKey) {
+                val webView = remember(compositeKey, reloadGen) {
                     AdsterraManager.getOrCreateWebView(
                         context = context,
                         screenKey = screenKey,

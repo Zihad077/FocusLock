@@ -1,25 +1,226 @@
 <resources>
     <string name="app_name">FocusLock</string>
     <string name="accessibility_service_description">Utilisé par FocusLock pour détecter l\'ouverture d\'applications distrayantes afin de les bloquer.</string>
+    
+    <!-- Home / Dashboard -->
+    <string name="digital_equilibrium">ÉQUILIBRE NUMÉRIQUE</string>
     <string name="level_xp">Niveau %1$d • %2$d XP jusqu\'au suivant</string>
     <string name="limits">Limites</string>
     <string name="schedules">Horaires</string>
-    <string name="time_limits_today">Limites de temps aujourd\'hui</string>
+    <string name="time_limits_today">Limites de temps pour aujourd\'hui</string>
     <string name="stats">Statistiques</string>
-    <string name="total_focus">Concentration totale</string>
-    <string name="time_saved">Temps gagné</string>
-    <string name="start_focus">Démarrer</string>
-    <string name="app_blocked">%1$s est bloquée</string>
-    <string name="limit_reached">Vous avez atteint votre limite quotidienne de %1$d minutes.</string>
-    <string name="wait_and_breathe">Attendez et respirez</string>
-    <string name="earn_more_time">Gagnez du temps</string>
-    <string name="emergency_unlock">Déverrouillage d\'urgence</string>
-    <string name="take_a_deep_breath">Prenez une grande respiration.</string>
-    <string name="challenge_instructions">Tapez le texte ci-dessus pour débloquer 5 minutes supplémentaires.</string>
+    <string name="total_focus">Concentration Totale</string>
+    <string name="time_saved">Temps Gagné</string>
+    <string name="start_focus">Se Concentrer 🔒</string>
+    <string name="focus_score">Score de Focus</string>
+    <string name="todays_usage">UTILISATION DU JOUR</string>
+    <string name="time_reclaimed">TEMPS RÉCUPÉRÉ</string>
+    <string name="blocked_apps">Apps Bloquées</string>
+    <string name="current_streak">Série de Focus 🔥</string>
+    <string name="days_suffix">Jours</string>
+    <string name="active_limits">Limites Actives</string>
+    <string name="monitored_suffix">surveillées</string>
+    <string name="no_limits_set">Aucune limite définie</string>
+    <string name="no_limits_desc">Définissez des limites quotidiennes dans l\'onglet Apps pour protéger votre attention.</string>
+    <string name="set_app_limits">Définir des Limites</string>
+    <string name="active_protection">Protection Active</string>
+    <string name="protection_limited">Protection Limitée</string>
+    <string name="protection_active_desc">Le moniteur d\'accessibilité et l\'écran de blocage fonctionnent normalement.</string>
+    <string name="accessibility_needed_desc">Autorisation d\'accessibilité requise pour intercepter les applications.</string>
+    <string name="overlay_needed_desc">Autorisation de superposition requise pour afficher l\'écran de verrouillage.</string>
+    <string name="enable_btn">Activer</string>
+    <string name="adjust_limit_title">Ajuster la limite : %1$s</string>
+    <string name="daily_allowance">Quota quotidien : %1$d minutes</string>
+    <string name="min_5">5 min</string>
+    <string name="hours_4">4 heures</string>
+    <string name="save">Enregistrer</string>
+    <string name="cancel">Annuler</string>
+    <string name="blocked_status">Bloquée</string>
+    <string name="min_left">%1$d min restantes</string>
+    <string name="used_format">%1$d / %2$d min utilisées</string>
+
+    <!-- Block Screen -->
+    <string name="app_blocked">Mode Focus : ACTIVÉ. Distractions : BLOQUÉES.</string>
+    <string name="app_restricted">MODE FOCUS : ACTIVÉ</string>
+    <string name="times_up">TEMPS ÉCOULÉ 🌱</string>
+    <string name="restricted_reason">« %1$s » est en pause pour vous aider à rester concentré 🔒</string>
+    <string name="quota_reached_reason">Quota quotidien atteint pour « %1$s ». Prenez une pause 🌱 et ressourcez-vous.</string>
+    <string name="usage_today">UTILISATION DU JOUR</string>
+    <string name="limit_reached">Vous avez atteint votre limite de %1$d min pour aujourd\'hui ✨</string>
+    <string name="strict_block_0m">Blocage Strict (limite 0m)</string>
+    <string name="return_to_home">Rester Concentré 🔒</string>
+    <string name="complete_challenge_to_unlock">Réussir un Défi pour Déverrouiller</string>
+    <string name="emergency_bypass_left">Accès d\'Urgence (%1$d restants)</string>
+    <string name="no_emergency_passes_left">Plus d\'Accès d\'Urgence</string>
+    <string name="wait_and_breathe">Attendre et Respirer</string>
+    <string name="earn_more_time">Gagner Plus de Temps</string>
+    <string name="emergency_unlock">Déverrouillage d\'Urgence</string>
+    <string name="take_a_deep_breath">Prenez une grande respiration. Vous avez le contrôle.</string>
+    <string name="challenge_instructions">Tapez la phrase ci-dessous pour débloquer 5 minutes supplémentaires.</string>
+    
+    <!-- Challenge Screen -->
+    <string name="verification_gateway">PORTAIL DE VÉRIFICATION</string>
+    <string name="verification_gateway_desc">Complétez un défi pour débloquer une session temporaire.</string>
+    <string name="no_challenges_enabled">Aucun défi configuré. Activez les défis dans les Paramètres.</string>
+    <string name="mental_math_challenge">Défi de Calcul Mental</string>
+    <string name="mental_math_subtitle">Résoudre un problème arithmétique</string>
+    <string name="patience_stillness">Patience et Calme</string>
+    <string name="patience_stillness_subtitle">Compte à rebours de pleine conscience</string>
+    <string name="patience_stillness_desc">Gardez votre attention calme sans fermer cet écran.</string>
+    <string name="typing_intention_title">Saisie d\'Intention Consciente</string>
+    <string name="typing_intention_subtitle">Tapez une phrase d\'affirmation</string>
+    <string name="secure_pin_title">Autorisation par Code PIN</string>
+    <string name="secure_pin_subtitle">Entrez votre code secret</string>
+    <string name="return_to_block_screen">Retour à l\'Écran de Blocage</string>
+    <string name="what_is_math">Combien font %1$d + %2$d ?</string>
+    <string name="your_answer">Votre Réponse</string>
+    <string name="verify_answer">Vérifier la Réponse</string>
+    <string name="give_up">Abandonner</string>
+    <string name="security_passcode">Code de Sécurité</string>
+    <string name="enter_pin">Entrer le PIN</string>
+    <string name="authorize_unlock">Autoriser le Déverrouillage</string>
+
+    <!-- Typing Challenge -->
+    <string name="mindful_intention_prompt">Défi d\'Intention Consciente</string>
+    <string name="type_affirmation_exact">Tapez exactement la phrase ci-dessous :</string>
+    <string name="type_affirmation_placeholder">Tapez la phrase ici</string>
+    <string name="confirm_intention">Confirmer l\'Intention</string>
+    <string name="new_sentence">Nouvelle Phrase</string>
+    <string name="incorrect_try_again">Le texte ne correspond pas. Veuillez réessayer.</string>
+    
+    <!-- Stats -->
     <string name="statistics">Statistiques</string>
-    <string name="most_distracting">Les plus distrayantes</string>
+    <string name="most_distracting">Plus Distrayante</string>
     <string name="insufficient_data">Données insuffisantes pour déterminer.</string>
     <string name="this_week">CETTE SEMAINE</string>
     <string name="total_usage">Utilisation totale : %1$dh %2$dm.</string>
+    <string name="tab_analytics">Analyses</string>
+    <string name="tab_insights">Aperçus</string>
+    <string name="tab_goals">Objectifs</string>
+    <string name="screen_time_title">Temps d\'Écran et Statistiques</string>
+    <string name="screen_time_subtitle">Suivez vos habitudes et développez votre concentration</string>
+    <string name="today_label">Aujourd\'hui</string>
+    <string name="yesterday_label">Hier</string>
+    <string name="this_week_label">Cette Semaine</string>
+    <string name="past_30_days_label">30 Derniers Jours</string>
+    <string name="productivity_intelligence">Intelligence de Productivité</string>
+    <string name="smart_recommendations">Recommandations Intelligentes</string>
+    <string name="focus_goals_milestones">Objectifs et Étapes de Focus</string>
+    <string name="active_commitments">Engagements Actifs</string>
+    <string name="achievements_badges">Succès et Badges</string>
+    <string name="add_goal">Ajouter un Objectif</string>
+    <string name="no_goals_set">Aucun objectif actif</string>
+    <string name="no_goals_desc">Définissez un objectif quotidien pour rester constant et progresser.</string>
+    <string name="no_insights_desc">Continuez d\'utiliser votre appareil en pleine conscience pour générer des conseils.</string>
+    <string name="search_apps">Rechercher des applications…</string>
+    <string name="all_monitored_apps">Toutes les Applications Surveillées</string>
+    <string name="set_limit">Définir Limite</string>
+    <string name="permission_required">Accès aux Données d\'Utilisation Requis</string>
+    <string name="grant_permission_desc">FocusLock a besoin de l\'accès aux données d\'utilisation pour calculer votre temps d\'écran.</string>
+    <string name="grant_permission_btn">Accorder l\'Autorisation</string>
+    
+    <!-- Settings & Permissions -->
+    <string name="settings_title">Paramètres</string>
+    <string name="permissions_manager">Gestionnaire d\'Autorisations Système</string>
+    <string name="permissions_manager_desc">Vérifier les autorisations de superposition, d\'utilisation et d\'accessibilité</string>
+    <string name="display_over_apps">Superposer aux autres applications</string>
+    <string name="usage_access">Accès aux données d\'utilisation</string>
+    <string name="accessibility_service">Service d\'accessibilité</string>
+    <string name="granted">Actif et Accordé</string>
+    <string name="grant">Accorder</string>
+    <string name="done">Terminé</string>
+    <string name="close">Fermer</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_name">Notifications FocusLock</string>
+    <string name="notification_channel_desc">Notifications pour les sessions de concentration et limites d\'applications</string>
+    <string name="block_channel_name">Alertes de Blocage FocusLock</string>
+    <string name="block_channel_desc">Affiche l\'écran de blocage lorsque des applications restreintes sont ouvertes</string>
+    <string name="approaching_limit_title">Limite Proche : %1$s</string>
+    <string name="approaching_limit_desc">Il vous reste %1$d min sur votre limite quotidienne de %2$d min.</string>
+    <string name="deep_focus_active_title">Mode Focus : ACTIVÉ 🔒</string>
+    <string name="deep_focus_active_desc">Distractions bloquées — %1$d minutes restantes.</string>
+    <string name="deep_focus_complete_title">Session Réussie ! 🔥</string>
+    <string name="deep_focus_complete_desc">Session terminée ! Prenez une pause 🌱 (+50 XP gagnés)</string>
+
+    <!-- General -->
     <string name="unknown_app">Application Inconnue</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Accueil</string>
+    <string name="nav_apps">Apps</string>
+    <string name="nav_focus">Focus</string>
+    <string name="nav_goals">Objectifs</string>
+    <string name="nav_stats">Stats</string>
+    <string name="nav_settings">Paramètres</string>
+
+    <!-- Settings Sections & Items -->
+    <string name="account_section">Compte</string>
+    <string name="preferences_section">Préférences</string>
+    <string name="features_section">Fonctionnalités</string>
+    <string name="premium_section">Premium</string>
+    <string name="data_management_section">Gestion des Données</string>
+    <string name="about_section">À propos</string>
+
+    <string name="appearance">Thème d\'Arrière-plan</string>
+    <string name="appearance_desc">Choisissez des scènes animées en direct</string>
+    <string name="language">Langue</string>
+    <string name="language_desc">Sélectionner la langue de l\'application</string>
+    <string name="choose_language">Choisir la Langue</string>
+    <string name="profile_level">Profil et Niveau</string>
+    <string name="notifications">Notifications</string>
+    <string name="notifications_subtitle">Alertes et rappels</string>
+    <string name="anti_distraction_challenges">Défis Anti-Distraction</string>
+    <string name="anti_distraction_challenges_subtitle">Pratiquer le déverrouillage conscient</string>
+    <string name="focus_mode_setting">Mode Focus</string>
+    <string name="focus_mode_subtitle_active">Session active en cours</string>
+    <string name="focus_mode_subtitle_idle">Configurer des sessions de travail profond</string>
+    <string name="app_limits_schedules">Limites et Horaires d\'Apps</string>
+    <string name="app_limits_schedules_subtitle">Gérer les applications restreintes</string>
+    <string name="emergency_unlock_setting">Déverrouillage d\'Urgence</string>
+    <string name="permission_center">Centre d\'Autorisations</string>
+    <string name="permission_center_subtitle">Gérer les protections système requises et optionnelles</string>
+    <string name="escape_prevention">Prévention de Contournement</string>
+    <string name="escape_prevention_subtitle">Configurer les modes anti-suppression et verrouillage</string>
+    <string name="focuslock_premium">FocusLock Premium</string>
+    <string name="premium_active">Premium Actif</string>
+    <string name="premium_inactive">Supprimez les publicités à vie et soutenez le développement</string>
+    <string name="data_backup">Données et Sauvegarde</string>
+    <string name="data_backup_subtitle">Exporter, importer et sauvegarder vos données</string>
+    <string name="privacy_policy">Confidentialité et Conditions</string>
+    <string name="privacy_policy_subtitle">Confidentialité 100% sur l\'appareil</string>
+    <string name="terms_of_service">Conditions d\'Utilisation</string>
+    <string name="terms_of_service_subtitle">Utilisation équitable, mode strict et garanties</string>
+    <string name="about_app">À propos de FocusLock</string>
+    <string name="about_app_subtitle">Version 1.3.0 (Build 25)</string>
+
+    <!-- Launcher App Shortcuts -->
+    <string name="shortcut_focus_short">Focus 🔒</string>
+    <string name="shortcut_focus_long">Démarrer le Focus Profond 🔒</string>
+    <string name="shortcut_apps_short">Bloquer Apps</string>
+    <string name="shortcut_apps_long">Gérer les Limites d\'Apps</string>
+    <string name="shortcut_stats_short">Ma Série 🔥</string>
+    <string name="shortcut_stats_long">Voir Séries et Statistiques</string>
+    <string name="shortcut_share_short">Partager Badges</string>
+    <string name="shortcut_share_long">Partager Carte de Succès 🏆</string>
+
+    <!-- Welcome & Onboarding Hooking Texts -->
+    <string name="welcome_badge">✦ PLEINE CONSCIENCE ET PRODUCTIVITÉ</string>
+    <string name="welcome_hero_title">Reprenez Votre Temps.\nMaîtrisez Votre Focus.</string>
+    <string name="welcome_hero_desc">Brisez la boucle du défilement infini. Créez des habitudes numériques saines, réduisez les ouvertures impulsives et gagnez plus de 3 heures par jour.</string>
+    <string name="stat_hours_saved">2.8+ Heures</string>
+    <string name="stat_hours_saved_desc">Gagnées / jour</string>
+    <string name="stat_reduction">94% Moins</string>
+    <string name="stat_reduction_desc">Ouvertures impulsives</string>
+    <string name="stat_privacy">100% Privé</string>
+    <string name="stat_privacy_desc">Sur l\'appareil</string>
+    <string name="feature_friction_title">Boucliers de Pause Consciente</string>
+    <string name="feature_friction_desc">Des pauses respiratoires et rappels intelligents remplacent le défilement compulsif.</string>
+    <string name="feature_challenges_title">Portails de Déverrouillage Cognitif</string>
+    <string name="feature_challenges_desc">Affirmations inspirantes, défis mathématiques et minuteurs vérifient votre intention.</string>
+    <string name="feature_deepwork_title">Quotas Stricts et Horaires</string>
+    <string name="feature_deepwork_desc">Verrouillez les applications distrayantes pendant le travail et gagnez des XP.</string>
+    <string name="feature_privacy_title">100% Hors Ligne et Zéro Pistage</string>
+    <string name="feature_privacy_desc">Aucun cloud, aucun compte requis. Vos habitudes restent entièrement sur votre appareil.</string>
+    <string name="get_started_btn">Commencer à Reprendre Mon Temps</string>
 </resources>

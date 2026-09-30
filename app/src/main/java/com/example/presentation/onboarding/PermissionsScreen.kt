@@ -1,28 +1,23 @@
 package com.example.presentation.onboarding
 
-import android.Manifest
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
-import android.os.PowerManager
 import android.provider.Settings
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.*
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -33,90 +28,159 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.example.service.AppMonitorService
+import com.example.ui.theme.FocusLockSemanticColors
+import com.example.ui.theme.GlassStatusBadge
 import com.example.ui.theme.LiquidBackground
+import com.example.ui.theme.SemanticTone
 import com.example.ui.theme.liquidGlass
 import com.example.util.PermissionHelper
+import kotlinx.coroutines.delay
 
 enum class PermissionType {
-    REQUIRED,
-    OPTIONAL
+    REQUIRED
 }
 
 data class PermissionItemData(
     val id: String,
     val title: String,
-    val category: PermissionType,
+    val category: PermissionType = PermissionType.REQUIRED,
     val icon: ImageVector,
     val shortPurpose: String,
     val detailedPurpose: String,
+    val whyRequiredBullet: String,
     val isGranted: Boolean,
     val actionText: String = "Grant",
-    val restrictedSettingsGuide: String? = null
+    val restrictedSettingsGuide: String? = null,
+    val onGrantClick: (() -> Unit)? = null
 )
 
+/**
+ * Dedicated Permission Screen with Context-Based Color Psychology & Compact Permission Center Cards:
+ * - Green: Successfully granted permissions & ready confirmation
+ * - Amber: Permissions that still need attention / pending setup
+ * - Red: Critical permission errors / missing protection alerts when attempting to configure or enforce limits
+ * - Blue/Teal: Informational context and guidance
+ *
+ * Layout:
+ * 1. Compact Required Permission Cards at the top (with an "i" info button beside each permission name to view full details)
+ * 2. Contextual explanation cards ("Required to Limit..." and "Why FocusLock Needs These 3 Permissions") below the permission cards
+ * 3. Bottom "Continue" button (disabled until all 3 required permissions are granted)
+ */
 @Composable
 fun PermissionsScreen(
     isFromSettings: Boolean = false,
+    isForLimitSetup: Boolean = false,
+    targetAppName: String? = null,
+    hasExistingConfiguredLimits: Boolean = false,
     onNavigateBack: (() -> Unit)? = null,
     onPermissionsGranted: () -> Unit
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val primaryCyan = Color(0xFF00E5FF)
+    val semantic = FocusLockSemanticColors
 
-    // Permission states
+    // Live required permission states — never assumed granted until verified by PermissionHelper
+    var hasUsage by remember { mutableStateOf(PermissionHelper.hasUsageAccess(context)) }
     var hasAccessibility by remember { mutableStateOf(PermissionHelper.hasAccessibilityPermission(context)) }
     var hasOverlay by remember { mutableStateOf(PermissionHelper.hasOverlayPermission(context)) }
-    var hasUsage by remember { mutableStateOf(PermissionHelper.hasUsageAccess(context)) }
-    var hasNotification by remember { mutableStateOf(PermissionHelper.hasNotificationPermission(context)) }
-    var hasBatteryOpt by remember { mutableStateOf(PermissionHelper.isIgnoringBatteryOptimizations(context)) }
-    var hasDndPolicy by remember { mutableStateOf(PermissionHelper.hasNotificationPolicyAccess(context)) }
-    var hasLocation by remember { mutableStateOf(PermissionHelper.hasLocationPermission(context)) }
 
-    // Dialogs / Explanations
+    // Track if the user launched Android Settings from this screen so we can auto-continue once all 3 are granted
+    var launchedSettingsForPermission by remember { mutableStateOf(false) }
     var selectedHelpPermission by remember { mutableStateOf<PermissionItemData?>(null) }
 
-    // Runtime permission launcher for Notifications (Android 13+)
-    val notificationPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        hasNotification = isGranted
-    }
-
-    // Runtime permission launcher for Location (Optional profiles)
-    val locationPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        hasLocation = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
-                permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
-    }
-
-    // Refresh state when coming back to the foreground
+    // Recheck permission status when the user returns from Android Settings using ON_RESUME lifecycle callback
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
+                hasUsage = PermissionHelper.hasUsageAccess(context)
                 hasAccessibility = PermissionHelper.hasAccessibilityPermission(context)
                 hasOverlay = PermissionHelper.hasOverlayPermission(context)
-                hasUsage = PermissionHelper.hasUsageAccess(context)
-                hasNotification = PermissionHelper.hasNotificationPermission(context)
-                hasBatteryOpt = PermissionHelper.isIgnoringBatteryOptimizations(context)
-                hasDndPolicy = PermissionHelper.hasNotificationPolicyAccess(context)
-                hasLocation = PermissionHelper.hasLocationPermission(context)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    val allRequiredGranted = hasAccessibility && hasOverlay && hasUsage
-    val requiredCount = listOf(hasAccessibility, hasOverlay, hasUsage).count { it }
+    val allRequiredGranted = hasUsage && hasAccessibility && hasOverlay
+    val requiredCount = listOf(hasUsage, hasAccessibility, hasOverlay).count { it }
     val totalRequired = 3
+    val missingNames = remember(hasUsage, hasAccessibility, hasOverlay) {
+        buildList {
+            if (!hasUsage) add("Usage Data Access")
+            if (!hasAccessibility) add("Accessibility Service")
+            if (!hasOverlay) add("Display Over Other Apps")
+        }
+    }
+
+    // Once all permissions are granted during an app-limit setup flow (or after returning from Settings),
+    // start the monitoring service and automatically return the user to their original limit-setup flow.
+    LaunchedEffect(allRequiredGranted, launchedSettingsForPermission, isForLimitSetup) {
+        if (allRequiredGranted) {
+            AppMonitorService.startService(context)
+            if (isForLimitSetup || launchedSettingsForPermission) {
+                delay(380) // Brief visual confirmation of Green "All Granted" state before returning
+                onPermissionsGranted()
+            }
+        }
+    }
+
+    if (onNavigateBack != null) {
+        BackHandler(onBack = onNavigateBack)
+    }
+
+    val headerSemanticTone = when {
+        allRequiredGranted -> SemanticTone.GREEN
+        isForLimitSetup || hasExistingConfiguredLimits -> SemanticTone.RED
+        else -> SemanticTone.AMBER
+    }
+
+    val openUsageSettings: () -> Unit = {
+        launchedSettingsForPermission = true
+        try {
+            val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {
+                data = Uri.parse("package:${context.packageName}")
+            }
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            try {
+                context.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+            } catch (ex: Exception) {
+                context.startActivity(Intent(Settings.ACTION_SETTINGS))
+            }
+        }
+    }
+
+    val openAccessibilitySettings: () -> Unit = {
+        launchedSettingsForPermission = true
+        try {
+            val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            context.startActivity(Intent(Settings.ACTION_SETTINGS))
+        }
+    }
+
+    val openOverlaySettings: () -> Unit = {
+        launchedSettingsForPermission = true
+        try {
+            val intent = Intent(
+                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                Uri.parse("package:${context.packageName}")
+            )
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            context.startActivity(Intent(Settings.ACTION_SETTINGS))
+        }
+    }
 
     LiquidBackground {
         Column(
@@ -124,27 +188,29 @@ fun PermissionsScreen(
                 .fillMaxSize()
                 .statusBarsPadding()
                 .navigationBarsPadding()
-                .padding(horizontal = 20.dp)
+                .padding(horizontal = 18.dp)
         ) {
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            // Header Row
+            // Top Header Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (isFromSettings && onNavigateBack != null) {
+                if (onNavigateBack != null) {
                     IconButton(
                         onClick = onNavigateBack,
                         modifier = Modifier
-                            .size(38.dp)
+                            .testTag("permissions_back_button")
+                            .size(44.dp)
                             .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.1f))
+                            .background(semantic.neutral.container)
+                            .border(1.dp, semantic.neutral.border, CircleShape)
                     ) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.onBackground
+                            tint = semantic.textPrimary
                         )
                     }
                     Spacer(modifier = Modifier.width(12.dp))
@@ -152,377 +218,290 @@ fun PermissionsScreen(
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Permission Center",
-                        style = MaterialTheme.typography.headlineMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 26.sp,
-                            letterSpacing = (-0.5).sp
+                        text = if (isForLimitSetup) "Permissions Required" else "Permission Center",
+                        style = MaterialTheme.typography.headlineSmall.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 22.sp,
+                            letterSpacing = (-0.4).sp
                         ),
-                        color = Color.White
+                        color = semantic.textPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = if (allRequiredGranted) "All required system guards active"
-                        else "$requiredCount of $totalRequired required permissions enabled",
+                        text = when {
+                            allRequiredGranted -> "All 3 required permissions granted & active"
+                            else -> "$requiredCount of $totalRequired required permissions enabled"
+                        },
                         style = MaterialTheme.typography.bodySmall.copy(
-                            color = if (allRequiredGranted) Color(0xFF00E5FF) else Color(0xFFE55353),
+                            color = when {
+                                allRequiredGranted -> semantic.green.accent
+                                isForLimitSetup -> semantic.amber.accent
+                                else -> semantic.red.accent
+                            },
                             fontWeight = FontWeight.SemiBold,
-                            fontSize = 13.sp
+                            fontSize = 12.5.sp
                         )
                     )
                 }
 
-                // Status Badge in Liquid Glass (as shown in 1790213352222.png)
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(
-                            if (allRequiredGranted) Color(0x3000E5FF)
-                            else Color(0x40551822)
-                        )
-                        .border(
-                            1.dp,
-                            if (allRequiredGranted) Color(0x8000E5FF)
-                            else Color(0x80EF4444),
-                            RoundedCornerShape(16.dp)
-                        )
-                        .padding(horizontal = 12.dp, vertical = 7.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            if (allRequiredGranted) Icons.Default.CheckCircle else Icons.Default.Warning,
-                            contentDescription = null,
-                            tint = if (allRequiredGranted) Color(0xFF00E5FF) else Color(0xFFFF5252),
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = if (allRequiredGranted) "PROTECTED" else "SETUP NEEDED",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 10.5.sp,
-                                letterSpacing = 0.5.sp
-                            ),
-                            color = if (allRequiredGranted) Color(0xFF00E5FF) else Color(0xFFFF5252)
-                        )
+                Spacer(modifier = Modifier.width(8.dp))
+
+                GlassStatusBadge(
+                    text = when {
+                        allRequiredGranted -> "READY"
+                        isForLimitSetup -> "ACTION NEEDED"
+                        else -> "$requiredCount/$totalRequired ACTIVE"
+                    },
+                    semanticTone = headerSemanticTone,
+                    icon = when {
+                        allRequiredGranted -> Icons.Default.CheckCircle
+                        headerSemanticTone == SemanticTone.RED -> Icons.Default.ErrorOutline
+                        else -> Icons.Default.WarningAmber
                     }
-                }
+                )
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             LazyColumn(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
                 contentPadding = PaddingValues(vertical = 4.dp)
             ) {
-                // Section 1: REQUIRED PERMISSIONS
+                // Section Header for the 3 Required Permissions (at the very top)
                 item {
-                    SectionHeader(
-                        title = "REQUIRED PERMISSIONS",
-                        subtitle = "Essential for real-time app blocking and screen time limits",
-                        isCritical = true
-                    )
-                }
-
-                // 1. Accessibility Service
-                item {
-                    PermissionGlassCard(
-                        data = PermissionItemData(
-                            id = "accessibility",
-                            title = "Accessibility Service",
-                            category = PermissionType.REQUIRED,
-                            icon = Icons.Default.Accessibility,
-                            shortPurpose = "Instant detection when distraction apps launch to enforce limits.",
-                            detailedPurpose = "FocusLock monitors window transitions strictly on-device to intercept restricted apps immediately. No keystrokes or text contents are read or stored.",
-                            isGranted = hasAccessibility,
-                            actionText = "Turn On",
-                            restrictedSettingsGuide = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hasAccessibility) {
-                                "If toggle is grayed out on Android 13+: Open Phone Settings > Apps > FocusLock > tap 3 dots (⋮) in top right > tap 'Allow restricted settings'."
-                            } else null
-                        ),
-                        onEnable = {
-                            try {
-                                val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                context.startActivity(Intent(Settings.ACTION_SETTINGS))
-                            }
-                        },
-                        onHelpClick = { selectedHelpPermission = it }
-                    )
-                }
-
-                // 2. Display Over Other Apps (Overlay)
-                item {
-                    PermissionGlassCard(
-                        data = PermissionItemData(
-                            id = "overlay",
-                            title = "Display Over Other Apps",
-                            category = PermissionType.REQUIRED,
-                            icon = Icons.Default.Layers,
-                            shortPurpose = "Displays the Liquid Glass blocking screen over restricted apps.",
-                            detailedPurpose = "Allows FocusLock to render mindful challenge screens, countdown timers, and emergency break options when an app limit is reached.",
-                            isGranted = hasOverlay,
-                            actionText = "Grant"
-                        ),
-                        onEnable = {
-                            try {
-                                val intent = Intent(
-                                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                                    Uri.parse("package:${context.packageName}")
-                                )
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                context.startActivity(Intent(Settings.ACTION_SETTINGS))
-                            }
-                        },
-                        onHelpClick = { selectedHelpPermission = it }
-                    )
-                }
-
-                // 3. Usage Data Access
-                item {
-                    PermissionGlassCard(
-                        data = PermissionItemData(
-                            id = "usage",
-                            title = "Usage Data Access",
-                            category = PermissionType.REQUIRED,
-                            icon = Icons.Default.ShowChart,
-                            shortPurpose = "Calculates daily screen time and tracks streaks accurately.",
-                            detailedPurpose = "Reads Android OS package usage statistics locally to tally daily screen-time minutes, track goal progress, and alert you before limits are hit.",
-                            isGranted = hasUsage,
-                            actionText = "Allow"
-                        ),
-                        onEnable = {
-                            try {
-                                val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                context.startActivity(Intent(Settings.ACTION_SETTINGS))
-                            }
-                        },
-                        onHelpClick = { selectedHelpPermission = it }
-                    )
-                }
-
-                // Section 2: OPTIONAL PERMISSIONS
-                item {
-                    Spacer(modifier = Modifier.height(10.dp))
-                    SectionHeader(
-                        title = "OPTIONAL ENHANCEMENTS",
-                        subtitle = "Enable for seamless background defense and silence controls",
-                        isCritical = false
-                    )
-                }
-
-                // 4. Notifications (POST_NOTIFICATIONS)
-                item {
-                    PermissionGlassCard(
-                        data = PermissionItemData(
-                            id = "notification",
-                            title = "Active Notifications",
-                            category = PermissionType.OPTIONAL,
-                            icon = Icons.Default.Notifications,
-                            shortPurpose = "Sends limit alerts, streak reminders, and active focus timers.",
-                            detailedPurpose = "Allows FocusLock to show the persistent foreground service notification and alert you when approaching a daily time limit.",
-                            isGranted = hasNotification,
-                            actionText = "Allow"
-                        ),
-                        onEnable = {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                            } else {
-                                Toast.makeText(context, "Notification permission is granted by default on your Android version", Toast.LENGTH_SHORT).show()
-                            }
-                        },
-                        onHelpClick = { selectedHelpPermission = it }
-                    )
-                }
-
-                // 5. Unrestricted Battery / Background
-                item {
-                    PermissionGlassCard(
-                        data = PermissionItemData(
-                            id = "battery",
-                            title = "Unrestricted Battery",
-                            category = PermissionType.OPTIONAL,
-                            icon = Icons.Default.BatteryChargingFull,
-                            shortPurpose = "Prevents Android OS from killing FocusLock in the background.",
-                            detailedPurpose = "Disables aggressive OS power saving routines so focus sessions and app limit enforcements are never unexpectedly terminated.",
-                            isGranted = hasBatteryOpt,
-                            actionText = "Optimize"
-                        ),
-                        onEnable = {
-                            try {
-                                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                                    data = Uri.parse("package:${context.packageName}")
-                                }
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                try {
-                                    context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
-                                } catch (ex: Exception) {
-                                    context.startActivity(Intent(Settings.ACTION_SETTINGS))
-                                }
-                            }
-                        },
-                        onHelpClick = { selectedHelpPermission = it }
-                    )
-                }
-
-                // 6. Do Not Disturb (DND Policy)
-                item {
-                    PermissionGlassCard(
-                        data = PermissionItemData(
-                            id = "dnd",
-                            title = "Do Not Disturb Access",
-                            category = PermissionType.OPTIONAL,
-                            icon = Icons.Default.DoNotDisturbOn,
-                            shortPurpose = "Silences incoming alerts automatically during deep focus sessions.",
-                            detailedPurpose = "Allows FocusLock to toggle system Do Not Disturb mode when you start a timed Deep Focus or Bedtime session.",
-                            isGranted = hasDndPolicy,
-                            actionText = "Grant"
-                        ),
-                        onEnable = {
-                            try {
-                                val intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                context.startActivity(Intent(Settings.ACTION_SETTINGS))
-                            }
-                        },
-                        onHelpClick = { selectedHelpPermission = it }
-                    )
-                }
-
-                // 7. Location (Location-based Profiles)
-                item {
-                    PermissionGlassCard(
-                        data = PermissionItemData(
-                            id = "location",
-                            title = "Location (Profiles)",
-                            category = PermissionType.OPTIONAL,
-                            icon = Icons.Default.Place,
-                            shortPurpose = "Triggers automatic focus profiles at specific places (Work, Study).",
-                            detailedPurpose = "Used solely to detect arrival at your configured Work or Library locations to automatically engage focus profiles. Location data never leaves your device.",
-                            isGranted = hasLocation,
-                            actionText = "Grant"
-                        ),
-                        onEnable = {
-                            locationPermissionLauncher.launch(
-                                arrayOf(
-                                    Manifest.permission.ACCESS_FINE_LOCATION,
-                                    Manifest.permission.ACCESS_COARSE_LOCATION
-                                )
+                    val sectionColor = if (allRequiredGranted) semantic.green.accent else semantic.amber.accent
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(7.dp)
+                                    .clip(CircleShape)
+                                    .background(sectionColor)
                             )
-                        },
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "REQUIRED PERMISSIONS ($requiredCount/$totalRequired)",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = FontWeight.ExtraBold,
+                                    letterSpacing = 1.sp,
+                                    fontSize = 11.5.sp
+                                ),
+                                color = sectionColor
+                            )
+                        }
+                        Text(
+                            text = "Tap ⓘ for details",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = semantic.textSecondary,
+                                fontSize = 11.sp
+                            )
+                        )
+                    }
+                }
+
+                // 1. Usage Data Access (Compact Card)
+                item {
+                    val usageItem = PermissionItemData(
+                        id = "usage",
+                        title = "Usage Data Access",
+                        icon = Icons.Default.QueryStats,
+                        shortPurpose = "Tracks daily screen time & app usage minutes.",
+                        detailedPurpose = "FocusLock queries Android's UsageStatsManager locally on your device to calculate how many minutes you have spent in each app today and trigger timely warnings when you approach your limit.",
+                        whyRequiredBullet = "Required to measure how long restricted apps are used each day.",
+                        isGranted = hasUsage,
+                        actionText = "Grant",
+                        onGrantClick = openUsageSettings
+                    )
+                    PermissionGlassCard(
+                        data = usageItem,
+                        onEnable = openUsageSettings,
+                        onHelpClick = { selectedHelpPermission = it }
+                    )
+                }
+
+                // 2. Accessibility Service (Compact Card)
+                item {
+                    val accessibilityItem = PermissionItemData(
+                        id = "accessibility",
+                        title = "Accessibility Service",
+                        icon = Icons.Default.AccessibilityNew,
+                        shortPurpose = "Detects restricted app launches in real time.",
+                        detailedPurpose = "FocusLock uses Android's Accessibility Service strictly on-device to detect foreground app launches so limits and focus locks cannot be bypassed. FocusLock never reads or stores personal text or passwords.",
+                        whyRequiredBullet = "Required to instantly detect and intercept restricted apps when opened.",
+                        isGranted = hasAccessibility,
+                        actionText = "Enable",
+                        restrictedSettingsGuide = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hasAccessibility) {
+                            "Tip for Android 13+: If the toggle is grayed out, open Phone Settings > Apps > FocusLock > tap the 3 dots (⋮) in the top-right corner > tap 'Allow restricted settings'."
+                        } else null,
+                        onGrantClick = openAccessibilitySettings
+                    )
+                    PermissionGlassCard(
+                        data = accessibilityItem,
+                        onEnable = openAccessibilitySettings,
+                        onHelpClick = { selectedHelpPermission = it }
+                    )
+                }
+
+                // 3. Display Over Other Apps (Compact Card)
+                item {
+                    val overlayItem = PermissionItemData(
+                        id = "overlay",
+                        title = "Display Over Other Apps",
+                        icon = Icons.Default.Layers,
+                        shortPurpose = "Shows the lock shield when time expires.",
+                        detailedPurpose = "Allows FocusLock to display the blocking screen, countdown timer, and mindful unlock challenge directly over restricted apps the moment their time limit is reached.",
+                        whyRequiredBullet = "Required to display the lock shield when an app limit is reached.",
+                        isGranted = hasOverlay,
+                        actionText = "Grant",
+                        onGrantClick = openOverlaySettings
+                    )
+                    PermissionGlassCard(
+                        data = overlayItem,
+                        onEnable = openOverlaySettings,
                         onHelpClick = { selectedHelpPermission = it }
                     )
                 }
 
                 item {
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(2.dp))
+                }
+
+                // Contextual Explanation Banner (moved below the 3 permission cards as requested)
+                item {
+                    PermissionContextBanner(
+                        allRequiredGranted = allRequiredGranted,
+                        isForLimitSetup = isForLimitSetup,
+                        targetAppName = targetAppName,
+                        hasExistingConfiguredLimits = hasExistingConfiguredLimits,
+                        missingNames = missingNames
+                    )
+                }
+
+                // Why FocusLock Needs These Permissions Summary Card (moved below as requested)
+                item {
+                    WhyPermissionsNecessaryCard()
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
             }
 
-            // Bottom Primary Action Button with Specular Diamond Star Sparkle
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(60.dp)
-                    .shadow(
-                        elevation = if (allRequiredGranted) 14.dp else 6.dp,
-                        shape = RoundedCornerShape(32.dp),
-                        spotColor = if (allRequiredGranted) primaryCyan else Color(0x20000000)
+            // Bottom "Continue" Button — Disabled until ALL required permissions are granted
+            val continueButtonContainerBrush = if (allRequiredGranted) {
+                Brush.horizontalGradient(
+                    listOf(semantic.green.accent, Color(0xFF059669))
+                )
+            } else {
+                Brush.verticalGradient(
+                    listOf(
+                        Color(0x42334155),
+                        Color(0x2E1E293B)
                     )
-                    .clip(RoundedCornerShape(32.dp))
-                    .background(
-                        if (allRequiredGranted) {
-                            Brush.horizontalGradient(
-                                listOf(Color(0xFF00E5FF), Color(0xFF0091EA))
-                            )
-                        } else {
-                            Brush.verticalGradient(
-                                listOf(
-                                    Color(0x4239495B),
-                                    Color(0x2E2A3644),
-                                    Color(0x201E2632)
-                                )
-                            )
-                        }
-                    )
-                    .border(
-                        1.5.dp,
-                        if (allRequiredGranted) Color.White.copy(alpha = 0.90f) else Color.White.copy(alpha = 0.55f),
-                        RoundedCornerShape(32.dp)
-                    ),
-                contentAlignment = Alignment.Center
+                )
+            }
+
+            val continueBorderColor by animateColorAsState(
+                targetValue = if (allRequiredGranted) semantic.green.border else semantic.neutral.border,
+                animationSpec = tween(250),
+                label = "continue_border"
+            )
+
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                if (!allRequiredGranted) {
+                    Text(
+                        text = "Enable ${totalRequired - requiredCount} more required permission${if (totalRequired - requiredCount == 1) "" else "s"} to unlock Continue",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = semantic.amber.accent,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 11.5.sp
+                        ),
+                        modifier = Modifier.padding(bottom = 6.dp)
+                    )
+                }
+
                 Button(
-                    onClick = onPermissionsGranted,
-                    modifier = Modifier.fillMaxSize(),
+                    onClick = {
+                        if (allRequiredGranted) {
+                            AppMonitorService.startService(context)
+                            onPermissionsGranted()
+                        }
+                    },
+                    enabled = allRequiredGranted,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(54.dp)
+                        .testTag("permissions_continue_button")
+                        .shadow(
+                            elevation = if (allRequiredGranted) 12.dp else 0.dp,
+                            shape = RoundedCornerShape(28.dp),
+                            spotColor = if (allRequiredGranted) semantic.green.accent else Color.Transparent
+                        )
+                        .clip(RoundedCornerShape(28.dp))
+                        .background(continueButtonContainerBrush)
+                        .border(
+                            width = 1.4.dp,
+                            color = continueBorderColor,
+                            shape = RoundedCornerShape(28.dp)
+                        ),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color.Transparent,
-                        disabledContainerColor = Color.Transparent
+                        disabledContainerColor = Color.Transparent,
+                        contentColor = Color(0xFF042F2E),
+                        disabledContentColor = semantic.textMuted
                     ),
-                    shape = RoundedCornerShape(32.dp)
+                    shape = RoundedCornerShape(28.dp)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
                         Icon(
-                            if (allRequiredGranted) Icons.Default.CheckCircle else Icons.Default.ArrowForward,
+                            imageVector = if (allRequiredGranted) Icons.Default.CheckCircle else Icons.Default.Lock,
                             contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
+                            tint = if (allRequiredGranted) Color(0xFF032219) else semantic.textMuted,
+                            modifier = Modifier.size(19.dp)
                         )
-                        Spacer(modifier = Modifier.width(10.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (isFromSettings) {
-                                if (allRequiredGranted) "All Required Active • Return" else "Save & Return"
-                            } else {
-                                if (allRequiredGranted) "Complete Setup & Enter FocusLock" else "Enter FocusLock (Preview Mode)"
+                            text = when {
+                                allRequiredGranted && isForLimitSetup && !targetAppName.isNullOrBlank() ->
+                                    "Continue to $targetAppName Limit Setup"
+                                allRequiredGranted && isForLimitSetup ->
+                                    "Continue to Limit Setup"
+                                allRequiredGranted ->
+                                    "Continue"
+                                else ->
+                                    "Continue ($requiredCount/$totalRequired Permissions Granted)"
                             },
                             style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 15.5.sp
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 14.5.sp
                             ),
-                            color = Color.White
+                            color = if (allRequiredGranted) Color(0xFF032219) else semantic.textMuted,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
-
-                // Decorative Diamond Star Sparkle Flare on Top-Right Edge (matches 1790213352222.png)
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .offset(x = (-40).dp, y = (-8).dp)
-                        .size(32.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    // Soft halo glow
-                    Box(
-                        modifier = Modifier
-                            .size(18.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.35f))
-                    )
-                    // 4-point diamond star
-                    Text(
-                        text = "✦",
-                        color = Color.White.copy(alpha = 0.95f),
-                        fontSize = 26.sp,
-                        fontWeight = FontWeight.ExtraBold
-                    )
-                }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
         }
 
-        // Detailed Permission Explanation Dialog
+        // Detailed Permission Explanation Dialog when user taps the "i" button
         selectedHelpPermission?.let { item ->
             PermissionExplanationDialog(
                 data = item,
@@ -532,232 +511,290 @@ fun PermissionsScreen(
     }
 }
 
-@Composable
-private fun SectionHeader(
-    title: String,
-    subtitle: String,
-    isCritical: Boolean
-) {
-    val primaryCyan = Color(0xFF00E5FF)
-
-    Column(modifier = Modifier.padding(vertical = 4.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(7.dp)
-                    .clip(CircleShape)
-                    .background(if (isCritical) primaryCyan else Color(0xFFE2E8F0))
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = 1.2.sp
-                ),
-                color = if (isCritical) primaryCyan else Color(0xFFE2E8F0)
-            )
-        }
-        Spacer(modifier = Modifier.height(3.dp))
-        Text(
-            text = subtitle,
-            style = MaterialTheme.typography.bodySmall.copy(
-                color = Color.White.copy(alpha = 0.72f),
-                fontSize = 12.5.sp
-            )
-        )
-    }
-}
-
+/**
+ * Compact, single-row Permission Card matching the original Permission Center look:
+ * - Left: 42dp Semantic Icon Bubble
+ * - Middle: Permission Title + "i" Info Button right beside the name (opens full details popup) + compact 1-line status
+ * - Right: Compact "Grant" / "Enable" pill button or "GRANTED" badge
+ */
 @Composable
 private fun PermissionGlassCard(
     data: PermissionItemData,
     onEnable: () -> Unit,
     onHelpClick: (PermissionItemData) -> Unit
 ) {
-    val primaryCyan = Color(0xFF24DFEC)
+    val semantic = FocusLockSemanticColors
+    // Semantic Rule: Green for granted permissions, Amber for permissions that still need attention
+    val cardTone = if (data.isGranted) SemanticTone.GREEN else SemanticTone.AMBER
+    val palette = semantic.forTone(cardTone)
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .liquidGlass(shape = RoundedCornerShape(26.dp), isHighlight = data.isGranted)
-            .padding(horizontal = 18.dp, vertical = 16.dp)
+            .liquidGlass(
+                shape = RoundedCornerShape(20.dp),
+                semanticTone = cardTone
+            )
+            .clickable {
+                if (!data.isGranted) {
+                    onEnable()
+                } else {
+                    onHelpClick(data)
+                }
+            }
+            .padding(horizontal = 14.dp, vertical = 12.dp)
     ) {
-        Column {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            // Compact Circular Icon Bubble
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(CircleShape)
+                    .background(palette.container)
+                    .border(1.1.dp, palette.border, CircleShape),
+                contentAlignment = Alignment.Center
             ) {
-                // Frosted Circular Glass Icon Background
+                Icon(
+                    imageVector = if (data.isGranted) Icons.Default.CheckCircle else data.icon,
+                    contentDescription = null,
+                    tint = palette.icon,
+                    modifier = Modifier.size(21.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Permission Name + "i" Info Button + 1-line compact status
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = data.title,
+                        style = MaterialTheme.typography.titleSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp
+                        ),
+                        color = semantic.textPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    // "i" button right next to the permission name to view full details
+                    Box(
+                        modifier = Modifier
+                            .testTag("info_permission_${data.id}")
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .background(semantic.blue.container)
+                            .border(0.8.dp, semantic.blue.border, CircleShape)
+                            .clickable { onHelpClick(data) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Info,
+                            contentDescription = "Details for ${data.title}",
+                            tint = semantic.blue.accent,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(2.dp))
+
+                Text(
+                    text = if (data.isGranted) {
+                        "Granted & Active"
+                    } else {
+                        data.shortPurpose
+                    },
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontSize = 11.8.sp,
+                        fontWeight = if (data.isGranted) FontWeight.SemiBold else FontWeight.Normal
+                    ),
+                    color = if (data.isGranted) palette.accent else semantic.textSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Spacer(modifier = Modifier.width(10.dp))
+
+            // Right Action Button or Granted Status Badge
+            if (data.isGranted) {
+                GlassStatusBadge(
+                    text = "GRANTED",
+                    semanticTone = SemanticTone.GREEN,
+                    icon = Icons.Default.Check
+                )
+            } else {
                 Box(
                     modifier = Modifier
-                        .size(50.dp)
-                        .clip(CircleShape)
+                        .testTag("grant_permission_${data.id}")
+                        .defaultMinSize(minHeight = 36.dp)
+                        .clip(RoundedCornerShape(14.dp))
                         .background(
-                            if (data.isGranted) Color(0x3500E5FF)
-                            else Color(0x303E4F63)
+                            Brush.horizontalGradient(
+                                listOf(semantic.amber.accent, Color(0xFFD97706))
+                            )
                         )
-                        .border(
-                            1.dp,
-                            if (data.isGranted) Color(0x8000E5FF)
-                            else Color.White.copy(alpha = 0.35f),
-                            CircleShape
-                        ),
+                        .border(1.dp, semantic.amber.border, RoundedCornerShape(14.dp))
+                        .clickable(onClick = onEnable)
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = data.icon,
-                        contentDescription = null,
-                        tint = if (data.isGranted) Color(0xFF00E5FF) else Color.White,
-                        modifier = Modifier.size(26.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(14.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = data.title,
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.5.sp
-                            ),
-                            color = Color.White
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        IconButton(
-                            onClick = { onHelpClick(data) },
-                            modifier = Modifier.size(22.dp)
-                        ) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.HelpOutline,
-                                contentDescription = "Explain ${data.title}",
-                                tint = Color.White.copy(alpha = 0.55f),
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(2.dp))
-
                     Text(
-                        text = data.shortPurpose,
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            color = Color.White.copy(alpha = 0.75f),
-                            fontSize = 12.5.sp,
-                            lineHeight = 16.sp
-                        )
+                        text = data.actionText,
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 12.sp
+                        ),
+                        color = Color(0xFF1F1200)
                     )
                 }
+            }
+        }
+    }
+}
 
-                Spacer(modifier = Modifier.width(10.dp))
+@Composable
+private fun PermissionContextBanner(
+    allRequiredGranted: Boolean,
+    isForLimitSetup: Boolean,
+    targetAppName: String?,
+    hasExistingConfiguredLimits: Boolean,
+    missingNames: List<String>
+) {
+    val semantic = FocusLockSemanticColors
+    val tone = when {
+        allRequiredGranted -> SemanticTone.GREEN
+        isForLimitSetup || hasExistingConfiguredLimits -> SemanticTone.RED
+        else -> SemanticTone.AMBER
+    }
+    val palette = semantic.forTone(tone)
 
-                // Action Button / Active Badge
-                if (data.isGranted) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(Color(0x3000E5FF))
-                            .border(1.dp, Color(0x8000E5FF), RoundedCornerShape(16.dp))
-                            .padding(horizontal = 14.dp, vertical = 8.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.Check,
-                                contentDescription = null,
-                                tint = Color(0xFF00E5FF),
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "ON",
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontWeight = FontWeight.ExtraBold,
-                                    fontSize = 11.sp
-                                ),
-                                color = Color(0xFF00E5FF)
-                            )
-                        }
-                    }
-                } else if (data.category == PermissionType.REQUIRED) {
-                    // Required Solid Turquoise Cyan Button
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(Color(0xFF24DFEC))
-                            .clickable(onClick = onEnable)
-                            .padding(horizontal = 18.dp, vertical = 10.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = data.actionText,
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp
-                            ),
-                            color = Color(0xFF061820)
-                        )
-                    }
-                } else {
-                    // Optional Frosted Glass Button
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(Color(0x403E4C5E))
-                            .border(
-                                1.dp,
-                                Color.White.copy(alpha = 0.40f),
-                                RoundedCornerShape(16.dp)
-                            )
-                            .clickable(onClick = onEnable)
-                            .padding(horizontal = 18.dp, vertical = 10.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = data.actionText,
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 13.5.sp
-                            ),
-                            color = Color.White
-                        )
-                    }
-                }
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .liquidGlass(
+                shape = RoundedCornerShape(18.dp),
+                semanticTone = tone
+            )
+            .padding(horizontal = 14.dp, vertical = 12.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(34.dp)
+                    .clip(CircleShape)
+                    .background(palette.container)
+                    .border(1.dp, palette.border, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = when {
+                        allRequiredGranted -> Icons.Default.VerifiedUser
+                        tone == SemanticTone.RED -> Icons.Default.GppMaybe
+                        else -> Icons.Default.WarningAmber
+                    },
+                    contentDescription = null,
+                    tint = palette.icon,
+                    modifier = Modifier.size(18.dp)
+                )
             }
 
-            // Android 13+ Restricted Settings warning if present
-            if (data.restrictedSettingsGuide != null) {
-                Spacer(modifier = Modifier.height(12.dp))
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(18.dp))
-                        .background(Color(0x455A371B))
-                        .border(1.dp, Color(0x80FFA726), RoundedCornerShape(18.dp))
-                        .padding(12.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.Top) {
-                        Icon(
-                            Icons.Default.Info,
-                            contentDescription = null,
-                            tint = Color(0xFFFFA726),
-                            modifier = Modifier
-                                .size(17.dp)
-                                .padding(top = 1.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = data.restrictedSettingsGuide,
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                color = Color(0xFFFDE68A),
-                                fontSize = 12.5.sp,
-                                lineHeight = 16.5.sp
-                            )
-                        )
-                    }
-                }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = when {
+                        allRequiredGranted -> "All Required Permissions Active"
+                        isForLimitSetup && !targetAppName.isNullOrBlank() ->
+                            "Required to Limit $targetAppName"
+                        isForLimitSetup ->
+                            "Permissions Needed to Set App Limits"
+                        hasExistingConfiguredLimits ->
+                            "Limit Enforcement Paused — Permission Missing"
+                        else ->
+                            "Complete Permission Setup for App Blocking"
+                    },
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 13.8.sp
+                    ),
+                    color = palette.accent
+                )
+                Spacer(modifier = Modifier.height(3.dp))
+                Text(
+                    text = when {
+                        allRequiredGranted ->
+                            "FocusLock has full access to track usage and enforce your app limits reliably. Tap Continue below to proceed."
+                        isForLimitSetup ->
+                            "Missing: ${missingNames.joinToString(", ")}. FocusLock cannot monitor screen time or block restricted apps until all 3 permissions above are enabled."
+                        hasExistingConfiguredLimits ->
+                            "Your configured app limits are safely stored, but enforcement is currently unavailable because ${missingNames.joinToString(", ")} ${if (missingNames.size == 1) "is" else "are"} turned off."
+                        else ->
+                            "Currently missing: ${missingNames.joinToString(", ")}. Enable each permission above to activate real-time app limits."
+                    },
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontSize = 12.sp,
+                        lineHeight = 16.5.sp
+                    ),
+                    color = semantic.textPrimary.copy(alpha = 0.88f)
+                )
             }
+        }
+    }
+}
+
+@Composable
+private fun WhyPermissionsNecessaryCard() {
+    val semantic = FocusLockSemanticColors
+    val bluePalette = semantic.blue
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .liquidGlass(
+                shape = RoundedCornerShape(18.dp),
+                semanticTone = SemanticTone.BLUE
+            )
+            .padding(horizontal = 14.dp, vertical = 12.dp)
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = null,
+                    tint = bluePalette.icon,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(7.dp))
+                Text(
+                    text = "Why FocusLock Needs These 3 Permissions",
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    ),
+                    color = bluePalette.accent
+                )
+            }
+            Text(
+                text = "• Usage Data Access measures how many minutes you spend in each app.\n" +
+                        "• Accessibility Service detects the instant a restricted app opens.\n" +
+                        "• Display Over Other Apps shows the lock screen when your time limit is up.\n" +
+                        "All usage checks run 100% locally on your device.",
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontSize = 11.8.sp,
+                    lineHeight = 16.sp
+                ),
+                color = semantic.textSecondary
+            )
         }
     }
 }
@@ -767,66 +804,135 @@ private fun PermissionExplanationDialog(
     data: PermissionItemData,
     onDismiss: () -> Unit
 ) {
-    val isDark = isSystemInDarkTheme()
-    val primaryCyan = if (isDark) Color(0xFF00E5FF) else Color(0xFF0077D6)
+    val semantic = FocusLockSemanticColors
+    val tonePalette = if (data.isGranted) semantic.green else semantic.amber
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(24.dp),
+        containerColor = semantic.surfaceElevated,
+        modifier = Modifier.border(1.dp, tonePalette.border, RoundedCornerShape(24.dp)),
         icon = {
-            Icon(
-                data.icon,
-                contentDescription = null,
-                tint = primaryCyan,
-                modifier = Modifier.size(32.dp)
-            )
+            Box(
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(CircleShape)
+                    .background(tonePalette.container)
+                    .border(1.2.dp, tonePalette.border, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    data.icon,
+                    contentDescription = null,
+                    tint = tonePalette.icon,
+                    modifier = Modifier.size(26.dp)
+                )
+            }
         },
         title = {
             Text(
                 text = data.title,
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.titleLarge
+                style = MaterialTheme.typography.titleLarge.copy(fontSize = 19.sp),
+                color = semantic.textPrimary
             )
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "Category: ",
-                        fontWeight = FontWeight.SemiBold,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Text(
-                        text = if (data.category == PermissionType.REQUIRED) "Required (App-Blocking Core)" else "Optional (System Convenience)",
-                        color = if (data.category == PermissionType.REQUIRED) primaryCyan else MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
+                GlassStatusBadge(
+                    text = if (data.isGranted) "GRANTED & ACTIVE" else "REQUIRED FOR APP LIMITS",
+                    semanticTone = if (data.isGranted) SemanticTone.GREEN else SemanticTone.AMBER,
+                    icon = if (data.isGranted) Icons.Default.CheckCircle else Icons.Default.WarningAmber
+                )
 
                 Text(
                     text = data.detailedPurpose,
-                    style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 20.sp)
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = 13.5.sp,
+                        lineHeight = 19.5.sp
+                    ),
+                    color = semantic.textSecondary
                 )
+
+                if (data.restrictedSettingsGuide != null) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(semantic.amber.container)
+                            .border(1.dp, semantic.amber.border, RoundedCornerShape(12.dp))
+                            .padding(11.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.Top) {
+                            Icon(
+                                Icons.Default.Info,
+                                contentDescription = null,
+                                tint = semantic.amber.icon,
+                                modifier = Modifier
+                                    .size(16.dp)
+                                    .padding(top = 1.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = data.restrictedSettingsGuide,
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = semantic.amber.onContainer,
+                                    fontSize = 11.8.sp,
+                                    lineHeight = 16.sp
+                                )
+                            )
+                        }
+                    }
+                }
 
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(Color.White.copy(alpha = if (isDark) 0.06f else 0.4f))
-                        .padding(10.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(semantic.blue.container)
+                        .border(1.dp, semantic.blue.border, RoundedCornerShape(12.dp))
+                        .padding(11.dp)
                 ) {
                     Text(
-                        text = "🔒 FocusLock guarantees that your data is processed 100% locally on your device and never uploaded to remote servers.",
+                        text = "🔒 Privacy Guarantee: All usage tracking and app-blocking checks happen 100% locally on your device.",
                         style = MaterialTheme.typography.labelSmall.copy(
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
+                            color = semantic.blue.onContainer,
+                            fontSize = 11.8.sp,
+                            lineHeight = 16.sp
                         )
                     )
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Got It", fontWeight = FontWeight.Bold, color = primaryCyan)
+            if (!data.isGranted && data.onGrantClick != null) {
+                Button(
+                    onClick = {
+                        onDismiss()
+                        data.onGrantClick.invoke()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = semantic.amber.accent,
+                        contentColor = Color(0xFF1F1200)
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        text = data.actionText,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                }
+            } else {
+                TextButton(onClick = onDismiss) {
+                    Text("Got It", fontWeight = FontWeight.Bold, color = semantic.blue.accent)
+                }
+            }
+        },
+        dismissButton = {
+            if (!data.isGranted && data.onGrantClick != null) {
+                TextButton(onClick = onDismiss) {
+                    Text("Close", fontWeight = FontWeight.SemiBold, color = semantic.textSecondary)
+                }
             }
         }
     )

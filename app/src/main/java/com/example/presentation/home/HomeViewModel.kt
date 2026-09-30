@@ -139,7 +139,10 @@ class HomeViewModel(
         initialValue = StatsSummary(0, 0)
     )
 
-    fun updateLimit(packageName: String, appName: String, dailyMinutes: Int) {
+    fun updateLimit(packageName: String, appName: String, dailyMinutes: Int): Boolean {
+        if (!com.example.util.PermissionHelper.areAllRequiredPermissionsGranted(getApplication())) {
+            return false
+        }
         viewModelScope.launch {
             val existing = repository.getLimit(packageName)
             if (existing != null) {
@@ -154,7 +157,9 @@ class HomeViewModel(
                     )
                 )
             }
+            com.example.service.AppMonitorService.startService(getApplication())
         }
+        return true
     }
 
     fun removeLimit(packageName: String) {

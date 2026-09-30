@@ -1,6 +1,9 @@
 <resources>
     <string name="app_name">FocusLock</string>
     <string name="accessibility_service_description">يُستخدم بواسطة FocusLock لاكتشاف وقت فتح التطبيقات المشتتة للانتباه حتى يمكن حظرها.</string>
+    
+    <!-- Home / Dashboard -->
+    <string name="digital_equilibrium">التوازن الرقمي</string>
     <string name="level_xp">المستوى %1$d • %2$d نقطة خبرة للتالي</string>
     <string name="limits">الحدود</string>
     <string name="schedules">الجداول الزمنية</string>
@@ -8,18 +11,216 @@
     <string name="stats">الإحصائيات</string>
     <string name="total_focus">التركيز الكلي</string>
     <string name="time_saved">الوقت الموفر</string>
-    <string name="start_focus">ابدأ</string>
-    <string name="app_blocked">%1$s محظور</string>
-    <string name="limit_reached">لقد وصلت إلى الحد اليومي البالغ %1$d دقيقة.</string>
+    <string name="start_focus">ابدأ التركيز الآن 🔒</string>
+    <string name="focus_score">نقاط التركيز</string>
+    <string name="todays_usage">استخدام اليوم</string>
+    <string name="time_reclaimed">الوقت المستعاد</string>
+    <string name="blocked_apps">التطبيقات المحظورة</string>
+    <string name="current_streak">سلسلة التركيز 🔥</string>
+    <string name="days_suffix">أيام</string>
+    <string name="active_limits">الحدود النشطة</string>
+    <string name="monitored_suffix">قيد المراقبة</string>
+    <string name="no_limits_set">لم يتم تعيين حدود بعد</string>
+    <string name="no_limits_desc">عيّن حدوداً يومية في علامة تبويب التطبيقات وحافظ على تركيزك.</string>
+    <string name="set_app_limits">تعيين حدود التطبيقات</string>
+    <string name="active_protection">الحماية نشطة</string>
+    <string name="protection_limited">الحماية محدودة</string>
+    <string name="protection_active_desc">مراقب إمكانية الوصول وحظر الشاشة يعملان بسلاسة.</string>
+    <string name="accessibility_needed_desc">يلزم إذن إمكانية الوصول لاعتراض التطبيقات المشتتة فوراً.</string>
+    <string name="overlay_needed_desc">يلزم إذن الظهور فوق التطبيقات لعرض شاشة القفل الذكي.</string>
+    <string name="enable_btn">تفعيل</string>
+    <string name="adjust_limit_title">تعديل الحد: %1$s</string>
+    <string name="daily_allowance">الحد اليومي المسموح: %1$d دقيقة</string>
+    <string name="min_5">5 دقائق</string>
+    <string name="hours_4">4 ساعات</string>
+    <string name="save">حفظ</string>
+    <string name="cancel">إلغاء</string>
+    <string name="blocked_status">محظور</string>
+    <string name="min_left">متبقي %1$d د</string>
+    <string name="used_format">تم استخدام %1$d / %2$d دقيقة</string>
+
+    <!-- Block Screen -->
+    <string name="app_blocked">وضع التركيز: قيد التشغيل. المشتتات: متوقفة.</string>
+    <string name="app_restricted">وضع التركيز: نشط</string>
+    <string name="times_up">انتهى الوقت المسموح 🌱</string>
+    <string name="restricted_reason">تم إيقاف \"%1$s\" مؤقتاً لمساعدتك في الحفاظ على تركيزك 🔒</string>
+    <string name="quota_reached_reason">لقد استهلكت حصتك اليومية لتطبيق \"%1$s\". خذ استراحة 🌱 واستعد نشاطك.</string>
+    <string name="usage_today">استخدام اليوم</string>
+    <string name="limit_reached">لقد وصلت إلى الحد اليومي البالغ %1$d دقيقة لهذا اليوم ✨</string>
+    <string name="strict_block_0m">حظر صارم (0 دقيقة)</string>
+    <string name="return_to_home">البقاء في وضع التركيز 🔒</string>
+    <string name="complete_challenge_to_unlock">أكمل التحدي لفتح القفل</string>
+    <string name="emergency_bypass_left">تجاوز طارئ (%1$d متبقي)</string>
+    <string name="no_emergency_passes_left">لا توجد مرات تجاوز طارئة متبقية</string>
     <string name="wait_and_breathe">انتظر وتنفس</string>
     <string name="earn_more_time">اكسب المزيد من الوقت</string>
     <string name="emergency_unlock">فتح طارئ</string>
-    <string name="take_a_deep_breath">خذ نفسا عميقا.</string>
-    <string name="challenge_instructions">اكتب النص أعلاه لفتح 5 دقائق إضافية.</string>
+    <string name="take_a_deep_breath">خذ نفساً عميقاً. أنت المتحكم في وقتك.</string>
+    <string name="challenge_instructions">اكتب الجملة أدناه لفتح 5 دقائق إضافية.</string>
+    
+    <!-- Challenge Screen -->
+    <string name="verification_gateway">بوابة التحقق الذكي</string>
+    <string name="verification_gateway_desc">أكمل تحدياً لفتح جلسة استخدام مؤقتة.</string>
+    <string name="no_challenges_enabled">لم يتم تفعيل أي تحديات. قم بتفعيلها من الإعدادات.</string>
+    <string name="mental_math_challenge">تحدي الحساب الذهني</string>
+    <string name="mental_math_subtitle">حل مسألة حسابية سريعة</string>
+    <string name="patience_stillness">الصبر والهدوء</string>
+    <string name="patience_stillness_subtitle">عد تنازلي للتأمل الواعي</string>
+    <string name="patience_stillness_desc">حافظ على هدوئك وانتباهك دون إغلاق هذه الشاشة.</string>
+    <string name="typing_intention_title">كتابة النية الواعية</string>
+    <string name="typing_intention_subtitle">اكتب عبارة تحفيزية للتركيز</string>
+    <string name="secure_pin_title">التفويض برمز PIN الآمن</string>
+    <string name="secure_pin_subtitle">أدخل رمز المرور المحدد مسبقاً</string>
+    <string name="return_to_block_screen">العودة إلى شاشة الحظر</string>
+    <string name="what_is_math">كم يساوي %1$d + %2$d؟</string>
+    <string name="your_answer">إجابتك</string>
+    <string name="verify_answer">تحقق من الإجابة</string>
+    <string name="give_up">تراجع</string>
+    <string name="security_passcode">رمز الأمان</string>
+    <string name="enter_pin">أدخل رمز PIN</string>
+    <string name="authorize_unlock">تأكيد فتح القفل</string>
+
+    <!-- Typing Challenge -->
+    <string name="mindful_intention_prompt">تحدي الكتابة الواعية</string>
+    <string name="type_affirmation_exact">اكتب الجملة التالية بدقة:</string>
+    <string name="type_affirmation_placeholder">اكتب الجملة هنا</string>
+    <string name="confirm_intention">تأكيد النية</string>
+    <string name="new_sentence">جملة جديدة</string>
+    <string name="incorrect_try_again">النص غير متطابق. يرجى المحاولة مرة أخرى.</string>
+    
+    <!-- Stats -->
     <string name="statistics">الإحصائيات</string>
-    <string name="most_distracting">الأكثر تشتيتا</string>
+    <string name="most_distracting">الأكثر تشتيتاً</string>
     <string name="insufficient_data">بيانات غير كافية للتحديد.</string>
     <string name="this_week">هذا الأسبوع</string>
     <string name="total_usage">إجمالي الاستخدام: %1$dس %2$dد.</string>
+    <string name="tab_analytics">التحليلات</string>
+    <string name="tab_insights">الرؤى الذكية</string>
+    <string name="tab_goals">الأهداف</string>
+    <string name="screen_time_title">وقت الشاشة والإحصائيات</string>
+    <string name="screen_time_subtitle">تتبع أنماط الاستخدام وعزز تركيزك اليومي</string>
+    <string name="today_label">اليوم</string>
+    <string name="yesterday_label">أمس</string>
+    <string name="this_week_label">هذا الأسبوع</string>
+    <string name="past_30_days_label">آخر 30 يوماً</string>
+    <string name="productivity_intelligence">ذكاء الإنتاجية</string>
+    <string name="smart_recommendations">توصيات ذكية</string>
+    <string name="focus_goals_milestones">أهداف وإنجازات التركيز</string>
+    <string name="active_commitments">الالتزامات النشطة</string>
+    <string name="achievements_badges">الإنجازات والشارات</string>
+    <string name="add_goal">إضافة هدف</string>
+    <string name="no_goals_set">لا توجد أهداف نشطة بعد</string>
+    <string name="no_goals_desc">حدد هدفاً يومياً للحفاظ على الاستمرارية والارتقاء بمستواك.</string>
+    <string name="no_insights_desc">واصل استخدام جهازك بوعي لتوليد رؤى إنتاجية ذكية.</string>
+    <string name="search_apps">البحث في التطبيقات…</string>
+    <string name="all_monitored_apps">جميع التطبيقات المراقبة</string>
+    <string name="set_limit">تعيين حد</string>
+    <string name="permission_required">مطلوب إذن بيانات الاستخدام</string>
+    <string name="grant_permission_desc">يحتاج FocusLock إلى إذن الوصول لبيانات الاستخدام لحساب وقت الشاشة بدقة.</string>
+    <string name="grant_permission_btn">منح الإذن</string>
+    
+    <!-- Settings & Permissions -->
+    <string name="settings_title">الإعدادات</string>
+    <string name="permissions_manager">مدير أذونات النظام</string>
+    <string name="permissions_manager_desc">التحقق من أذونات الظهور فوق التطبيقات والاستخدام وإمكانية الوصول</string>
+    <string name="display_over_apps">الظهور فوق التطبيقات الأخرى</string>
+    <string name="usage_access">الوصول إلى بيانات الاستخدام</string>
+    <string name="accessibility_service">خدمة إمكانية الوصول</string>
+    <string name="granted">نشط وممنوح</string>
+    <string name="grant">منح</string>
+    <string name="done">تم</string>
+    <string name="close">إغلاق</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_name">إشعارات FocusLock</string>
+    <string name="notification_channel_desc">إشعارات جلسات التركيز وحدود التطبيقات</string>
+    <string name="block_channel_name">تنبيهات الحظر من FocusLock</string>
+    <string name="block_channel_desc">يعرض شاشة الحظر الواعي عند فتح التطبيقات المقيدة</string>
+    <string name="approaching_limit_title">اقتربت من الحد: %1$s</string>
+    <string name="approaching_limit_desc">يتبقى لديك %1$d دقيقة من حدك اليومي البالغ %2$d دقيقة.</string>
+    <string name="deep_focus_active_title">وضع التركيز: نشط 🔒</string>
+    <string name="deep_focus_active_desc">تم إيقاف المشتتات — متبقي %1$d دقيقة.</string>
+    <string name="deep_focus_complete_title">أداء رائع! 🔥</string>
+    <string name="deep_focus_complete_desc">اكتملت الجلسة بنجاح! خذ استراحة 🌱 (+50 XP)</string>
+
+    <!-- General -->
     <string name="unknown_app">تطبيق غير معروف</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">الرئيسية</string>
+    <string name="nav_apps">التطبيقات</string>
+    <string name="nav_focus">التركيز</string>
+    <string name="nav_goals">الأهداف</string>
+    <string name="nav_stats">الإحصائيات</string>
+    <string name="nav_settings">الإعدادات</string>
+
+    <!-- Settings Sections & Items -->
+    <string name="account_section">الحساب</string>
+    <string name="preferences_section">التفضيلات</string>
+    <string name="features_section">الميزات</string>
+    <string name="premium_section">بريميوم</string>
+    <string name="data_management_section">إدارة البيانات</string>
+    <string name="about_section">حول التطبيق</string>
+
+    <string name="appearance">سمة الخلفية</string>
+    <string name="appearance_desc">اختر مشاهد متحركة حية</string>
+    <string name="language">اللغة</string>
+    <string name="language_desc">اختر لغة التطبيق</string>
+    <string name="choose_language">اختر اللغة</string>
+    <string name="profile_level">الملف الشخصي والمستوى</string>
+    <string name="notifications">الإشعارات</string>
+    <string name="notifications_subtitle">التنبيهات والتذكيرات</string>
+    <string name="anti_distraction_challenges">تحديات مقاومة التشتت</string>
+    <string name="anti_distraction_challenges_subtitle">تدرب على فتح القفل الواعي</string>
+    <string name="focus_mode_setting">وضع التركيز</string>
+    <string name="focus_mode_subtitle_active">جلسة نشطة قيد التشغيل</string>
+    <string name="focus_mode_subtitle_idle">إعداد جلسات العمل العميق</string>
+    <string name="app_limits_schedules">حدود وجداول التطبيقات</string>
+    <string name="app_limits_schedules_subtitle">إدارة التطبيقات المقيدة</string>
+    <string name="emergency_unlock_setting">فتح القفل الطارئ</string>
+    <string name="permission_center">مركز الأذونات</string>
+    <string name="permission_center_subtitle">إدارة أذونات الحماية المطلوبة والاختيارية</string>
+    <string name="escape_prevention">منع التجاوز والحذف</string>
+    <string name="escape_prevention_subtitle">ضبط الحماية ضد الحذف وأوضاع القفل المستقر</string>
+    <string name="focuslock_premium">FocusLock بريميوم</string>
+    <string name="premium_active">بريميوم نشط</string>
+    <string name="premium_inactive">إزالة الإعلانات للأبد ودعم التطوير</string>
+    <string name="data_backup">البيانات والنسخ الاحتياطي</string>
+    <string name="data_backup_subtitle">تصدير واستيراد ونسخ بياناتك احتياطياً</string>
+    <string name="privacy_policy">الخصوصية والشروط</string>
+    <string name="privacy_policy_subtitle">خصوصية 100% على جهازك فقط</string>
+    <string name="terms_of_service">شروط الخدمة</string>
+    <string name="terms_of_service_subtitle">الاستخدام العادل والوضع الصارم وضمانات الأمان</string>
+    <string name="about_app">حول FocusLock</string>
+    <string name="about_app_subtitle">الإصدار 1.3.0 (البناء 25)</string>
+
+    <!-- Launcher App Shortcuts -->
+    <string name="shortcut_focus_short">تركيز 🔒</string>
+    <string name="shortcut_focus_long">بدء جلسة تركيز عميق 🔒</string>
+    <string name="shortcut_apps_short">حظر التطبيقات</string>
+    <string name="shortcut_apps_long">إدارة حدود التطبيقات</string>
+    <string name="shortcut_stats_short">سلسلتي 🔥</string>
+    <string name="shortcut_stats_long">عرض السلسلة والإحصائيات</string>
+    <string name="shortcut_share_short">مشاركة الشارات</string>
+    <string name="shortcut_share_long">مشاركة بطاقة الإنجاز 🏆</string>
+
+    <!-- Welcome & Onboarding Hooking Texts -->
+    <string name="welcome_badge">✦ اليقظة الرقمية والإنتاجية الذكية</string>
+    <string name="welcome_hero_title">استعد وقتك.\nتحكم في تركيزك.</string>
+    <string name="welcome_hero_desc">اكسر حلقة التصفح اللانهائي. ابنِ عادات واعية لاستخدام الشاشة، وتغلب على فتح التطبيقات العشوائي، واستعد أكثر من 3 ساعات يومياً.</string>
+    <string name="stat_hours_saved">+2.8 ساعة</string>
+    <string name="stat_hours_saved_desc">توفير يومي</string>
+    <string name="stat_reduction">94% أقل</string>
+    <string name="stat_reduction_desc">فتح عشوائي</string>
+    <string name="stat_privacy">100% خاص</string>
+    <string name="stat_privacy_desc">على جهازك فقط</string>
+    <string name="feature_friction_title">دروع التوقف الواعي</string>
+    <string name="feature_friction_desc">تذكيرات التنفس الواعي توقف التصفح التلقائي فوراً.</string>
+    <string name="feature_challenges_title">بوابات التحدي الذهني</string>
+    <string name="feature_challenges_desc">عبارات ملهمة ومسائل حسابية ومؤقتات للتحقق من نيتك الحقيقية.</string>
+    <string name="feature_deepwork_title">حصص صارمة وجداول زمنية</string>
+    <string name="feature_deepwork_desc">اقفل التطبيقات المشتتة أثناء ساعات العمل واكسب نقاط الخبرة XP.</string>
+    <string name="feature_privacy_title">100% بدون إنترنت وبدون تتبع</string>
+    <string name="feature_privacy_desc">لا توجد سحابة أو تسجيل دخول. بياناتك وعاداتك تبقى بالكامل على هاتفك.</string>
+    <string name="get_started_btn">ابدأ في استعادة وقتك الآن</string>
 </resources>

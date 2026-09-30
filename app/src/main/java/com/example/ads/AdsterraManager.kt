@@ -49,20 +49,20 @@ data class AdSlotSpec(
 /**
  * Adsterra monetization configuration and tab-scoped WebView lifecycle manager for FocusLock.
  *
- * Behavior:
- * - Preloads all ad slots belonging to the currently active tab/screen with a safe staggered delay
- *   so they stay loaded in memory even when scrolled outside the LazyColumn viewport.
- * - Detaches and destroys all ad WebViews from the previous tab when switching to a different tab,
- *   waiting for Compose exit animations to finish so WebViews are never destroyed while drawing.
- * - Implements [WebViewClient.onRenderProcessGone] returning `true` on all WebViews to prevent
- *   `aw_browser_terminator.cc` renderer crashes.
+ * Uses 100% real Adsterra ad units in WebViews across all screens:
+ * - 1:1 Square Native Banner (NativeBanner_1: 43cfe3dc4791cdf4c02fababba57f14d)
+ * - 320x50 Banner (ce907ceee43c8f2cbf521675591e593e)
+ * - Social Bar (f4002865e3ad4ae912683730e0522dc8)
+ *
+ * Automatically recovers and reloads the real Adsterra WebView if the system WebView renderer
+ * process ever restarts (`onRenderProcessGone`), without using any dummy/fake ads.
  */
 object AdsterraManager {
 
     private const val TAG = "AdsterraManager"
     private val mainHandler = Handler(Looper.getMainLooper())
 
-    // Adsterra Native Banner script URL / container key
+    // Adsterra Native Banner script URL / container key (1:1 NativeBanner_1)
     const val NATIVE_BANNER_KEY = "43cfe3dc4791cdf4c02fababba57f14d"
     const val NATIVE_BANNER_SRC = "https://pl31271904.profitableratecpmnetwork.com/43cfe3dc4791cdf4c02fababba57f14d/invoke.js"
     const val NATIVE_BANNER_BASE_URL = "https://pl31271904.profitableratecpmnetwork.com/"
@@ -83,9 +83,14 @@ object AdsterraManager {
     private val _readySlots = MutableStateFlow<Set<String>>(emptySet())
     val readySlots: StateFlow<Set<String>> = _readySlots.asStateFlow()
 
+    // Incremented when a slot recovers from renderer exit so Compose re-attaches the fresh WebView
+    private val _reloadGeneration = MutableStateFlow(0)
+    val reloadGeneration: StateFlow<Int> = _reloadGeneration.asStateFlow()
+
     // Active WebViews keyed by "SCREEN_KEY::SLOT_KEY"
     private val activeWebViews = mutableMapOf<String, WebView>()
     private var currentScreenKey: String? = null
+    private val isChromiumEngineWarmedUp = AtomicBoolean(false)
 
     fun canShowSocialBar(isPremium: Boolean, isFocusActive: Boolean = false): Boolean {
         return !isPremium && !isFocusActive
@@ -130,12 +135,7 @@ object AdsterraManager {
     }
 
     /**
-     * Switches the active ad tab to [newScreenKey]:
-     * 1. Immediately hides previous tab's slots from Compose so AndroidView detaches cleanly.
-     * 2. Waits for NavHost's 220ms exit animation to finish, then safely stops and destroys all
-     *    WebViews belonging to the previous tab.
-     * 3. Preloads all ad slots for [newScreenKey] with a staggered delay so they stay loaded
-     *    even if scrolled outside the viewport, without overwhelming the Chromium renderer.
+     * Switches the active ad tab to [newScreenKey] and loads the real Adsterra WebViews.
      */
     suspend fun switchActiveTab(
         context: Context,
@@ -153,28 +153,25 @@ object AdsterraManager {
         }
 
         val prefix = "$newScreenKey::"
-        // Keep only slots belonging to newScreenKey in readySlots; hide old screen slots first
         _readySlots.value = _readySlots.value.filter { it.startsWith(prefix) }.toSet()
 
-        // Remove old tab WebViews from map and destroy them AFTER NavHost's 220ms exit transition finishes
         val keysToRemove = activeWebViews.keys.filter { !it.startsWith(prefix) }
         val webViewsToDestroy = keysToRemove.mapNotNull { activeWebViews.remove(it) }
 
         if (webViewsToDestroy.isNotEmpty()) {
             delay(320)
             webViewsToDestroy.forEach { destroyWebViewSafely(it) }
-            Log.d(TAG, "Destroyed ${webViewsToDestroy.size} ad WebViews from previous tab")
         } else {
-            delay(280)
+            delay(200)
         }
 
         if (currentScreenKey != newScreenKey) return
 
-        // Preload all slots for the active tab one by one (staggered to avoid renderer memory spikes)
         val slots = getSlotsForScreen(newScreenKey, isFocusActive)
-        for (spec in slots) {
+        for ((index, spec) in slots.withIndex()) {
             if (currentScreenKey != newScreenKey) return
             val compositeKey = "$newScreenKey::${spec.slotKey}"
+            val isFirstColdWebView = isChromiumEngineWarmedUp.compareAndSet(false, true)
             getOrCreateWebView(
                 context = context,
                 screenKey = newScreenKey,
@@ -185,7 +182,12 @@ object AdsterraManager {
                 markSocialBarShown()
             }
             _readySlots.value = _readySlots.value + compositeKey
-            delay(180)
+            // Give Chromium SimpleCache (HTTP Cache & Code Cache/js) time to complete one-time cold init
+            if (isFirstColdWebView && index == 0) {
+                delay(500)
+            } else {
+                delay(240)
+            }
         }
     }
 
@@ -205,7 +207,11 @@ object AdsterraManager {
             return existing
         }
 
-        val created = createConfiguredAdWebView(context, compositeKey, slotType)
+        val appContext = context.applicationContext
+        com.example.FocusLockApplication.configureMesaSoftwareEnvironment()
+        (appContext as? com.example.FocusLockApplication)?.ensureChromiumSimpleCacheStructure()
+
+        val created = createConfiguredAdWebView(appContext, screenKey, slotKey, slotType)
         activeWebViews[compositeKey] = created
         return created
     }
@@ -240,9 +246,11 @@ object AdsterraManager {
     @SuppressLint("SetJavaScriptEnabled")
     private fun createConfiguredAdWebView(
         context: Context,
-        compositeKey: String,
+        screenKey: String,
+        slotKey: String,
         slotType: AdSlotType
     ): WebView {
+        val compositeKey = "$screenKey::$slotKey"
         val baseUrl = when (slotType) {
             AdSlotType.BANNER_320_50 -> BANNER_320_50_BASE_URL
             AdSlotType.NATIVE_BANNER -> NATIVE_BANNER_BASE_URL
@@ -256,6 +264,7 @@ object AdsterraManager {
         }
 
         return WebView(context).apply {
+            com.example.util.LocaleHelper.restoreLocaleAfterWebView(context)
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
@@ -271,16 +280,18 @@ object AdsterraManager {
             settings.apply {
                 javaScriptEnabled = true
                 domStorageEnabled = true
-                databaseEnabled = true
-                allowFileAccess = true
-                allowContentAccess = true
+                databaseEnabled = false
+                allowFileAccess = false
+                allowContentAccess = false
                 loadWithOverviewMode = false
                 useWideViewPort = false
-                cacheMode = WebSettings.LOAD_DEFAULT
+                cacheMode = WebSettings.LOAD_NO_CACHE
                 mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-                mediaPlaybackRequiresUserGesture = false
+                mediaPlaybackRequiresUserGesture = true
                 javaScriptCanOpenWindowsAutomatically = true
-                safeBrowsingEnabled = false
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    safeBrowsingEnabled = false
+                }
                 setSupportMultipleWindows(true)
                 userAgentString = userAgentString
                     .replace("; wv", "")
@@ -296,7 +307,6 @@ object AdsterraManager {
                     val url = request?.url?.toString() ?: return false
                     val isMainFrame = request.isForMainFrame
                     val hasGesture = request.hasGesture()
-                    Log.d(TAG, "[$slotType Navigation] main=$isMainFrame gesture=$hasGesture url=$url")
 
                     if (url.startsWith("market://") || url.startsWith("intent://") || url.contains("play.google.com/store")) {
                         return launchExternalUrl(context, url)
@@ -306,7 +316,6 @@ object AdsterraManager {
                         return false
                     }
 
-                    // Allow initial background ad script and iframe loads without user gesture
                     if (!hasGesture && (url.contains("/invoke.js") || url.contains("/watchnew") ||
                         url.contains("highrevenueformat.com") || url.contains("profitableratecpmnetwork.com") ||
                         url.contains("effectivegatecontent.com") || url.contains("adsterra.com"))) {
@@ -317,12 +326,10 @@ object AdsterraManager {
                         return false
                     }
 
-                    // Open external browser on user click or top-frame ad redirect
                     if ((hasGesture || isMainFrame) && (url.startsWith("http://") || url.startsWith("https://")) &&
                         !url.contains("/invoke.js") && !url.contains("/watchnew") &&
                         url != baseUrl
                     ) {
-                        Log.i(TAG, "[$slotType Click] Launching sponsor website: $url")
                         return launchExternalUrl(context, url)
                     }
 
@@ -330,12 +337,10 @@ object AdsterraManager {
                 }
 
                 override fun onReceivedSslError(view: WebView?, handler: SslErrorHandler?, error: SslError?) {
-                    Log.w(TAG, "[$slotType SSL Warning] $error")
                     handler?.proceed()
                 }
 
                 override fun onRenderProcessGone(view: WebView?, detail: RenderProcessGoneDetail?): Boolean {
-                    Log.w(TAG, "[$slotType] WebView renderer process exited (didCrash=${detail?.didCrash()}); recovering cleanly")
                     _readySlots.value = _readySlots.value - compositeKey
                     activeWebViews.remove(compositeKey)
                     if (view != null) {
@@ -346,7 +351,16 @@ object AdsterraManager {
                             } catch (_: Exception) {}
                         }
                     }
-                    // Return true so Android WebView NEVER crashes the host app process
+                    // Automatically recreate the real Adsterra WebView if this screen is still active
+                    mainHandler.postDelayed({
+                        if (currentScreenKey == screenKey) {
+                            try {
+                                getOrCreateWebView(context, screenKey, slotKey, slotType)
+                                _reloadGeneration.value = _reloadGeneration.value + 1
+                                _readySlots.value = _readySlots.value + compositeKey
+                            } catch (_: Exception) {}
+                        }
+                    }, 1200)
                     return true
                 }
             }
@@ -362,9 +376,6 @@ object AdsterraManager {
 
                     val hasLaunched = AtomicBoolean(false)
 
-                    // 1. Only use HitTestResult.extra when type is explicitly SRC_ANCHOR_TYPE (text link).
-                    // Never use HitTestResult.extra for SRC_IMAGE_ANCHOR_TYPE or IMAGE_TYPE because
-                    // Android WebView returns the <img> src URL instead of the <a> href sponsor URL!
                     val hitTestResult = view.hitTestResult
                     if (hitTestResult.type == WebView.HitTestResult.SRC_ANCHOR_TYPE) {
                         val extraUrl = hitTestResult.extra
@@ -380,7 +391,6 @@ object AdsterraManager {
                         }
                     }
 
-                    // 2. Extract the enclosing <a> href ("url") rather than <img> src ("src") for image anchors
                     val hrefHandler = Handler(Looper.getMainLooper()) { msg ->
                         val hrefUrl = msg.data?.getString("url")
                         if (!hrefUrl.isNullOrBlank() &&
@@ -391,7 +401,6 @@ object AdsterraManager {
                                 hrefUrl.startsWith("market://") || hrefUrl.startsWith("intent://"))
                         ) {
                             if (hasLaunched.compareAndSet(false, true)) {
-                                Log.i(TAG, "[$slotType FocusNodeHref] Launching sponsor website: $hrefUrl")
                                 launchExternalUrl(context, hrefUrl)
                             }
                         }
@@ -399,14 +408,12 @@ object AdsterraManager {
                     }
                     view.requestFocusNodeHref(hrefHandler.obtainMessage())
 
-                    // 3. Attach popup WebView via WebViewTransport to resolve target="_blank" & window.open()
-                    // IMPORTANT: Never call v.destroy() synchronously inside onPageStarted/shouldOverrideUrlLoading
-                    // as that crashes the Chromium renderer process while JNI is on the stack!
                     val tempWebView = WebView(view.context).apply {
                         setLayerType(View.LAYER_TYPE_SOFTWARE, null)
                         settings.apply {
                             javaScriptEnabled = true
                             domStorageEnabled = true
+                            cacheMode = WebSettings.LOAD_NO_CACHE
                             mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                             userAgentString = view.settings.userAgentString
                         }
@@ -424,7 +431,6 @@ object AdsterraManager {
                                     targetUrl.startsWith("market://") || targetUrl.startsWith("intent://")
                                 ) {
                                     if (hasLaunched.compareAndSet(false, true)) {
-                                        Log.i(TAG, "[$slotType PopupWebView] Launching sponsor website: $targetUrl")
                                         launchExternalUrl(context, targetUrl)
                                     }
                                     v?.stopLoading()
@@ -480,6 +486,29 @@ object AdsterraManager {
     }
 
     /**
+     * Safety shim injected before ad scripts to disable WebGL/WebGPU/WebRTC hardware probes
+     * that crash software/Mesa renderers while keeping all Adsterra ad scripts 100% functional.
+     */
+    private const val RENDERER_SAFETY_SHIM = """
+        <script type="text/javascript">
+            (function() {
+                try {
+                    var origGetContext = HTMLCanvasElement.prototype.getContext;
+                    HTMLCanvasElement.prototype.getContext = function(type, attrs) {
+                        if (type && (type.indexOf('webgl') !== -1 || type.indexOf('gpu') !== -1)) {
+                            return null;
+                        }
+                        return origGetContext.call(this, type, attrs);
+                    };
+                    window.RTCPeerConnection = undefined;
+                    window.webkitRTCPeerConnection = undefined;
+                    window.SharedWorker = undefined;
+                } catch (e) {}
+            })();
+        </script>
+    """
+
+    /**
      * Constructs HTML snippet for Adsterra 320x50 Mobile Banner.
      */
     fun getBanner320x50Html(): String {
@@ -489,6 +518,7 @@ object AdsterraManager {
             <head>
                 <meta charset="utf-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+                $RENDERER_SAFETY_SHIM
                 <style>
                     html, body {
                         background-color: #0E1829;
@@ -537,7 +567,8 @@ object AdsterraManager {
     }
 
     /**
-     * Constructs HTML snippet for Adsterra Native Banner.
+     * Constructs HTML snippet for Adsterra 1:1 Square Native Banner (NativeBanner_1).
+     * Ensures the creative fills the full 1:1 square viewport cleanly without horizontal cropping or height compression.
      */
     fun getNativeBannerHtml(): String {
         return """
@@ -546,22 +577,59 @@ object AdsterraManager {
             <head>
                 <meta charset="utf-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+                $RENDERER_SAFETY_SHIM
                 <style>
+                    * {
+                        box-sizing: border-box;
+                    }
                     html, body {
                         background-color: #0E1829;
-                        color: #E2E8F0;
-                        font-family: sans-serif;
+                        color: #F8FAFC;
+                        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
                         margin: 0;
                         padding: 0;
-                        width: 100%;
-                        min-height: 140px;
-                        overflow-x: hidden;
+                        width: 100vw;
+                        height: 100vh;
+                        min-width: 100%;
+                        min-height: 100vw;
+                        aspect-ratio: 1 / 1;
+                        overflow: hidden;
+                        display: flex;
+                        align-items: stretch;
+                        justify-content: center;
                     }
                     #container-$NATIVE_BANNER_KEY {
                         width: 100%;
-                        min-height: 140px;
+                        height: 100%;
+                        min-height: 100vw;
+                        aspect-ratio: 1 / 1;
                         margin: 0 auto;
+                        padding: 4px;
                         background-color: #0E1829;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        align-items: stretch;
+                        overflow: hidden;
+                    }
+                    #container-$NATIVE_BANNER_KEY > div,
+                    #container-$NATIVE_BANNER_KEY iframe {
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        height: 100% !important;
+                        min-height: calc(100vw - 8px) !important;
+                        margin: 0 auto !important;
+                        border: 0 !important;
+                    }
+                    #container-$NATIVE_BANNER_KEY img {
+                        max-width: 100% !important;
+                        max-height: 72vh !important;
+                        width: auto !important;
+                        height: auto !important;
+                        object-fit: contain !important;
+                        display: block !important;
+                        margin: 0 auto !important;
+                        border-radius: 10px;
                     }
                 </style>
             </head>
@@ -583,6 +651,7 @@ object AdsterraManager {
             <head>
                 <meta charset="utf-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+                $RENDERER_SAFETY_SHIM
                 <style>
                     html, body {
                         background-color: transparent;
