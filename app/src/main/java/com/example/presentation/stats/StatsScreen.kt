@@ -288,7 +288,7 @@ fun StatsScreen(
                                     }
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Text(
-                                        "${totalFocusTime / 60}h ${totalFocusTime % 60}m",
+                                        com.example.util.FormatUtils.formatHoursMinutes(totalFocusTime),
                                         style = MaterialTheme.typography.titleLarge.copy(
                                             fontWeight = FontWeight.ExtraBold,
                                             fontSize = 20.sp
@@ -1020,8 +1020,6 @@ private fun HeroScreenTimeCard(
     primaryCyan: Color
 ) {
     val totalMinutes = summary.totalScreenTimeMinutes
-    val hours = totalMinutes / 60
-    val minutes = totalMinutes % 60
 
     Box(
         modifier = Modifier
@@ -1050,7 +1048,7 @@ private fun HeroScreenTimeCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "${hours}h ${minutes}m",
+                text = com.example.util.FormatUtils.formatHoursMinutes(totalMinutes),
                 style = MaterialTheme.typography.displayMedium.copy(
                     fontWeight = FontWeight.ExtraBold,
                     fontSize = 38.sp
@@ -1107,7 +1105,7 @@ private fun WeeklyTrendChartCard(
                         modifier = Modifier.weight(1f)
                     ) {
                         Text(
-                            text = "${stat.minutes / 60}h",
+                            text = com.example.util.FormatUtils.formatHoursMinutes(stat.minutes),
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                             color = Color.White.copy(alpha = 0.6f)
                         )
@@ -1185,7 +1183,7 @@ private fun AppUsageRowItem(
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            text = "${appInfo.usedMinutes / 60}h ${appInfo.usedMinutes % 60}m (${appInfo.launchCount} opens)",
+                            text = "${com.example.util.FormatUtils.formatHoursMinutes(appInfo.usedMinutes)} (${com.example.util.FormatUtils.formatOpens(appInfo.launchCount)})",
                             style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
                             color = Color.White.copy(alpha = 0.65f)
                         )
@@ -1205,7 +1203,7 @@ private fun AppUsageRowItem(
                         text = when {
                             !appInfo.isLimitActive -> stringResource(R.string.set_limit)
                             appInfo.dailyLimitMinutes == 0 -> stringResource(R.string.blocked_status)
-                            else -> "${appInfo.dailyLimitMinutes}m limit"
+                            else -> "${com.example.util.FormatUtils.formatHoursMinutes(appInfo.dailyLimitMinutes)} limit"
                         },
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
                     )

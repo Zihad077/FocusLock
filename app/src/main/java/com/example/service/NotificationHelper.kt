@@ -94,7 +94,7 @@ class NotificationHelper(private val context: Context) {
         val body = if (limitMinutes == 0) {
             "$appName is locked right now so you can stay in your flow state. Tap to view options."
         } else {
-            "You've used $usedMinutes/$limitMinutes min on $appName today. Protect your streak or complete a mindful challenge."
+            "You've used ${com.example.util.FormatUtils.formatHoursMinutes(usedMinutes)} / ${com.example.util.FormatUtils.formatHoursMinutes(limitMinutes)} on $appName today. Protect your streak or complete a mindful challenge."
         }
 
         val builder = NotificationCompat.Builder(context, BLOCK_CHANNEL_ID)
@@ -168,8 +168,8 @@ class NotificationHelper(private val context: Context) {
 
     fun showLimitWarningNotification(appName: String, usedMinutes: Int, limitMinutes: Int) {
         val remaining = (limitMinutes - usedMinutes).coerceAtLeast(0)
-        val title = "Heads up! $remaining min left on $appName ⏳"
-        val message = "You've used $usedMinutes of your $limitMinutes min daily budget. Wrap up soon to keep your streak alive 🔥"
+        val title = "Heads up! ${com.example.util.FormatUtils.formatRemaining(remaining)} on $appName ⏳"
+        val message = "You've used ${com.example.util.FormatUtils.formatHoursMinutes(usedMinutes)} of your ${com.example.util.FormatUtils.formatHoursMinutes(limitMinutes)} daily budget. Wrap up soon to keep your streak alive 🔥"
 
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK

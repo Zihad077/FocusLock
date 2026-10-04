@@ -321,7 +321,11 @@ fun GoalGlassCard(
                         color = Color.White
                     )
                     Text(
-                        text = "${goal.currentValue} / ${goal.targetValue}",
+                        text = if (goal.type == "FOCUS_MINUTES" || goal.type == "FOCUS_TIME" || goal.type == "SCREEN_TIME") {
+                            "${com.example.util.FormatUtils.formatHoursMinutes(goal.currentValue)} / ${com.example.util.FormatUtils.formatHoursMinutes(goal.targetValue)}"
+                        } else {
+                            "${goal.currentValue} / ${goal.targetValue}"
+                        },
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.Bold,
                             fontSize = 12.sp

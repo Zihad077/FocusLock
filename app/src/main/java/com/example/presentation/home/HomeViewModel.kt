@@ -127,7 +127,10 @@ class HomeViewModel(
                 .groupBy { it.packageName }
                 .values
                 .sumOf { list -> list.maxOfOrNull { it.usedMinutes } ?: 0 }
-            val totalTodayScreenTime = liveTotalMinutes ?: dbTotalToday
+            val cal = java.util.Calendar.getInstance()
+            val elapsedTodayMinutes = (cal.get(java.util.Calendar.HOUR_OF_DAY) * 60 + cal.get(java.util.Calendar.MINUTE)).coerceAtLeast(1)
+            val safeDbTotal = minOf(elapsedTodayMinutes, dbTotalToday)
+            val totalTodayScreenTime = liveTotalMinutes ?: safeDbTotal
             val totalLimit = limits.sumOf { it.dailyLimitMinutes }
             val totalUsedOnLimitedApps = limits.sumOf { it.usedMinutes }
             val timeSaved = if (totalLimit > 0) maxOf(0, totalLimit - totalUsedOnLimitedApps) else 0

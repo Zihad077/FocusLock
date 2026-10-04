@@ -498,7 +498,7 @@ private fun CoreMetricsSection(
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "${stats.totalUsedMinutes / 60}h ${stats.totalUsedMinutes % 60}m",
+                        text = com.example.util.FormatUtils.formatHoursMinutes(stats.totalUsedMinutes),
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 22.sp
@@ -570,7 +570,7 @@ private fun CoreMetricsSection(
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "+${stats.totalSavedMinutes}m",
+                        text = "+${com.example.util.FormatUtils.formatHoursMinutes(stats.totalSavedMinutes)}",
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 22.sp
@@ -734,9 +734,9 @@ private fun AppLimitCard(
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = if (isEnforcementPaused) {
-                            "Saved (${limit.dailyLimitMinutes}m) • Enforcement paused until permissions granted"
+                            "Saved (${com.example.util.FormatUtils.formatHoursMinutes(limit.dailyLimitMinutes)}) • Enforcement paused until permissions granted"
                         } else {
-                            stringResource(R.string.used_format, limit.usedMinutes, limit.dailyLimitMinutes)
+                            com.example.util.FormatUtils.formatUsedVsLimit(limit.usedMinutes, limit.dailyLimitMinutes)
                         },
                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.5.sp),
                         color = when {
@@ -750,7 +750,7 @@ private fun AppLimitCard(
                 val statusText = when {
                     isEnforcementPaused -> "PAUSED"
                     isExceeded -> stringResource(R.string.blocked_status)
-                    else -> stringResource(R.string.min_left, limit.remainingMinutes)
+                    else -> com.example.util.FormatUtils.formatRemaining(limit.remainingMinutes)
                 }
 
                 GlassStatusBadge(

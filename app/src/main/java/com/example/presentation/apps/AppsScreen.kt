@@ -783,17 +783,17 @@ fun AppListItem(
 
                     val subtitle = when {
                         isEnforcementPaused ->
-                            "Saved limit (${app.dailyLimitMinutes}m) • Grant permissions to enforce"
+                            "Saved limit (${com.example.util.FormatUtils.formatHoursMinutes(app.dailyLimitMinutes)}) • Grant permissions to enforce"
                         app.isLimited && app.dailyLimitMinutes == 0 ->
                             "Strict Block (0m allowed) • Blocked"
                         isBlockedOrExpired ->
-                            "Limit Reached: ${app.usedTodayMinutes}m / ${app.dailyLimitMinutes}m used"
+                            "Limit Reached: ${com.example.util.FormatUtils.formatUsedVsLimit(app.usedTodayMinutes, app.dailyLimitMinutes)}"
                         isApproachingLimit ->
-                            "Approaching Limit: ${app.usedTodayMinutes}m / ${app.dailyLimitMinutes}m (${(app.dailyLimitMinutes - app.usedTodayMinutes).coerceAtLeast(0)}m left)"
+                            "Approaching Limit: ${com.example.util.FormatUtils.formatUsedVsLimit(app.usedTodayMinutes, app.dailyLimitMinutes)} (${com.example.util.FormatUtils.formatRemaining(app.dailyLimitMinutes - app.usedTodayMinutes)})"
                         app.isLimited ->
-                            "Active Limit: ${app.dailyLimitMinutes}m/day (Used: ${app.usedTodayMinutes}m)"
+                            "Active Limit: ${com.example.util.FormatUtils.formatHoursMinutes(app.dailyLimitMinutes)}/day (Used: ${com.example.util.FormatUtils.formatHoursMinutes(app.usedTodayMinutes)})"
                         app.usedTodayMinutes > 0 ->
-                            "Today: ${app.usedTodayMinutes}m • Tap to set limit"
+                            "Today: ${com.example.util.FormatUtils.formatHoursMinutes(app.usedTodayMinutes)} • Tap to set limit"
                         else ->
                             "No limit configured • Tap to set limit"
                     }
@@ -962,7 +962,7 @@ fun CustomTimeLimitDialog(
                 }
 
                 Text(
-                    text = "Daily Allowance: ${if (minutes == 0) "Strict Block (0m)" else "$minutes minutes"}",
+                    text = "Daily Allowance: ${if (minutes == 0) "Strict Block (0m)" else com.example.util.FormatUtils.formatHoursMinutes(minutes)}",
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
                     color = if (minutes == 0) semantic.red.text else semantic.info.primary
                 )

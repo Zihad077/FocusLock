@@ -37,10 +37,12 @@ class UsageTracker(
         }
         val startTime = calendar.timeInMillis
         
-        // Use queryAndAggregateUsageStats for better accuracy over queryUsageStats
-        val stats = usageStatsManager.queryAndAggregateUsageStats(startTime, now)
-        val appStats = stats[packageName]
-        val usedTimeMillis = appStats?.totalTimeInForeground ?: 0L
+        val usedTimeMillis = com.example.util.UsageStatsHelper.getForegroundUsageMillisForPackage(
+            context,
+            packageName,
+            startTime,
+            now
+        )
         val usedMinutes = if (usedTimeMillis >= 30000L) maxOf(1, ((usedTimeMillis + 30000L) / (1000 * 60)).toInt()) else (usedTimeMillis / (1000 * 60)).toInt()
         
         cache[packageName] = Pair(now, usedTimeMillis)

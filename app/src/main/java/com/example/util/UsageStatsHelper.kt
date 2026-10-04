@@ -6,7 +6,6 @@ import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
-import android.graphics.drawable.Drawable
 import android.os.Build
 import android.util.Log
 import com.example.data.AppRepository
@@ -126,6 +125,193 @@ object UsageStatsHelper {
     }
 
     /**
+     * Internal raw usage metrics parsed directly from Android UsageEvents and UsageStats.
+     */
+    private data class ParsedUsageTelemetry(
+        val appDurations: Map<String, Long>,
+        val appLaunchCounts: Map<String, Int>,
+        val appLastUsed: Map<String, Long>,
+        val totalDeviceScreenTimeMillis: Long
+    )
+
+    /**
+     * Merges overlapping time intervals into non-overlapping segments to compute
+     * exact device screen-on / active phone usage without double counting.
+     */
+    private fun calculateMergedIntervalsMillis(intervals: List<Pair<Long, Long>>, maxWindowMillis: Long): Long {
+        if (intervals.isEmpty()) return 0L
+        val sorted = intervals.filter { it.second > it.first }.sortedBy { it.first }
+        if (sorted.isEmpty()) return 0L
+
+        var total = 0L
+        var curStart = sorted[0].first
+        var curEnd = sorted[0].second
+
+        for (i in 1 until sorted.size) {
+            val next = sorted[i]
+            if (next.first <= curEnd) {
+                curEnd = maxOf(curEnd, next.second)
+            } else {
+                total += (curEnd - curStart)
+                curStart = next.first
+                curEnd = next.second
+            }
+        }
+        total += (curEnd - curStart)
+        return minOf(maxWindowMillis, maxOf(0L, total))
+    }
+
+    /**
+     * Queries Android UsageEvents and UsageStats to accurately compute foreground duration,
+     * launch counts, and non-overlapping total device screen time.
+     */
+    private fun queryTelemetry(
+        context: Context,
+        startTime: Long,
+        endTime: Long
+    ): ParsedUsageTelemetry {
+        val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
+            ?: return ParsedUsageTelemetry(emptyMap(), emptyMap(), emptyMap(), 0L)
+
+        val selfPackage = context.packageName
+        val maxWindow = maxOf(0L, endTime - startTime)
+
+        val foregroundDurations = mutableMapOf<String, Long>()
+        val launchCounts = mutableMapOf<String, Int>()
+        val lastUsedMap = mutableMapOf<String, Long>()
+        val timelineIntervals = mutableListOf<Pair<Long, Long>>()
+
+        val activeAppStarts = mutableMapOf<String, Long>()
+
+        // 1. Precise chronological event parsing via UsageEvents
+        try {
+            val events = usageStatsManager.queryEvents(startTime, endTime)
+            val event = UsageEvents.Event()
+
+            while (events.hasNextEvent()) {
+                events.getNextEvent(event)
+                val pkg = event.packageName ?: continue
+                if (pkg == selfPackage || pkg == "com.android.systemui") continue
+
+                val eventType = event.eventType
+                val time = event.timeStamp
+
+                when (eventType) {
+                    // ACTIVITY_RESUMED or MOVE_TO_FOREGROUND
+                    1 -> {
+                        launchCounts[pkg] = (launchCounts[pkg] ?: 0) + 1
+                        activeAppStarts[pkg] = maxOf(startTime, time)
+                        lastUsedMap[pkg] = maxOf(lastUsedMap[pkg] ?: 0L, time)
+                    }
+                    // ACTIVITY_PAUSED or MOVE_TO_BACKGROUND or ACTIVITY_STOPPED (2 or 23)
+                    2, 23 -> {
+                        val start = activeAppStarts.remove(pkg)
+                        if (start != null) {
+                            val end = minOf(endTime, time)
+                            if (end > start) {
+                                val duration = end - start
+                                foregroundDurations[pkg] = (foregroundDurations[pkg] ?: 0L) + duration
+                                timelineIntervals.add(Pair(start, end))
+                            }
+                        } else if (time > startTime) {
+                            // App was already in foreground when interval began
+                            val duration = minOf(endTime, time) - startTime
+                            if (duration > 0) {
+                                foregroundDurations[pkg] = (foregroundDurations[pkg] ?: 0L) + duration
+                                timelineIntervals.add(Pair(startTime, minOf(endTime, time)))
+                                if ((launchCounts[pkg] ?: 0) == 0) {
+                                    launchCounts[pkg] = 1
+                                }
+                            }
+                        }
+                        lastUsedMap[pkg] = maxOf(lastUsedMap[pkg] ?: 0L, time)
+                    }
+                }
+            }
+
+            // Close any currently active sessions that remained in foreground up to endTime
+            val now = System.currentTimeMillis()
+            val effectiveEnd = minOf(endTime, now)
+            for ((pkg, start) in activeAppStarts) {
+                if (effectiveEnd > start) {
+                    val duration = effectiveEnd - start
+                    foregroundDurations[pkg] = (foregroundDurations[pkg] ?: 0L) + duration
+                    timelineIntervals.add(Pair(start, effectiveEnd))
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error querying usage events", e)
+        }
+
+        // 2. Reconcile with queryUsageStats / queryAndAggregateUsageStats for any missing apps
+        try {
+            val statsList = usageStatsManager.queryUsageStats(
+                UsageStatsManager.INTERVAL_DAILY,
+                startTime,
+                endTime
+            )
+
+            for (stats in statsList) {
+                val pkg = stats.packageName ?: continue
+                if (pkg == selfPackage || pkg == "com.android.systemui") continue
+
+                val rawDuration = stats.totalTimeInForeground
+                val clamped = minOf(maxWindow, rawDuration)
+
+                if (stats.lastTimeUsed in startTime..endTime) {
+                    lastUsedMap[pkg] = maxOf(lastUsedMap[pkg] ?: 0L, stats.lastTimeUsed)
+                }
+
+                // If events didn't capture this app or gave 0 while stats has positive usage:
+                val eventDuration = foregroundDurations[pkg] ?: 0L
+                if (eventDuration <= 0L && clamped > 0L && stats.lastTimeUsed >= startTime) {
+                    foregroundDurations[pkg] = clamped
+                    timelineIntervals.add(Pair(maxOf(startTime, stats.lastTimeUsed - clamped), stats.lastTimeUsed))
+                }
+
+                // Ensure launch count is at least 1 if the app was used
+                if ((foregroundDurations[pkg] ?: 0L) > 0L && (launchCounts[pkg] ?: 0) == 0) {
+                    val count = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        try {
+                            val countMethod = stats.javaClass.getMethod("getAppLaunchCount")
+                            (countMethod.invoke(stats) as? Int) ?: 1
+                        } catch (e: Exception) {
+                            1
+                        }
+                    } else {
+                        1
+                    }
+                    launchCounts[pkg] = maxOf(1, count)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error querying usage stats fallback", e)
+        }
+
+        // Clamp each app's duration to the requested interval window
+        val finalAppDurations = foregroundDurations.mapValues { (_, dur) ->
+            minOf(maxWindow, dur)
+        }
+
+        // 3. Compute non-overlapping total device screen time
+        val mergedDeviceMillis = calculateMergedIntervalsMillis(timelineIntervals, maxWindow)
+        val totalDeviceMillis = if (mergedDeviceMillis > 0L) {
+            mergedDeviceMillis
+        } else {
+            // Fallback: sum of foreground apps capped at total elapsed window
+            val sum = finalAppDurations.values.sum()
+            minOf(maxWindow, sum)
+        }
+
+        return ParsedUsageTelemetry(
+            appDurations = finalAppDurations,
+            appLaunchCounts = launchCounts,
+            appLastUsed = lastUsedMap,
+            totalDeviceScreenTimeMillis = totalDeviceMillis
+        )
+    }
+
+    /**
      * Retrieves detailed app usage for a given time range directly from Android's UsageStatsManager.
      */
     fun getAppUsageList(
@@ -137,11 +323,7 @@ object UsageStatsHelper {
             return emptyList()
         }
 
-        val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
-            ?: return emptyList()
-
         val packageManager = context.packageManager
-
         val calendar = Calendar.getInstance()
         val now = System.currentTimeMillis()
 
@@ -177,29 +359,20 @@ object UsageStatsHelper {
             }
         }
 
-        val aggregatedStats = try {
-            usageStatsManager.queryAndAggregateUsageStats(startTime, endTime)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error querying aggregated usage stats", e)
-            emptyMap<String, UsageStats>()
-        }
-
+        val telemetry = queryTelemetry(context, startTime, endTime)
         val limitMap = limits.associateBy { it.packageName }
         val selfPackage = context.packageName
 
-        var totalForegroundMillis = 0L
+        var totalAppMillis = 0L
         val rawList = mutableListOf<AppUsageInfo>()
 
-        for ((pkg, stats) in aggregatedStats) {
-            val totalTime = stats.totalTimeInForeground
-            // Ignore 0 usage, self, and system launcher components that aren't real user apps
+        for ((pkg, totalTime) in telemetry.appDurations) {
             if (totalTime < 10_000L || pkg == selfPackage || pkg == "com.android.systemui") {
                 continue
             }
 
             val appName = try {
                 val appInfo = packageManager.getApplicationInfo(pkg, 0)
-                // Filter out non-launchable background system daemons
                 if (packageManager.getLaunchIntentForPackage(pkg) == null &&
                     !pkg.contains("chrome") && !pkg.contains("youtube") && !pkg.contains("google")
                 ) {
@@ -207,7 +380,6 @@ object UsageStatsHelper {
                 }
                 packageManager.getApplicationLabel(appInfo).toString()
             } catch (e: Exception) {
-                // If application info not found, skip non-installed remnants
                 continue
             }
 
@@ -216,10 +388,12 @@ object UsageStatsHelper {
                 continue
             }
 
-            totalForegroundMillis += totalTime
+            totalAppMillis += totalTime
             val category = getAppCategory(packageManager, pkg)
             val limit = limitMap[pkg]
             val isLimitActive = limit?.isEnabled == true
+            val rawLaunchCount = telemetry.appLaunchCounts[pkg] ?: 0
+            val launchCount = if (usedMinutes > 0 && rawLaunchCount == 0) 1 else rawLaunchCount
 
             rawList.add(
                 AppUsageInfo(
@@ -227,7 +401,8 @@ object UsageStatsHelper {
                     appName = appName,
                     usedMinutes = maxOf(1, usedMinutes),
                     usedMillis = totalTime,
-                    lastTimeUsed = stats.lastTimeUsed,
+                    launchCount = launchCount,
+                    lastTimeUsed = telemetry.appLastUsed[pkg] ?: 0L,
                     category = category,
                     isLimitActive = isLimitActive,
                     dailyLimitMinutes = if (isLimitActive) (limit?.dailyLimitMinutes ?: 0) else 0,
@@ -236,7 +411,7 @@ object UsageStatsHelper {
             )
         }
 
-        // Also include apps that have an active limit (e.g. strictly blocked 0m apps with 0 usage today)
+        // Also include apps that have an active limit (even if 0 usage today)
         if (timeRange == UsageTimeRange.TODAY) {
             val existingPackages = rawList.map { it.packageName }.toSet()
             for (limit in limits) {
@@ -254,6 +429,7 @@ object UsageStatsHelper {
                             appName = appName,
                             usedMinutes = 0,
                             usedMillis = 0L,
+                            launchCount = 0,
                             lastTimeUsed = 0L,
                             category = category,
                             isLimitActive = true,
@@ -272,13 +448,9 @@ object UsageStatsHelper {
                 .thenBy { it.appName.lowercase() }
         )
 
-        // Compute percentage of total screen time
-        return if (totalForegroundMillis > 0L) {
-            rawList.map {
-                it.copy(percentageOfTotal = (it.usedMillis.toFloat() / totalForegroundMillis.toFloat()).coerceIn(0f, 1f))
-            }
-        } else {
-            rawList
+        val denominator = if (totalAppMillis > 0L) totalAppMillis.toFloat() else 1f
+        return rawList.map {
+            it.copy(percentageOfTotal = (it.usedMillis.toFloat() / denominator).coerceIn(0f, 1f))
         }
     }
 
@@ -292,7 +464,51 @@ object UsageStatsHelper {
         limits: List<AppLimit> = emptyList()
     ): ScreenTimeSummary {
         val appList = getAppUsageList(context, timeRange, limits)
-        val totalMinutes = appList.sumOf { it.usedMinutes }
+
+        val calendar = Calendar.getInstance()
+        val now = System.currentTimeMillis()
+        val (startTime, endTime) = when (timeRange) {
+            UsageTimeRange.TODAY -> {
+                calendar.set(Calendar.HOUR_OF_DAY, 0)
+                calendar.set(Calendar.MINUTE, 0)
+                calendar.set(Calendar.SECOND, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
+                Pair(calendar.timeInMillis, now)
+            }
+            UsageTimeRange.YESTERDAY -> {
+                calendar.add(Calendar.DAY_OF_YEAR, -1)
+                calendar.set(Calendar.HOUR_OF_DAY, 0)
+                calendar.set(Calendar.MINUTE, 0)
+                calendar.set(Calendar.SECOND, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
+                val start = calendar.timeInMillis
+                calendar.set(Calendar.HOUR_OF_DAY, 23)
+                calendar.set(Calendar.MINUTE, 59)
+                calendar.set(Calendar.SECOND, 59)
+                calendar.set(Calendar.MILLISECOND, 999)
+                val end = calendar.timeInMillis
+                Pair(start, end)
+            }
+            UsageTimeRange.LAST_7_DAYS -> {
+                calendar.add(Calendar.DAY_OF_YEAR, -6)
+                calendar.set(Calendar.HOUR_OF_DAY, 0)
+                calendar.set(Calendar.MINUTE, 0)
+                calendar.set(Calendar.SECOND, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
+                Pair(calendar.timeInMillis, now)
+            }
+        }
+
+        val telemetry = queryTelemetry(context, startTime, endTime)
+        val nonOverlappingTotalMinutes = (telemetry.totalDeviceScreenTimeMillis / 60000L).toInt()
+        val sumAppsMinutes = appList.sumOf { it.usedMinutes }
+        val finalTotalMinutes = if (nonOverlappingTotalMinutes > 0) {
+            nonOverlappingTotalMinutes
+        } else {
+            val maxAllowedMinutes = ((endTime - startTime) / 60000L).toInt()
+            minOf(maxAllowedMinutes, sumAppsMinutes)
+        }
+
         val topApp = appList.firstOrNull()
 
         // Category distribution
@@ -307,26 +523,26 @@ object UsageStatsHelper {
         val averageDaily = if (dailyStats.isNotEmpty()) {
             dailyStats.sumOf { it.minutes } / dailyStats.size
         } else {
-            totalMinutes
+            finalTotalMinutes
         }
 
         val comparisonText = if (timeRange == UsageTimeRange.TODAY && dailyStats.size >= 2) {
             val yesterdayMinutes = dailyStats.getOrNull(dailyStats.size - 2)?.minutes ?: 0
-            val diff = totalMinutes - yesterdayMinutes
+            val diff = finalTotalMinutes - yesterdayMinutes
             if (diff > 0) {
-                "${diff / 60}h ${diff % 60}m more than yesterday"
+                "${FormatUtils.formatHoursMinutes(diff)} more than yesterday"
             } else if (diff < 0) {
                 val absDiff = -diff
-                "${absDiff / 60}h ${absDiff % 60}m less than yesterday"
+                "${FormatUtils.formatHoursMinutes(absDiff)} less than yesterday"
             } else {
                 "Same as yesterday"
             }
         } else {
-            "Daily Average: ${averageDaily / 60}h ${averageDaily % 60}m"
+            "Daily Average: ${FormatUtils.formatHoursMinutes(averageDaily)}"
         }
 
         return ScreenTimeSummary(
-            totalScreenTimeMinutes = totalMinutes,
+            totalScreenTimeMinutes = finalTotalMinutes,
             topApp = topApp,
             totalAppCount = appList.size,
             averageDailyMinutes = averageDaily,
@@ -338,15 +554,12 @@ object UsageStatsHelper {
     }
 
     /**
-     * Computes real daily usage stats for the last 7 days.
+     * Computes real non-overlapping daily usage stats for the last 7 days.
      */
     fun get7DayDailyStats(context: Context): List<DailyStat> {
         if (!PermissionHelper.hasUsageAccess(context)) {
             return emptyList()
         }
-
-        val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
-            ?: return emptyList()
 
         val dayFormat = SimpleDateFormat("EEE", Locale.getDefault())
         val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
@@ -371,25 +584,27 @@ object UsageStatsHelper {
             val dayName = dayFormat.format(Date(dayStart))
             val dateStr = dateFormat.format(Date(dayStart))
 
-            val statsMap = try {
-                usageStatsManager.queryAndAggregateUsageStats(dayStart, dayEnd)
-            } catch (e: Exception) {
-                emptyMap<String, UsageStats>()
-            }
+            val telemetry = queryTelemetry(context, dayStart, dayEnd)
+            val dayMinutes = (telemetry.totalDeviceScreenTimeMillis / 60000L).toInt()
 
-            var totalDayMillis = 0L
-            val selfPkg = context.packageName
-            for ((pkg, stats) in statsMap) {
-                if (pkg != selfPkg && pkg != "com.android.systemui") {
-                    totalDayMillis += stats.totalTimeInForeground
-                }
-            }
-
-            val dayMinutes = (totalDayMillis / 60000L).toInt()
             result.add(DailyStat(day = dayName, minutes = dayMinutes, dateString = dateStr))
         }
 
         return result
+    }
+
+    /**
+     * Retrieves exact foreground usage milliseconds for a specific package today.
+     * Prevents overcounting or relying on stale multi-day buckets.
+     */
+    fun getForegroundUsageMillisForPackage(
+        context: Context,
+        packageName: String,
+        startTime: Long,
+        endTime: Long
+    ): Long {
+        val telemetry = queryTelemetry(context, startTime, endTime)
+        return telemetry.appDurations[packageName] ?: 0L
     }
 
     /**
@@ -404,9 +619,6 @@ object UsageStatsHelper {
         if (!PermissionHelper.hasUsageAccess(context)) {
             return@withContext
         }
-
-        val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
-            ?: return@withContext
 
         val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
         val selfPkg = context.packageName
@@ -428,12 +640,11 @@ object UsageStatsHelper {
                 val dayEnd = if (i == 0) System.currentTimeMillis() else cal.timeInMillis
 
                 val dateStr = dateFormat.format(Date(dayStart))
-                val statsMap = usageStatsManager.queryAndAggregateUsageStats(dayStart, dayEnd)
+                val telemetry = queryTelemetry(context, dayStart, dayEnd)
 
                 val dailyUsages = mutableListOf<DailyUsage>()
-                for ((pkg, stats) in statsMap) {
-                    val foregroundMillis = stats.totalTimeInForeground
-                    val minutes = if (foregroundMillis >= 15000L) maxOf(1, ((foregroundMillis + 30000L) / 60000L).toInt()) else 0
+                for ((pkg, totalTime) in telemetry.appDurations) {
+                    val minutes = if (totalTime >= 15000L) maxOf(1, ((totalTime + 30000L) / 60000L).toInt()) else 0
                     if (minutes > 0 && pkg != selfPkg && pkg != "com.android.systemui") {
                         dailyUsages.add(
                             DailyUsage(

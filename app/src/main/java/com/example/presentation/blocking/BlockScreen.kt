@@ -423,9 +423,9 @@ fun BlockScreen(
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = if (limitMinutes > 0) {
-                                        stringResource(R.string.used_format, usedMinutes, limitMinutes)
+                                        "${com.example.util.FormatUtils.formatHoursMinutes(usedMinutes)} / ${com.example.util.FormatUtils.formatHoursMinutes(limitMinutes)} used today"
                                     } else {
-                                        "${usedMinutes}m used today (0m limit)"
+                                        "${com.example.util.FormatUtils.formatHoursMinutes(usedMinutes)} used today (0m limit)"
                                     },
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         fontWeight = FontWeight.ExtraBold,
