@@ -581,6 +581,8 @@ object AdsterraManager {
                 <style>
                     * {
                         box-sizing: border-box;
+                        margin: 0;
+                        padding: 0;
                     }
                     html, body {
                         background-color: #0E1829;
@@ -588,48 +590,51 @@ object AdsterraManager {
                         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
                         margin: 0;
                         padding: 0;
-                        width: 100vw;
-                        height: 100vh;
-                        min-width: 100%;
-                        min-height: 100vw;
-                        aspect-ratio: 1 / 1;
+                        width: 100%;
+                        height: 100%;
                         overflow: hidden;
                         display: flex;
-                        align-items: stretch;
+                        align-items: center;
                         justify-content: center;
                     }
                     #container-$NATIVE_BANNER_KEY {
                         width: 100%;
                         height: 100%;
-                        min-height: 100vw;
-                        aspect-ratio: 1 / 1;
                         margin: 0 auto;
-                        padding: 4px;
+                        padding: 2px;
                         background-color: #0E1829;
                         display: flex;
                         flex-direction: column;
                         justify-content: center;
-                        align-items: stretch;
+                        align-items: center;
+                        text-align: center;
                         overflow: hidden;
                     }
                     #container-$NATIVE_BANNER_KEY > div,
-                    #container-$NATIVE_BANNER_KEY iframe {
+                    #container-$NATIVE_BANNER_KEY iframe,
+                    #container-$NATIVE_BANNER_KEY a {
                         width: 100% !important;
                         max-width: 100% !important;
                         height: 100% !important;
-                        min-height: calc(100vw - 8px) !important;
+                        max-height: 100% !important;
                         margin: 0 auto !important;
                         border: 0 !important;
+                        display: flex !important;
+                        flex-direction: column !important;
+                        justify-content: center !important;
+                        align-items: center !important;
+                        text-decoration: none !important;
                     }
-                    #container-$NATIVE_BANNER_KEY img {
+                    #container-$NATIVE_BANNER_KEY img,
+                    #container-$NATIVE_BANNER_KEY picture img {
                         max-width: 100% !important;
-                        max-height: 72vh !important;
+                        max-height: 100% !important;
                         width: auto !important;
                         height: auto !important;
                         object-fit: contain !important;
                         display: block !important;
                         margin: 0 auto !important;
-                        border-radius: 10px;
+                        border-radius: 12px !important;
                     }
                 </style>
             </head>

@@ -98,7 +98,7 @@ fun LiquidGlassNativeAdCard(
                 }
 
                 Text(
-                    text = "1:1 NATIVE",
+                    text = "NATIVE AD",
                     fontSize = 8.5.sp,
                     fontWeight = FontWeight.Medium,
                     letterSpacing = 0.5.sp,
@@ -106,18 +106,19 @@ fun LiquidGlassNativeAdCard(
                 )
             }
 
-            // Responsive 1:1 Square Native Banner Ad Viewport
+            // Responsive Native Banner Ad Viewport
             BoxWithConstraints(
                 modifier = Modifier
-                    .testTag("native_banner_1_square_viewport")
+                    .testTag("native_banner_viewport")
                     .fillMaxWidth()
-                    .aspectRatio(1f)
+                    .height(250.dp)
                     .clip(RoundedCornerShape(16.dp))
                     .background(Color(0xFF0E1829))
                     .border(0.8.dp, semantics.outlineSubtle, RoundedCornerShape(16.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                val squareSidePx = with(density) { maxWidth.roundToPx() }
+                val targetWidthPx = with(density) { maxWidth.roundToPx() }
+                val targetHeightPx = with(density) { 250.dp.roundToPx() }
 
                 if (isSlotReady) {
                     val webView = remember(compositeKey, reloadGen) {
@@ -139,15 +140,15 @@ fun LiquidGlassNativeAdCard(
                                 ViewGroup.LayoutParams.MATCH_PARENT,
                                 ViewGroup.LayoutParams.MATCH_PARENT
                             )
-                            webView.minimumWidth = squareSidePx
-                            webView.minimumHeight = squareSidePx
+                            webView.minimumWidth = targetWidthPx
+                            webView.minimumHeight = targetHeightPx
                             webView.onResume()
                             webView
                         },
                         update = { view ->
-                            if (view.minimumWidth != squareSidePx || view.minimumHeight != squareSidePx) {
-                                view.minimumWidth = squareSidePx
-                                view.minimumHeight = squareSidePx
+                            if (view.minimumWidth != targetWidthPx || view.minimumHeight != targetHeightPx) {
+                                view.minimumWidth = targetWidthPx
+                                view.minimumHeight = targetHeightPx
                                 view.requestLayout()
                             }
                             view.onResume()

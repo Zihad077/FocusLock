@@ -18,8 +18,8 @@ android {
     applicationId = "com.aistudio.focuslock.flzihd"
     minSdk = 24
     targetSdk = 36
-    versionCode = 25
-    versionName = "1.3.0"
+    versionCode = 27
+    versionName = "1.3.2"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
